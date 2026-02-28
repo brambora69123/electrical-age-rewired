@@ -162,7 +162,7 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
     }
 
     override fun multiMeterString(): String {
-        return "Mode: ${tr(mode.name.toLowerCase().capitalize())}, Value: ${Utils.plotPercent("", outputProcess.outputNormalized)}"
+        return "Mode: ${tr(mode.name.lowercase().capitalize())}, Value: ${Utils.plotPercent("", outputProcess.outputNormalized)}"
     }
 
     override fun thermoMeterString() = ""

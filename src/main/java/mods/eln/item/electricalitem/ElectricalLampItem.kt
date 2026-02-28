@@ -18,8 +18,8 @@ import net.minecraft.world.World
 class ElectricalLampItem(name: String, private var lightMin: Int, private var rangeMin: Int, private var dischargeMin: Double, private var lightMax: Int,
                          private var rangeMax: Int, internal var dischargeMax: Double, internal var energyStorage: Double, internal var chargePower: Double) : LampItem(name), IItemEnergyBattery {
 
-    internal var on: ResourceLocation = ResourceLocation("eln", "textures/items/" + name.replace(" ", "").toLowerCase() + "on.png")
-    internal var off: ResourceLocation = ResourceLocation("eln", "textures/items/" + name.replace(" ", "").toLowerCase() + "off.png")
+    internal var on: ResourceLocation = ResourceLocation("eln", "textures/items/" + name.replace(" ", "").lowercase() + "on.png")
+    internal var off: ResourceLocation = ResourceLocation("eln", "textures/items/" + name.replace(" ", "").lowercase() + "off.png")
 
     init {
         setDefaultIcon(name + "off")

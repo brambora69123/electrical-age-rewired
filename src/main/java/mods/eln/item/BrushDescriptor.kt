@@ -14,7 +14,7 @@ import net.minecraft.util.ResourceLocation
 
 class BrushDescriptor(name: String): GenericItemUsingDamageDescriptor(name) {
 
-    private val icon = ResourceLocation("eln", "textures/items/" + name.toLowerCase().replace(" ", "") + ".png")
+    private val icon = ResourceLocation("eln", "textures/items/" + name.lowercase().replace(" ", "") + ".png")
 
     override fun getName(stack: ItemStack): String {
         val creative = Minecraft.getMinecraft().player.capabilities.isCreativeMode
