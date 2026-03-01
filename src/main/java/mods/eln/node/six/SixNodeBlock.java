@@ -109,12 +109,22 @@ public class SixNodeBlock extends NodeBlock {
 
     @Override
     public boolean renderAsNormalBlock() {
-        return true;
+        return false;
     }
 
     @Override
     public EnumBlockRenderType getRenderType(IBlockState state) {
-        return state.getRenderType();
+        return EnumBlockRenderType.ENTITYBLOCK_ANIMATED;
+    }
+    
+    @Override
+    public boolean isFullCube(IBlockState state) {
+        return false;
+    }
+    
+    @Override
+    public boolean isFullBlock(IBlockState state) {
+        return false;
     }
 
 	/*
@@ -253,7 +263,11 @@ public class SixNodeBlock extends NodeBlock {
 
     @Override
     public void onNeighborChange(IBlockAccess world, BlockPos pos, BlockPos neighbor) {
+        if (((World) world).isRemote) return; // Only run on server side
+        
         SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
+        if (tileEntity == null) return;
+        
         SixNode sixNode = (SixNode) tileEntity.getNode();
         if (sixNode == null) return;
 

@@ -51,7 +51,7 @@ public class SixNodeEntity extends NodeBlockEntity {
                 } else {
                     if (id != elementRenderIdList[idx]) {
                         elementRenderIdList[idx] = id;
-                        SixNodeDescriptor descriptor = null; // TODO(1.12) Eln.sixNodeItem.getDescriptor(id);
+                        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(id);
                         elementRenderList[idx] = (SixNodeElementRender) descriptor.RenderClass.getConstructor(SixNodeEntity.class, Direction.class, SixNodeDescriptor.class).newInstance(this, Direction.fromInt(idx), descriptor);
                     }
                     elementRenderList[idx].publishUnserialize(stream);

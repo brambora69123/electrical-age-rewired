@@ -1,12 +1,25 @@
 package mods.eln;
 
-public class CommonProxy {
-    public static final String CABLE_PNG = "/mods/eln/sprites/CABLE.PNG";
-    public static final String CABLENODE_PNG = "/mods/eln/sprites/CABLENODE.PNG";
-    public static final String THERMALCABLE_PNG = "/mods/eln/sprites/TEX_THERMALCABLEBASE.PNG";
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 
-    // Client stuff
-    public void registerRenderers() {
-        // Nothing here as the server doesn't render graphics!
+/**
+ * Common proxy for server/client code separation.
+ * Server side does nothing, client side registers renderers.
+ */
+public class CommonProxy {
+
+    /**
+     * Called during preInit phase.
+     */
+    public void preInit(FMLPreInitializationEvent event) {
+        // Nothing needed in common preInit
+    }
+
+    /**
+     * Called during init phase.
+     */
+    public void init(FMLInitializationEvent event) {
+        // Nothing needed in common init
     }
 }

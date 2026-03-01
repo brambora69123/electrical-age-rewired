@@ -80,9 +80,7 @@ public class SixNode extends Node {
 
     public boolean createSubBlock(ItemStack itemStack, Direction direction, EntityPlayer player) {
 
-        // TODO(1.12)
-        //SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(itemStack);
-        SixNodeDescriptor descriptor = null;
+        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(itemStack);
         if (sideElementList[direction.getInt()] != null)
             return false;
         try {

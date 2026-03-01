@@ -1,6 +1,5 @@
 package mods.eln.sixnode
 
-import com.teamwizardry.librarianlib.features.kotlin.isNotEmpty
 import mods.eln.Eln
 import mods.eln.cable.CableRenderDescriptor
 import mods.eln.i18n.I18N.tr
@@ -120,7 +119,7 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
                     }
 
                     ScanMode.SLOTS -> slots.forEach {
-                        sum += if (te.getStackInSlot(it).isNotEmpty) 1 else 0
+                        sum += if (te.getStackInSlot(it).count > 0) 1 else 0
                         limit += 1
                     }
                 }
@@ -133,7 +132,7 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
                     }.toDouble()
 
                     ScanMode.SLOTS -> (0 until te.sizeInventory).count {
-                        te.getStackInSlot(it).isNotEmpty
+                        te.getStackInSlot(it).count > 0
                     }.toDouble() * te.inventoryStackLimit
                 }
                 return sum / te.inventoryStackLimit / te.sizeInventory

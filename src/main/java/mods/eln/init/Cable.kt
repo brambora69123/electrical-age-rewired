@@ -7,13 +7,6 @@ import mods.eln.sixnode.electricalcable.ElectricalCableRender
 
 class Cable {
     companion object {
-        val battery = Cable()
-        val signal = Cable()
-        val lowVoltage = Cable()
-        val mediumVoltage = Cable()
-        val highVoltage = Cable()
-        val veryHighVoltage = Cable()
-
         const val gateOutputCurrent = 0.1
 
         const val SVU = 5.0
@@ -27,8 +20,28 @@ class Cable {
         const val HVUinv = 1.0 / HVU
         const val VHVU = 3200.0
         const val VHVUinv = 1.0 / VHVU
+        
+        // Nominal power calculations (from Eln_old.java)
+        const val SVP = gateOutputCurrent * SVU
+        @JvmStatic
+        fun LVP() = 1000 * Config.cablePowerFactor
+        @JvmStatic
+        fun MVP() = 2000 * Config.cablePowerFactor
+        @JvmStatic
+        fun HVP() = 5000 * Config.cablePowerFactor
+        @JvmStatic
+        fun VHVP() = 15000 * Config.cablePowerFactor
+        
+        // Cable instances - initialized in Descriptors.preInit()
+        lateinit var battery: Cable
+        lateinit var signal: Cable
+        lateinit var lowVoltage: Cable
+        lateinit var mediumVoltage: Cable
+        lateinit var highVoltage: Cable
+        lateinit var veryHighVoltage: Cable
 
-        val smallRs = lowVoltage.descriptor.electricalRs
+        @JvmStatic
+        val smallRs get() = lowVoltage.descriptor.electricalRs
 
         @JvmStatic
         fun applySmallRs(aLoad: NbtElectricalLoad) {
@@ -43,5 +56,4 @@ class Cable {
     }
 
     lateinit var descriptor: ElectricalCableDescriptor
-    lateinit var render: ElectricalCableRender
 }

@@ -1,49 +1,126 @@
 package mods.eln.init
 
-import com.teamwizardry.librarianlib.features.base.block.BlockMod
-import com.teamwizardry.librarianlib.features.base.block.BlockModVariant
-import com.teamwizardry.librarianlib.features.kotlin.get
-import com.teamwizardry.librarianlib.features.kotlin.setVelocityAndUpdate
+import mods.eln.Eln
+import mods.eln.node.six.SixNodeBlock
+import mods.eln.node.six.SixNodeEntity
+import mods.eln.node.transparent.TransparentNodeBlock
+import mods.eln.node.transparent.TransparentNodeEntity
+import net.minecraft.block.Block
 import net.minecraft.block.material.Material
-import net.minecraft.block.properties.IProperty
+import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.block.state.IBlockState
+import net.minecraft.block.state.BlockStateContainer
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3d
 import net.minecraft.world.World
 import java.lang.Math.abs
 
+/**
+ * Legacy compatibility object - provides static field access for Java code.
+ * These are initialized by ElnContent during preInit.
+ *
+ * Note: Do not use these before ElnContent.preInit() is called during mod preInit.
+ */
 object ModBlock {
-    @JvmField
-    val oreBlock = ElnOreBlock(
-        "copper_ore",
-        "lead_ore")
+    @JvmStatic
+    lateinit var oreBlock: ElnOreBlock
 
-    val rubberBlock = RubberBlock("rubber", 0.75f)
-    val flubberBlock = RubberBlock("flubber", 2f)
+    @JvmStatic
+    lateinit var rubberBlock: RubberBlock
 
-    // TODO(1.12): These are obviously not done.
-    @JvmField
-    val ghostBlock = ElnBlockMod("ghost", Material.ROCK, "g")
+    @JvmStatic
+    lateinit var flubberBlock: RubberBlock
 
-    @JvmField
-    val sixNodeBlock = ElnBlockMod("sixnode", Material.ROCK, "s")
+    @JvmStatic
+    lateinit var ghostBlock: ElnBlockMod
 
-    @JvmField
-    val transparentNodeBlock = ElnBlockMod("transparentnode", Material.ROCK, "t")
+    @JvmStatic
+    lateinit var sixNodeBlock: SixNodeBlock
 
-    @JvmField
-    val lightBlock = BlockMod("light", Material.AIR)
-}
+    @JvmStatic
+    lateinit var transparentNodeBlock: TransparentNodeBlock
 
-class ElnOreBlock(vararg variants: String) : BlockModVariant("ore", Material.ROCK, *variants) {
-    init {
-        setHardness(3.0f)
-        setResistance(5.0f)
+    @JvmStatic
+    lateinit var lightBlock: ElnBlockMod
+
+    /**
+     * Initialize all blocks - called by ElnContent.preInit()
+     */
+    @JvmStatic
+    internal fun init() {
+        oreBlock = ElnOreBlock("copper_ore", "lead_ore")
+        rubberBlock = RubberBlock("rubber", 0.75f)
+        flubberBlock = RubberBlock("flubber", 2f)
+        ghostBlock = ElnBlockMod("ghost", Material.ROCK, "g")
+        sixNodeBlock = SixNodeBlock(Material.ROCK, SixNodeEntity::class.java).apply {
+            setRegistryName("sixnode")
+            setTranslationKey("sixnode")
+            setCreativeTab(Eln.Tab)
+        }
+        transparentNodeBlock = TransparentNodeBlock(Material.ROCK, TransparentNodeEntity::class.java).apply {
+            setRegistryName("transparentnode")
+            setTranslationKey("transparentnode")
+            setCreativeTab(Eln.Tab)
+        }
+        lightBlock = ElnBlockMod("light", Material.GROUND, "l")
+
+        // Set creative tab for all blocks
+        val tab = Eln.Tab
+        oreBlock.creativeTab = tab
+        rubberBlock.creativeTab = tab
+        flubberBlock.creativeTab = tab
+        ghostBlock.creativeTab = tab
+        sixNodeBlock.creativeTab = tab
+        transparentNodeBlock.creativeTab = tab
+        lightBlock.creativeTab = tab
     }
 }
 
-class RubberBlock(name: String, private val bounce: Float) : BlockMod(name, Material.WOOD) {
+class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
+    init {
+        setHardness(3.0f)
+        setResistance(5.0f)
+        setTranslationKey("oreEln")
+        setRegistryName("ore")
+        setCreativeTab(Eln.Tab)
+    }
+    
+    companion object {
+        val VARIANT: PropertyEnum<VariantType> = PropertyEnum.create("variant", VariantType::class.java)
+    }
+    
+    enum class VariantType(val modelName: String, val model: String) : net.minecraft.util.IStringSerializable {
+        COPPER_ORE("copper_ore", "copper_ore"),
+        LEAD_ORE("lead_ore", "lead_ore");
+        
+        override fun getName(): String = modelName
+    }
+    
+    override fun createBlockState(): BlockStateContainer {
+        return BlockStateContainer(this, VARIANT)
+    }
+    
+    override fun getStateFromMeta(meta: Int): IBlockState {
+        val variant = if (meta == 0) VariantType.COPPER_ORE else VariantType.LEAD_ORE
+        return defaultState.withProperty(VARIANT, variant)
+    }
+    
+    override fun getMetaFromState(state: IBlockState): Int {
+        return if (state.getValue(VARIANT) == VariantType.COPPER_ORE) 0 else 1
+    }
+    
+    override fun damageDropped(state: IBlockState): Int {
+        return getMetaFromState(state)
+    }
+}
+
+class RubberBlock(name: String, private val bounce: Float) : Block(Material.WOOD) {
+    init {
+        setTranslationKey(name)
+        setRegistryName(name)
+        setCreativeTab(Eln.Tab)
+    }
+    
     override fun onLanded(worldIn: World, entityIn: Entity) {
         if (abs(entityIn.motionY) > 0.1) {
             entityIn.motionY = abs(entityIn.motionY * bounce)
@@ -61,6 +138,11 @@ class SixNodeProxyBlock()
 
 class ElnProxyBlock(name: String, val uuid: String)
 
-class ElnBlockMod(name: String, material: Material, val uuid: String) : BlockMod(name, material) {
+class ElnBlockMod(name: String, material: Material, val uuid: String = name.take(1)) : Block(material) {
+    init {
+        setTranslationKey(name)
+        setRegistryName(name)
+        setCreativeTab(Eln.Tab)
+    }
 
 }

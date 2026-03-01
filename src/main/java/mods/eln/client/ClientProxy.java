@@ -1,58 +1,45 @@
 package mods.eln.client;
 
-import mods.eln.init.Config;
-import net.minecraft.client.renderer.entity.Render;
-import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraftforge.fml.client.registry.ClientRegistry;
-import net.minecraftforge.fml.client.registry.IRenderFactory;
-import net.minecraftforge.fml.client.registry.RenderingRegistry;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import mods.eln.CommonProxy;
 import mods.eln.Eln;
-import mods.eln.entity.ReplicatorEntity;
-import mods.eln.entity.ReplicatorRender;
 import mods.eln.node.six.SixNodeEntity;
 import mods.eln.node.six.SixNodeRender;
 import mods.eln.node.transparent.TransparentNodeEntity;
 import mods.eln.node.transparent.TransparentNodeRender;
-import mods.eln.sixnode.tutorialsign.TutorialSignOverlay;
 import mods.eln.sound.SoundClientEventListener;
-import net.minecraft.client.model.ModelSilverfish;
-import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
+/**
+ * Client-side proxy implementation.
+ * Registers tile entity special renderers and other client-side content.
+ */
+@SideOnly(Side.CLIENT)
 public class ClientProxy extends CommonProxy {
 
     public static UuidManager uuidManager;
     public static SoundClientEventListener soundClientEventListener;
 
-    //TODO: FIX ITEM RENDERING 1.10
+    /**
+     * Called during preInit phase on client side.
+     */
     @Override
-    public void registerRenderers() {
-        new ClientPacketHandler();
-        ClientRegistry.bindTileEntitySpecialRenderer(SixNodeEntity.class, new SixNodeRender());
-        ClientRegistry.bindTileEntitySpecialRenderer(TransparentNodeEntity.class, new TransparentNodeRender());
-
-//        MinecraftForgeClient.registerItemRenderer(Eln.transparentNodeItem, Eln.transparentNodeItem);
-//        MinecraftForgeClient.registerItemRenderer(Eln.sixNodeItem, Eln.sixNodeItem);
-//        MinecraftForgeClient.registerItemRenderer(Eln.sharedItem, Eln.sharedItem);
-//        MinecraftForgeClient.registerItemRenderer(Eln.sharedItemStackOne, Eln.sharedItemStackOne);
-
-        RenderingRegistry.registerEntityRenderingHandler(
-            ReplicatorEntity.class,
-            manager -> new ReplicatorRender(manager, new ModelSilverfish(), 0.3f));
-
-        // TODO(1.12): Is this important?
-        //Eln.clientKeyHandler = new ClientKeyHandler();
-        //MinecraftForge.EVENT_BUS.register(Eln.clientKeyHandler);
-        MinecraftForge.EVENT_BUS.register(new TutorialSignOverlay());
+    public void preInit(FMLPreInitializationEvent event) {
         uuidManager = new UuidManager();
         soundClientEventListener = new SoundClientEventListener(uuidManager);
+    }
 
-        if (Config.INSTANCE.getAnalyticsEnabled())
-            MinecraftForge.EVENT_BUS.register(AnalyticsHandler.getInstance());
-
-        new FrameTime();
-        new ConnectionListener();
+    /**
+     * Called during init phase on client side.
+     * Register tile entity special renderers (TESR).
+     */
+    @Override
+    public void init(FMLInitializationEvent event) {
+        // Register TESRs for SixNode and TransparentNode
+        ClientRegistry.bindTileEntitySpecialRenderer(SixNodeEntity.class, new SixNodeRender());
+        ClientRegistry.bindTileEntitySpecialRenderer(TransparentNodeEntity.class, new TransparentNodeRender());
     }
 }

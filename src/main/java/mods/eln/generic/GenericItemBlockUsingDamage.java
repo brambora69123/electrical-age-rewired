@@ -52,9 +52,8 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         orderList.add(damage);
         descriptors.add(descriptor);
         descriptor.setParent(this, damage);
-        // TODO(1.10): Mumble mumble.
-        throw new IllegalStateException("This code is fucked.");
-//        GameRegistry.register(descriptor.parentItem);
+        // In 1.12.2, items are registered via RegistryEvent.Register, not here
+        // The parent ItemBlock is already registered, descriptors are just metadata
     }
 
     public void addWithoutRegistry(int damage, Descriptor descriptor) {
@@ -129,17 +128,20 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
     @SideOnly(Side.CLIENT)
     @Override
     public void getSubItems(CreativeTabs tabs, NonNullList<ItemStack> items) {
-        // TODO(1.12)
-        throw new IllegalStateException("Don't get me started.");
-
-        // You can also take a more direct approach and do each one individual but I prefer the lazy / right way
-        //for(Entry<Integer, Descriptor> entry : subItemList.entrySet()
-
-//        for (int id : orderList) {
-//            ItemStack stack = Utils.newItemStack(itemID, 1, id);
-//            stack.setTagCompound(subItemList.get(id).getDefaultNBT());
-//            list.add(stack);
-//        }
+        if (this.isInCreativeTab(tabs)) {
+            // Add all sub-items to the creative tab
+            for (int id : orderList) {
+                Descriptor descriptor = subItemList.get(id);
+                if (descriptor != null) {
+                    ItemStack stack = new ItemStack(this, 1, id);
+                    stack.setTagCompound(descriptor.getDefaultNBT());
+                    items.add(stack);
+                    System.out.println("Added creative item: " + id + " with descriptor: " + descriptor.name);
+                } else {
+                    System.out.println("Missing descriptor for id: " + id);
+                }
+            }
+        }
     }
 
     public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List list, boolean par4) {

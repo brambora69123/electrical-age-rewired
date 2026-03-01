@@ -44,7 +44,6 @@ public class NodeManager extends WorldSavedData {
     }
 
     public void addNode(NodeBase node) {
-        // nodeArray.add(node);
         if (node.coordinate == null) {
             Utils.println("Null coordinate addnode");
             while (true)
@@ -57,7 +56,6 @@ public class NodeManager extends WorldSavedData {
 
         nodes.add(node);
         Utils.println("NodeManager has " + nodesMap.size() + "node");
-        // nodeArray.put(new NodeIdentifier(node), node);
     }
 
     public void removeNode(NodeBase node) {
@@ -128,14 +126,7 @@ public class NodeManager extends WorldSavedData {
 
 
     public NodeBase getNodeFromCoordinate(Coordinate nodeCoordinate) {
-        int idx = 0;
-        idx++;
-        // for(Node node : nodeArray)
-        {
-            // if(nodeCoordinate.equals(node.coordinate)) return node;
-        }
         return nodesMap.get(nodeCoordinate);
-        // return null;
     }
 
     public TransparentNodeElement getTransparentNodeFromCoordinate(Coordinate coord) {
@@ -159,7 +150,12 @@ public class NodeManager extends WorldSavedData {
         List<NodeBase> addedNode = new ArrayList<NodeBase>();
         for (Object o : Utils.getTags(nbt)) {
             NBTTagCompound tag = (NBTTagCompound) o;
-            Class nodeClass = UUIDToClass.get(tag.getString("tag"));
+            String uuid = tag.getString("tag");
+            Class nodeClass = UUIDToClass.get(uuid);
+            if (nodeClass == null) {
+                Utils.println("Warning: Unknown node UUID: " + uuid + ", skipping");
+                continue;
+            }
             try {
                 NodeBase node = (NodeBase) nodeClass.getConstructor().newInstance();
                 node.readFromNBT(tag);

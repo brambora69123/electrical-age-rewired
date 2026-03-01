@@ -1,6 +1,5 @@
 package mods.eln.node
 
-import com.teamwizardry.librarianlib.features.kotlin.isNotEmpty
 import mods.eln.generic.GenericItemBlockUsingDamageDescriptor
 import mods.eln.generic.GenericItemUsingDamageDescriptor
 import mods.eln.item.electricalinterface.IItemEnergyBattery
@@ -95,7 +94,7 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
                 if (acceptedItems.contains(it.javaClass)) {
                     itemStack.count -= 1
                     val inSlot = inventory.getStackInSlot(index)
-                    if (inSlot.isNotEmpty) {
+                    if (inSlot.count > 0) {
                         existingItemHandler?.handleExistingInventoryItem(inSlot)
                     }
                     inventory.setInventorySlotContents(index, it.newItemStack())
@@ -107,7 +106,7 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
                 if (acceptedItems.contains(it.javaClass)) {
                     itemStack.count -= 1
                     val inSlot = inventory.getStackInSlot(index)
-                    if (inSlot.isNotEmpty) {
+                    if (inSlot.count > 0) {
                         existingItemHandler?.handleExistingInventoryItem(inSlot)
                     }
                     inventory.setInventorySlotContents(index, it.newItemStack())

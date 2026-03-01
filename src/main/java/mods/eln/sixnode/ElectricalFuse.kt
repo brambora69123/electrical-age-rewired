@@ -1,6 +1,5 @@
 package mods.eln.sixnode
 
-import com.teamwizardry.librarianlib.features.kotlin.isNotEmpty
 import mods.eln.generic.GenericItemUsingDamageDescriptor
 import mods.eln.i18n.I18N
 import mods.eln.init.Cable
@@ -131,7 +130,7 @@ class ElectricalFuseHolderElement(sixNode: SixNode, side: Direction, descriptor:
             val fuseCompound = nbt.getTag("fuse") as? NBTTagCompound
             if (fuseCompound != null) {
                 val fuseStack = ItemStack(nbt)
-                if (fuseStack.isNotEmpty) {
+                if (fuseStack.count > 0) {
                     installedFuse = GenericItemUsingDamageDescriptorUpgrade.getDescriptor(fuseStack) as? ElectricalFuseDescriptor
                 }
             }
@@ -211,7 +210,7 @@ class ElectricalFuseHolderElement(sixNode: SixNode, side: Direction, descriptor:
         val itemStack = entityPlayer?.heldItemMainhand
         val fuseDescriptor = GenericItemUsingDamageDescriptorUpgrade.getDescriptor(itemStack) as? ElectricalFuseDescriptor
         if (itemStack != null) {
-            if (fuseDescriptor != null && itemStack.isNotEmpty) {
+            if (fuseDescriptor != null && itemStack.count > 0) {
                 // The player puts in a new lead fuse.
                 itemStack.count--
                 takenOutFuse = installedFuse

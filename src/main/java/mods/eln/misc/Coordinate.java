@@ -99,7 +99,7 @@ public class Coordinate implements INBTTReady {
     public boolean equals(Object obj) {
         if (!(obj instanceof Coordinate)) return false;
         Coordinate id = (Coordinate) obj;
-        return id.pos == pos && id.dimension == dimension;
+        return id.pos.equals(pos) && id.dimension == dimension;
     }
 
     @Override

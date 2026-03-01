@@ -141,33 +141,18 @@ public abstract class NodeBlock extends Block {//BlockContainer
 
     @Override
     public boolean hasTileEntity(IBlockState state) {
-        return hasTileEntity(getDefaultState());
+        return true; // All NodeBlocks have tile entities
     }
 
     @Override
     public TileEntity createTileEntity(World var1, IBlockState state) {
         try {
-            return (TileEntity) tileEntityClass.getConstructor().newInstance();
-        } catch (InstantiationException e) {
-
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-
-            e.printStackTrace();
-        } catch (SecurityException e) {
-
+            TileEntity entity = (TileEntity) tileEntityClass.getConstructor().newInstance();
+            return entity;
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        while (true) ;
+        return null;
     }
 
 
