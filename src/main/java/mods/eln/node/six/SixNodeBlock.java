@@ -9,6 +9,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -67,10 +68,10 @@ public class SixNodeBlock extends NodeBlock {
     }
 
 
-    public boolean hasVolume(World world, BlockPos pos) {
+    public boolean hasVolume(IBlockAccess world, BlockPos pos) {
         SixNodeEntity entity = getEntity(world, pos);
         if (entity == null) return false;
-        return entity.hasVolume(world, pos.getX(), pos.getY(), pos.getZ());
+        return entity.hasVolume((World) world, pos.getX(), pos.getY(), pos.getZ());
 
     }
 
@@ -87,7 +88,7 @@ public class SixNodeBlock extends NodeBlock {
         return entity == null ? 0 : entity.getDamageValue(world, pos.getX(), pos.getY(), pos.getZ());
     }
 
-    SixNodeEntity getEntity(World world, BlockPos pos) {
+    SixNodeEntity getEntity(IBlockAccess world, BlockPos pos) {
         TileEntity tileEntity = world.getTileEntity(pos);
         if (tileEntity != null && tileEntity instanceof SixNodeEntity)
             return (SixNodeEntity) tileEntity;
@@ -207,41 +208,95 @@ public class SixNodeBlock extends NodeBlock {
      */
 
     @Override
-    public boolean removedByPlayer(IBlockState state, World world, BlockPos pos,  EntityPlayer entityPlayer, boolean willHarvest) {
-        if (world.isRemote) return false;
+    public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer entityPlayer, boolean willHarvest) {
+        
+        if (world.isRemote) {
+            return false;
+        }
 
         SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
-
-        RayTraceResult raytrace = collisionRayTrace(world, pos, entityPlayer);
-        if (raytrace == null) return false;
+        if (tileEntity == null) {
+            return super.removedByPlayer(state, world, pos, entityPlayer, willHarvest);
+        }
 
         SixNode sixNode = (SixNode) tileEntity.getNode();
-        if (sixNode == null) return true;
-        if (sixNode.sixNodeCacheBlock.isAir(world.getBlockState(pos), world, pos)) {
+        if (sixNode == null) {
+            return true;
+        }
+        
 
+        // Get the hit face from raytrace
+        RayTraceResult raytrace = collisionRayTrace(world, pos, entityPlayer);
+        Direction hitDirection;
+        
+        if (raytrace != null) {
+            hitDirection = Direction.fromIntMinecraftSide(raytrace.sideHit.getIndex());
+        } else {
+            // Fallback: find any enabled side
+            hitDirection = null;
+            for (Direction dir : Direction.values()) {
+                if (sixNode.getSideEnable(dir)) {
+                    hitDirection = dir;
+                    break;
+                }
+            }
+            if (hitDirection == null) {
+                return super.removedByPlayer(state, world, pos, entityPlayer, willHarvest);
+            }
+        }
+
+        // If there's a cached block on top, break that first
+        if (sixNode.sixNodeCacheBlock != Blocks.AIR) {
             if (!(Utils.isCreative((EntityPlayerMP) entityPlayer))) {
                 ItemStack stack = new ItemStack(sixNode.sixNodeCacheBlock, 1, sixNode.sixNodeCacheBlockMeta);
                 sixNode.dropItem(stack);
             }
-
             sixNode.sixNodeCacheBlock = Blocks.AIR;
-
             Chunk chunk = world.getChunk(pos);
             Utils.generateHeightMap(chunk);
-            // TODO(1.10): Was this important?
-            //Utils.updateSkylight(chunk);
-            //chunk.generateSkylightMap();
-            //Utils.updateAllLightTypes(world, pos);
-
             sixNode.setNeedPublish(true);
             return false;
         }
-        if (!sixNode.playerAskToBreakSubBlock((EntityPlayerMP) entityPlayer, Direction.fromIntMinecraftSide(raytrace.sideHit.getIndex())))
+
+        // Break the cable on the hit face
+        if (!sixNode.playerAskToBreakSubBlock((EntityPlayerMP) entityPlayer, hitDirection)) {
             return false;
+        }
 
-        if (sixNode.getIfSideRemain()) return true;
+        // Reconnect and notify neighbors of changes
+        sixNode.reconnect();
+        notifyNeighborsAndUpdate(world, pos, sixNode, state);
 
-        return super.removedByPlayer(world.getBlockState(pos), world,  pos, entityPlayer, willHarvest);
+        // If sides remain, keep the block
+        if (sixNode.getIfSideRemain()) {
+            return true;
+        }
+
+        return super.removedByPlayer(state, world, pos, entityPlayer, willHarvest);
+    }
+
+    /**
+     * Helper method to notify neighbors and trigger updates when breaking cables.
+     */
+    private void notifyNeighborsAndUpdate(World world, BlockPos pos, SixNode sixNode, IBlockState state) {
+        // Notify neighboring SixNodeBlocks to update their connections
+        for (Direction dir : Direction.values()) {
+            BlockPos neighborPos = dir.applied(pos, 1);
+            if (world.getBlockState(neighborPos).getBlock() == this) {
+                world.notifyBlockUpdate(neighborPos, world.getBlockState(neighborPos), world.getBlockState(neighborPos), 3);
+                TileEntity neighborTE = world.getTileEntity(neighborPos);
+                if (neighborTE != null) neighborTE.markDirty();
+            }
+        }
+
+        SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
+        if (tileEntity != null) tileEntity.markDirty();
+
+        world.notifyNeighborsRespectDebug(pos, this, true);
+        world.markBlockRangeForRenderUpdate(pos.add(-1, -1, -1), pos.add(1, 1, 1));
+        world.notifyBlockUpdate(pos, state, state, 3);
+        sixNode.setNeedPublish(true);
+        sixNode.publishToAllPlayer();
     }
 
     @Override
@@ -252,53 +307,104 @@ public class SixNodeBlock extends NodeBlock {
             SixNode sixNode = (SixNode) tileEntity.getNode();
             if (sixNode == null) return;
 
+            // Disconnect once before removing all sides
+            sixNode.disconnect();
+            
+            // Remove all sides without individual disconnect/connect calls
             for (Direction direction : Direction.values()) {
                 if (sixNode.getSideEnable(direction)) {
-                    sixNode.deleteSubBlock(null, direction);
+                    sixNode.sideElementList[direction.getInt()] = null;
+                    sixNode.sideElementIdList[direction.getInt()] = 0;
                 }
             }
+            
+            // Notify neighboring blocks to update their connections
+            world.notifyNeighborsRespectDebug(pos, par5, true);
         }
         super.breakBlock(world, pos, par5, par6);
     }
 
     @Override
-    public void onNeighborChange(IBlockAccess world, BlockPos pos, BlockPos neighbor) {
-        if (((World) world).isRemote) return; // Only run on server side
-        
-        SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
+    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+        if (worldIn.isRemote) return;
+
+        SixNodeEntity tileEntity = (SixNodeEntity) worldIn.getTileEntity(pos);
         if (tileEntity == null) return;
-        
+
         SixNode sixNode = (SixNode) tileEntity.getNode();
         if (sixNode == null) return;
 
+        boolean changed = false;
+        for (Direction direction : Direction.values()) {
+            if (sixNode.getSideEnable(direction)) {
+                if (!getIfOtherBlockIsSolid(worldIn, pos, direction)) {
+                    sixNode.deleteSubBlock(null, direction);
+                    changed = true;
+                }
+            }
+        }
+
+        if (!sixNode.getIfSideRemain()) {
+            worldIn.setBlockToAir(pos);
+        } else if (changed) {
+            sixNode.reconnect();
+            notifyNeighborsAndUpdate(worldIn, pos, sixNode, worldIn.getBlockState(pos));
+        }
+    }
+
+    @Override
+    public void onNeighborChange(IBlockAccess world, BlockPos pos, BlockPos neighbor) {
+        // Also handle TileEntity neighbor changes
+        if (((World) world).isRemote) return;
+
+        SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
+        if (tileEntity == null) return;
+
+        SixNode sixNode = (SixNode) tileEntity.getNode();
+        if (sixNode == null) return;
+
+        boolean changed = false;
         for (Direction direction : Direction.values()) {
             if (sixNode.getSideEnable(direction)) {
                 if (!getIfOtherBlockIsSolid(world, pos, direction)) {
                     sixNode.deleteSubBlock(null, direction);
+                    changed = true;
                 }
             }
-
         }
 
         if (!sixNode.getIfSideRemain()) {
-            // TODO(1.10): Set this block to air.
+            ((World) world).setBlockToAir(pos);
         } else {
+            // Trigger reconnection and notify neighbors if changed
+            if (changed) {
+                sixNode.reconnect();
+                notifyNeighborsAndUpdate((World) world, pos, sixNode, world.getBlockState(pos));
+            }
             super.onNeighborChange(world, pos, neighbor);
         }
     }
 
-    double w = 0.0;
+    double w = 0.0; // Full face ray tracing (original behavior)
 
     boolean[] booltemp = new boolean[6];
 
     @Nullable
     @Override
     public RayTraceResult collisionRayTrace(IBlockState blockState, World world, BlockPos pos, Vec3d start, Vec3d end) {
-        // TODO(??): Pretty sure this can be improved. Do we even want to use collisionRayTrace?
         final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        if (nodeHasCache(world, pos)) return super.collisionRayTrace(blockState, world, pos, start, end);
+        
+        if (nodeHasCache(world, pos)) {
+            Utils.println("SixNodeBlock.collisionRayTrace: has cache, using super");
+            return super.collisionRayTrace(blockState, world, pos, start, end);
+        }
+        
         SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
-        if (tileEntity == null) return null;
+        if (tileEntity == null) {
+            Utils.println("SixNodeBlock.collisionRayTrace: tileEntity is null at " + x + "," + y + "," + z);
+            return null;
+        }
+        
         if (world.isRemote) {
             booltemp[0] = tileEntity.getSyncronizedSideEnable(Direction.XN);
             booltemp[1] = tileEntity.getSyncronizedSideEnable(Direction.XP);
@@ -306,112 +412,102 @@ public class SixNodeBlock extends NodeBlock {
             booltemp[3] = tileEntity.getSyncronizedSideEnable(Direction.YP);
             booltemp[4] = tileEntity.getSyncronizedSideEnable(Direction.ZN);
             booltemp[5] = tileEntity.getSyncronizedSideEnable(Direction.ZP);
-            SixNodeEntity entity = getEntity(world, pos);
-            if (entity != null) {
-                SixNodeElementRender element = entity.elementRenderList[Direction.YN.getInt()];
-                // setBlockBounds(0, 0, 0, 1, 1, 1);
-                if (element != null && element.sixNodeDescriptor.hasVolume()) {
-                    // We're going to assume this is a lamp socket on the roof? Okay.
-                    return new RayTraceResult(new Vec3d(0.5, 0.5, 0.5), Direction.YN.toForge(), pos);
-                }
-            }
-
         } else {
             SixNode sixNode = (SixNode) tileEntity.getNode();
-            if (sixNode == null) return null;
+            if (sixNode == null) {
+                Utils.println("SixNodeBlock.collisionRayTrace: sixNode is null at " + x + "," + y + "," + z);
+                return null;
+            }
             booltemp[0] = sixNode.getSideEnable(Direction.XN);
             booltemp[1] = sixNode.getSideEnable(Direction.XP);
             booltemp[2] = sixNode.getSideEnable(Direction.YN);
             booltemp[3] = sixNode.getSideEnable(Direction.YP);
             booltemp[4] = sixNode.getSideEnable(Direction.ZN);
             booltemp[5] = sixNode.getSideEnable(Direction.ZP);
-            SixNodeEntity entity = getEntity(world, pos);
-            if (entity != null) {
-                NodeBase node = entity.getNode();
-                if (node != null && node instanceof SixNode) {
-                    SixNodeElement element = ((SixNode) node).sideElementList[Direction.YN.getInt()];
-                    if (element != null && element.sixNodeElementDescriptor.hasVolume())
-                        // Yup, still a lamp socket.
-                        return new RayTraceResult(new Vec3d(0.5, 0.5, 0.5), Direction.YN.toForge(), pos);
-                }
-            }
-
         }
-        // XN
+        
+        Utils.println("SixNodeBlock.collisionRayTrace: sides enabled: XN=" + booltemp[0] + " XP=" + booltemp[1] + " YN=" + booltemp[2] + " YP=" + booltemp[3] + " ZN=" + booltemp[4] + " ZP=" + booltemp[5]);
 
+        // XN
         if (isIn(x, end.x, start.x) && booltemp[0]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (x - start.x) / (end.x - start.x);
+            double ratio = (x - start.x) / (end.x - start.x);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitZ, z + w, z + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitZ, z + w, z + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit XN face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.XN.toForge(), pos);
+                }
             }
         }
         // XP
         if (isIn(x + 1, start.x, end.x) && booltemp[1]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (x + 1 - start.x) / (end.x - start.x);
+            double ratio = (x + 1 - start.x) / (end.x - start.x);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitZ, z + w, z + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitZ, z + w, z + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit XP face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.XP.toForge(), pos);
+                }
             }
         }
         // YN
         if (isIn(y, end.y, start.y) && booltemp[2]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (y - start.y) / (end.y - start.y);
+            double ratio = (y - start.y) / (end.y - start.y);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitX, x + w, x + 1 - w) && isIn(hitZ, z + w, z + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitX, x + w, x + 1 - w) && isIn(hitZ, z + w, z + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit YN face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.YN.toForge(), pos);
+                }
             }
-
         }
         // YP
         if (isIn(y + 1, start.y, end.y) && booltemp[3]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (y + 1 - start.y) / (end.y - start.y);
+            double ratio = (y + 1 - start.y) / (end.y - start.y);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitX, x + w, x + 1 - w) && isIn(hitZ, z + w, z + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitX, x + w, x + 1 - w) && isIn(hitZ, z + w, z + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit YP face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.YP.toForge(), pos);
+                }
             }
         }
         // ZN
         if (isIn(z, end.z, start.z) && booltemp[4]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (z - start.z) / (end.z - start.z);
+            double ratio = (z - start.z) / (end.z - start.z);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitX, x + w, x + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitX, x + w, x + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit ZN face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.ZN.toForge(), pos);
-
+                }
             }
         }
         // ZP
         if (isIn(z + 1, start.z, end.z) && booltemp[5]) {
-            double hitX, hitY, hitZ, ratio;
-            ratio = (z + 1 - start.z) / (end.z - start.z);
+            double ratio = (z + 1 - start.z) / (end.z - start.z);
             if (ratio <= 1.1) {
-                hitX = start.x + ratio * (end.x - start.x);
-                hitY = start.y + ratio * (end.y - start.y);
-                hitZ = start.z + ratio * (end.z - start.z);
-                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitX, x + w, x + 1 - w))
+                double hitX = start.x + ratio * (end.x - start.x);
+                double hitY = start.y + ratio * (end.y - start.y);
+                double hitZ = start.z + ratio * (end.z - start.z);
+                if (isIn(hitY, y + w, y + 1 - w) && isIn(hitX, x + w, x + 1 - w)) {
+                    Utils.println("SixNodeBlock.collisionRayTrace: hit ZP face at ratio=" + ratio);
                     return new RayTraceResult(new Vec3d(hitX, hitY, hitZ), Direction.ZP.toForge(), pos);
+                }
             }
         }
+        
+        Utils.println("SixNodeBlock.collisionRayTrace: no hit");
 
         return null;
     }
@@ -424,7 +520,6 @@ public class SixNodeBlock extends NodeBlock {
         double distanceMax = 5.0;
         Vec3d start = new Vec3d(entityLiving.posX, entityLiving.posY, entityLiving.posZ);
 
-        // TODO(1.10): Really?
         if (!world.isRemote)
             start = start.add(0, 1.62, 0);
         Vec3d var5 = entityLiving.getLook(0.5f);
@@ -458,6 +553,72 @@ public class SixNodeBlock extends NodeBlock {
                 Utils.println("ASSERT A public boolean nodeHasCache(World world, int x, int y, int z) ");
         }
         return false;
+    }
+
+    // Cable thickness constants for selection box (original behavior)
+    private static final double CABLE_THICKNESS = 0.2; // Selection box thickness
+    private static final double CABLE_MARGIN = 0.02; // Selection box margin from edges
+
+    // Get selection bounding box (highlight box when looking at cable)
+    // This is client-side only, so we use elementRenderList
+    @Override
+    public AxisAlignedBB getSelectedBoundingBox(IBlockState state, World worldIn, BlockPos pos) {
+        if (hasVolume(worldIn, pos)) return super.getSelectedBoundingBox(state, worldIn, pos);
+        
+        // Get the face the player is looking at
+        RayTraceResult col = collisionRayTrace(worldIn, pos, net.minecraft.client.Minecraft.getMinecraft().player);
+        
+        double h = CABLE_THICKNESS;
+        double hn = 1 - h;
+        double b = CABLE_MARGIN;
+        double bn = 1 - b;
+        
+        if (col != null) {
+            switch (Direction.fromIntMinecraftSide(col.sideHit.getIndex())) {
+                case XN:
+                    return new AxisAlignedBB(
+                        pos.getX() + b, pos.getY(), pos.getZ(),
+                        pos.getX() + h, pos.getY() + 1, pos.getZ() + 1
+                    );
+                case XP:
+                    return new AxisAlignedBB(
+                        pos.getX() + hn, pos.getY(), pos.getZ(),
+                        pos.getX() + bn, pos.getY() + 1, pos.getZ() + 1
+                    );
+                case YN:
+                    return new AxisAlignedBB(
+                        pos.getX(), pos.getY() + b, pos.getZ(),
+                        pos.getX() + 1, pos.getY() + h, pos.getZ() + 1
+                    );
+                case YP:
+                    return new AxisAlignedBB(
+                        pos.getX(), pos.getY() + hn, pos.getZ(),
+                        pos.getX() + 1, pos.getY() + bn, pos.getZ() + 1
+                    );
+                case ZN:
+                    return new AxisAlignedBB(
+                        pos.getX(), pos.getY(), pos.getZ() + b,
+                        pos.getX() + 1, pos.getY() + 1, pos.getZ() + h
+                    );
+                case ZP:
+                    return new AxisAlignedBB(
+                        pos.getX(), pos.getY(), pos.getZ() + hn,
+                        pos.getX() + 1, pos.getY() + 1, pos.getZ() + bn
+                    );
+            }
+        }
+        
+        // Default: small center box
+        return new AxisAlignedBB(
+            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5
+        );
+    }
+
+    // No collision - cables are like redstone wire, no physical collision
+    @Override
+    public void addCollisionBoxToList(IBlockState state, World worldIn, BlockPos pos, AxisAlignedBB entityBox, List<AxisAlignedBB> collidingBoxes, @Nullable Entity collidingEntity, boolean p_185477_7_) {
+        // Cables have no collision boxes - entities pass through them like redstone wire
     }
 
     // TODO(1.10): This has to be done with block-states now.

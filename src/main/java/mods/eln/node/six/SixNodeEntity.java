@@ -38,7 +38,6 @@ public class SixNodeEntity extends NodeBlockEntity {
         super.serverPublishUnserialize(stream);
 
         try {
-
             sixNodeCacheBlock = Block.getBlockById(stream.readInt());
             sixNodeCacheBlockMeta = stream.readByte();
 
@@ -57,20 +56,9 @@ public class SixNodeEntity extends NodeBlockEntity {
                     elementRenderList[idx].publishUnserialize(stream);
                 }
             }
-
         } catch (IOException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
-
-        //	world.setLightValue(EnumSkyBlock.Sky, xCoord,yCoord,zCoord,15);
-        // TODO(1.10): This is hopefully unneeded.
-//        if (sixNodeCacheBlock != sixNodeCacheBlockOld) {
-//            Chunk chunk = world.getChunkFromBlockCoords(pos);
-//            chunk.generateHeightMap();
-//            Utils.updateSkylight(chunk);
-//            chunk.generateSkylightMap();
-//            Utils.updateAllLightTypes(world, xCoord, yCoord, zCoord);
-//        }
     }
 
     @Override
@@ -179,9 +167,7 @@ public class SixNodeEntity extends NodeBlockEntity {
 
     @Override
     public String getNodeUuid() {
-        return "";
-        // TODO(1.12)
-        //return Eln.sixNodeBlock.getNodeUuid();
+        return "s";
     }
 
     @Override

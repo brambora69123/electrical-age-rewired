@@ -135,7 +135,7 @@ public class TransparentNodeEntity extends NodeBlockEntity implements ISidedInve
 
     @Override
     public String getNodeUuid() {
-        return null; // TODO(1.12): Eln.transparentNodeBlock.getNodeUuid();
+        return "t";
     }
 
     @Override

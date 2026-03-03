@@ -2,10 +2,8 @@ package mods.eln.server;
 
 import mods.eln.item.electricalitem.TreeCapitation;
 import mods.eln.misc.Coordinate;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
-import net.minecraftforge.fml.common.gameevent.TickEvent.ServerTickEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 import mods.eln.Eln;
 import mods.eln.misc.Utils;
 import mods.eln.node.NodeManager;
@@ -19,6 +17,7 @@ import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.event.world.WorldEvent.Load;
 import net.minecraftforge.event.world.WorldEvent.Save;
 import net.minecraftforge.event.world.WorldEvent.Unload;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.io.*;
 import java.nio.file.*;
@@ -35,8 +34,8 @@ public class ServerEventListener {
     }
 
     @SubscribeEvent
-    public void tick(ServerTickEvent event) {
-        if (event.phase != Phase.END) return;
+    public void tick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
 
         lightningList = lightningListNext;
         lightningListNext = new LinkedList<EntityLightningBolt>();
@@ -152,6 +151,8 @@ public class ServerEventListener {
     static void readFromEaWorldNBT(NBTTagCompound nbt) {
         try {
             NodeManager.instance.loadFromNbt(nbt.getCompoundTag("nodes"));
+            // Schedule sync of all loaded nodes to clients
+            needsNodeSync = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -160,6 +161,22 @@ public class ServerEventListener {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static boolean needsNodeSync = false;
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        if (!needsNodeSync) return;
+        
+        needsNodeSync = false;
+        System.out.println("Syncing " + NodeManager.instance.getNodes().size() + " nodes to clients...");
+        for (mods.eln.node.NodeBase node : NodeManager.instance.getNodes()) {
+            node.setNeedPublish(true);
+            node.publishToAllPlayer();
+        }
+        System.out.println("Node sync complete");
     }
 
     static void writeToEaWorldNBT(NBTTagCompound nbt, int dim) {

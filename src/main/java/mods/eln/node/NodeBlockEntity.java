@@ -159,7 +159,8 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
     public void onLoad()
     {
         if (!world.isRemote) {
-            // world.setBlock(xCoord, yCoord, zCoord, 0);
+            // Don't call getNode() here - NodeManager hasn't loaded yet!
+            // The node will be lazily loaded when first accessed (rendering/interaction)
         } else {
             clientList.add(this);
         }
@@ -234,7 +235,11 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
             } else {
                 Utils.println("ASSERT WRONG TYPE public Node getNode " + new Coordinate(pos, world));
             }
-            if (node == null) DelayedBlockRemove.add(new Coordinate(pos, this.world));
+            // Don't add to DelayedBlockRemove if NodeManager just hasn't loaded yet
+            // Only add if NodeManager exists but doesn't have this node
+            if (node == null && NodeManager.instance != null && NodeManager.instance.getNodes().size() > 0) {
+                DelayedBlockRemove.add(new Coordinate(pos, this.world));
+            }
         }
         return node;
     }
@@ -256,8 +261,9 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
     public SPacketUpdateTileEntity getUpdatePacket() {
         Node node = getNode();
         if (node == null) {
-            Utils.println("ASSERT NULL NODE public Packet getDescriptionPacket() nodeblock entity");
-            return null;
+            Utils.println("ASSERT NULL NODE public Packet getDescriptionPacket() nodeblock entity at " + pos);
+            // Return a packet anyway to sync the TileEntity existence
+            return new SPacketUpdateTileEntity(getPos(), getBlockMetadata(), new NBTTagCompound());
         }
 
         NBTTagCompound tagCompound = new NBTTagCompound();

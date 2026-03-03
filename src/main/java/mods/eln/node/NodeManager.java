@@ -55,14 +55,16 @@ public class NodeManager extends WorldSavedData {
         }
 
         nodes.add(node);
-        Utils.println("NodeManager has " + nodesMap.size() + "node");
+        setDirty(true); // Mark for saving
+        Utils.println("NodeManager has " + nodesMap.size() + " node(s)");
     }
 
     public void removeNode(NodeBase node) {
         if (node == null) return;
         nodesMap.remove(node.coordinate);
         nodes.remove(node);
-        Utils.println("NodeManager has " + nodesMap.size() + "node");
+        setDirty(true); // Mark for saving
+        Utils.println("NodeManager has " + nodesMap.size() + " node(s)");
     }
 
     public void removeCoordinate(Coordinate c) {
@@ -147,6 +149,8 @@ public class NodeManager extends WorldSavedData {
 
 
     public void loadFromNbt(NBTTagCompound nbt) {
+        if (nbt == null) return;
+        
         List<NodeBase> addedNode = new ArrayList<NodeBase>();
         for (Object o : Utils.getTags(nbt)) {
             NBTTagCompound tag = (NBTTagCompound) o;
@@ -189,7 +193,6 @@ public class NodeManager extends WorldSavedData {
             }
 
         }
-
     }
 
     public void clear() {

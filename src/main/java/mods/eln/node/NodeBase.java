@@ -102,13 +102,13 @@ public abstract class NodeBase {
         neighborOpaque = 0;
         neighborWrapable = 0;
         for (Direction direction : Direction.values()) {
-            BlockPos.MutableBlockPos pos = coordinate.pos;
-            vector = Utils.posToArray(pos);
+            vector = Utils.posToArray(coordinate.pos);
             direction.applyTo(vector, 1);
+            BlockPos neighborPos = new BlockPos(vector[0], vector[1], vector[2]);
 
-            Block b = world.getBlockState(pos).getBlock();
+            Block b = world.getBlockState(neighborPos).getBlock();
             neighborOpaque |= 1 << direction.getInt();
-            if (isBlockWrappable(b, world, pos)) {
+            if (isBlockWrappable(b, world, neighborPos)) {
                 neighborWrapable |= 1 << direction.getInt();
             }
         }
@@ -531,13 +531,21 @@ public abstract class NodeBase {
 
     public void publishToAllPlayer() {
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
-        for (Object obj : server.getEntityWorld().playerEntities) {
-            EntityPlayerMP player = (EntityPlayerMP) obj;
-            WorldServer worldServer = server.getWorld(player.dimension);
-            if (player.dimension != this.coordinate.getDimension()) continue;
-            if (!worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16)) continue;
+        WorldServer[] worlds = server.worlds;
+        for (int dimId = 0; dimId < worlds.length; dimId++) {
+            WorldServer worldServer = worlds[dimId];
+            if (worldServer == null) continue;
+            for (Object obj : worldServer.playerEntities) {
+                EntityPlayerMP player = (EntityPlayerMP) obj;
+                if (player.dimension != this.coordinate.getDimension()) continue;
+                boolean watching = worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16);
+                System.out.println("publishToAllPlayer: player=" + player.getName() + " pos=" + coordinate.pos + " watching=" + watching);
+                if (!watching) continue;
 
-            Utils.sendPacketToClient(getPublishPacket(), player);
+                ByteArrayOutputStream packet = getPublishPacket();
+                System.out.println("publishToAllPlayer: packet size=" + (packet != null ? packet.size() : "null"));
+                Utils.sendPacketToClient(packet, player);
+            }
         }
         if (needNotify) {
             needNotify = false;

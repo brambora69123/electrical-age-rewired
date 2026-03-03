@@ -79,10 +79,13 @@ public class SixNode extends Node {
     }
 
     public boolean createSubBlock(ItemStack itemStack, Direction direction, EntityPlayer player) {
+        Utils.println("SixNode.createSubBlock: direction=" + direction + " itemStack=" + itemStack);
 
         SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(itemStack);
-        if (sideElementList[direction.getInt()] != null)
+        if (sideElementList[direction.getInt()] != null) {
+            Utils.println("SixNode.createSubBlock: side already occupied!");
             return false;
+        }
         try {
             //Object bool = descriptor.ElementClass.getMethod("canBePlacedOnSide",Direction.class,SixNodeDescriptor.class).invoke(null, direction,descriptor);
             //if((Boolean)bool == false) return false;
@@ -97,27 +100,27 @@ public class SixNode extends Node {
 
             connect();
 
-            Utils.println("createSubBlock " + sideElementIdList[direction.getInt()] + " " + direction);
+            Utils.println("SixNode.createSubBlock: SUCCESS " + sideElementIdList[direction.getInt()] + " " + direction);
 
             setNeedPublish(true);
             return true;
         } catch (InstantiationException e) {
-
+            Utils.println("SixNode.createSubBlock: InstantiationException");
             e.printStackTrace();
         } catch (IllegalAccessException e) {
-
+            Utils.println("SixNode.createSubBlock: IllegalAccessException");
             e.printStackTrace();
         } catch (IllegalArgumentException e) {
-
+            Utils.println("SixNode.createSubBlock: IllegalArgumentException");
             e.printStackTrace();
         } catch (InvocationTargetException e) {
-
+            Utils.println("SixNode.createSubBlock: InvocationTargetException");
             e.printStackTrace();
         } catch (NoSuchMethodException e) {
-
+            Utils.println("SixNode.createSubBlock: NoSuchMethodException");
             e.printStackTrace();
         } catch (SecurityException e) {
-
+            Utils.println("SixNode.createSubBlock: SecurityException");
             e.printStackTrace();
         }
         return false;
@@ -141,11 +144,18 @@ public class SixNode extends Node {
 
 
     public boolean playerAskToBreakSubBlock(EntityPlayerMP entityPlayer, Direction direction) {
+        Utils.println("SixNode.playerAskToBreakSubBlock: direction=" + direction);
+        Utils.println("SixNode.playerAskToBreakSubBlock: sideElementList[" + direction.getInt() + "]=" + sideElementList[direction.getInt()]);
 
-        if (sideElementList[direction.getInt()] == null)
+        if (sideElementList[direction.getInt()] == null) {
+            Utils.println("SixNode.playerAskToBreakSubBlock: side is null, calling deleteSubBlock");
             return deleteSubBlock(entityPlayer, direction);
+        }
 
-        if (sideElementList[direction.getInt()].playerAskToBreak()) {
+        boolean canBreak = sideElementList[direction.getInt()].playerAskToBreak();
+        Utils.println("SixNode.playerAskToBreakSubBlock: playerAskToBreak returned " + canBreak);
+        
+        if (canBreak) {
             return deleteSubBlock(entityPlayer, direction);
         } else {
             return false;
@@ -154,11 +164,14 @@ public class SixNode extends Node {
     }
 
     public boolean deleteSubBlock(EntityPlayerMP entityPlayer, Direction direction) {
+        Utils.println("SixNode.deleteSubBlock: direction=" + direction);
 
-        if (sideElementList[direction.getInt()] == null)
+        if (sideElementList[direction.getInt()] == null) {
+            Utils.println("SixNode.deleteSubBlock: side is already null");
             return false;
+        }
 
-        Utils.println("deleteSubBlock " + " " + direction);
+        Utils.println("SixNode.deleteSubBlock: deleting " + direction);
 
         disconnect();
         SixNodeElement e = sideElementList[direction.getInt()];
@@ -195,28 +208,28 @@ public class SixNode extends Node {
                 sideElementIdList[idx] = 0;
             } else {
                 try {
-                    SixNodeDescriptor descriptor = null; // TODO(1.12) Eln.sixNodeItem.getDescriptor(sideElementId);
+                    SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(sideElementId);
+                    if (descriptor == null) {
+                        Utils.println("Warning: Unknown SixNodeDescriptor for id " + sideElementId + ", skipping");
+                        sideElementList[idx] = null;
+                        sideElementIdList[idx] = 0;
+                        continue;
+                    }
                     sideElementIdList[idx] = sideElementId;
                     sideElementList[idx] = (SixNodeElement) descriptor.ElementClass.getConstructor(SixNode.class, Direction.class, SixNodeDescriptor.class).newInstance(this, Direction.fromInt(idx), descriptor);
                     sideElementList[idx].readFromNBT(nbt.getCompoundTag("ED" + idx));
                     sideElementList[idx].initialize();
                 } catch (InstantiationException e) {
-
                     e.printStackTrace();
                 } catch (IllegalAccessException e) {
-
                     e.printStackTrace();
                 } catch (IllegalArgumentException e) {
-
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {
-
                     e.printStackTrace();
                 } catch (NoSuchMethodException e) {
-
                     e.printStackTrace();
                 } catch (SecurityException e) {
-
                     e.printStackTrace();
                 }
             }
@@ -608,9 +621,7 @@ public class SixNode extends Node {
 
     @Override
     public String getNodeUuid() {
-        // TODO(1.12)
-        return "";
-//        return Eln.sixNodeBlock.getNodeUuid();
+        return "s";
     }
 
     @Override
