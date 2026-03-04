@@ -783,27 +783,37 @@ public class Utils {
 	 */
 
     public static void notifyNeighbor(TileEntity t) {
-        BlockPos pos = t.getPos();
-        World w = t.getWorld();
-        TileEntity o;
-        o = w.getTileEntity(pos.add(1, 0, 0));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
-        o = w.getTileEntity(pos.add(-1, 0, 0));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
-        o = w.getTileEntity(pos.add(0, 1, 0));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
-        o = w.getTileEntity(pos.add(0, -1, 0));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
-        o = w.getTileEntity(pos.add(0, 0, 1));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
-        o = w.getTileEntity(pos.add(0, 0, -1));
-        if (o != null && o instanceof ITileEntitySpawnClient)
-            ((ITileEntitySpawnClient) o).tileEntityNeighborSpawn();
+        notifyNodeNeighbors(t.getWorld(), t.getPos());
+    }
+
+    /**
+     * Notifies all blocks in a 3x3x3 area to update.
+     * This is crucial for ELN nodes that can connect diagonally/around corners.
+     */
+    public static void notifyNodeNeighbors(World world, BlockPos pos) {
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (x == 0 && y == 0 && z == 0) continue;
+                    BlockPos neighborPos = pos.add(x, y, z);
+                    
+                    // Notify TileEntities that implement ITileEntitySpawnClient (ELN standard)
+                    TileEntity te = world.getTileEntity(neighborPos);
+                    if (te instanceof ITileEntitySpawnClient) {
+                        ((ITileEntitySpawnClient) te).tileEntityNeighborSpawn();
+                    }
+                    
+                    // Trigger block update to force re-render on client
+                    IBlockState state = world.getBlockState(neighborPos);
+                    world.notifyBlockUpdate(neighborPos, state, state, 3);
+                }
+            }
+        }
+        
+        // Notify direct neighbors for redstone/logic updates
+        world.notifyNeighborsRespectDebug(pos, world.getBlockState(pos).getBlock(), true);
+        // Force render update for the immediate area
+        world.markBlockRangeForRenderUpdate(pos.add(-1, -1, -1), pos.add(1, 1, 1));
     }
 
     public static boolean playerHasMeter(EntityPlayer entityPlayer) {

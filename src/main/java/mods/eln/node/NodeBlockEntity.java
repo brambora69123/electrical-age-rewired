@@ -46,8 +46,6 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
         try {
             if (firstUnserialize) {
                 firstUnserialize = false;
-                Utils.notifyNeighbor(this);
-
             }
             Byte b = stream.readByte();
             light = b & 0xF;
@@ -66,6 +64,8 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
             world.checkLightFor(EnumSkyBlock.BLOCK, getPos());
         }
 
+        // Always notify neighbors so adjacent cables redraw their connections
+        Utils.notifyNeighbor(this);
     }
 
     @Override
@@ -273,6 +273,26 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
             getBlockMetadata(),
             tagCompound
         );
+    }
+
+    @Override
+    public NBTTagCompound getUpdateTag() {
+        NBTTagCompound tag = super.getUpdateTag();
+        Node node = getNode();
+        if (node != null) {
+            tag.setByteArray("eln", node.getPublishPacket().toByteArray());
+        }
+        return tag;
+    }
+
+    @Override
+    public void handleUpdateTag(NBTTagCompound tag) {
+        super.handleUpdateTag(tag);
+        if (tag.hasKey("eln")) {
+            byte[] bytes = tag.getByteArray("eln");
+            DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
+            Eln.packetHandler.packetRx(dataInputStream, null, Minecraft.getMinecraft().player);
+        }
     }
 
     @Override

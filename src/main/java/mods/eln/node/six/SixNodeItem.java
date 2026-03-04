@@ -138,7 +138,6 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
         if (world.isAirBlock(pos) || blockOld.isReplaceable(world, pos)) {
             // Require solid block behind for new placement
             if (!block.getIfOtherBlockIsSolid(world, pos, direction)) {
-                Utils.sendMessage(player, "Need solid block behind!");
                 return false;
             }
             
@@ -197,21 +196,20 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
 
             // Check if target face is already occupied
             if (sixNode.getSideEnable(direction)) {
-                Utils.sendMessage(player, "Face already occupied!");
                 return false;
             }
 
             // Check for solid block behind
             if (!block.getIfOtherBlockIsSolid(world, pos, direction)) {
-                Utils.sendMessage(player, "Need solid block behind!");
                 return false;
             }
 
             boolean created = sixNode.createSubBlock(stack, direction, player);
             if (!created) return false;
 
-            // Mark TileEntity dirty and reconnect
+            // Mark TileEntity dirty, re-read neighbors, and reconnect
             tileEntity.markDirty();
+            sixNode.neighborBlockRead();
             sixNode.reconnect();
             
             IBlockState oldState = world.getBlockState(pos);
@@ -227,20 +225,10 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
      * Helper method to notify neighbors and trigger updates for cable placement/breaking.
      */
     private void notifyNeighborsAndUpdate(World world, BlockPos pos, SixNodeBlock block, SixNode sixNode, IBlockState oldState, IBlockState newState) {
-        // Notify neighboring SixNodeBlocks to update their connections
-        for (Direction dir : Direction.values()) {
-            BlockPos neighborPos = dir.applied(pos, 1);
-            if (world.getBlockState(neighborPos).getBlock() == block) {
-                world.notifyBlockUpdate(neighborPos, world.getBlockState(neighborPos), world.getBlockState(neighborPos), 3);
-                TileEntity neighborTE = world.getTileEntity(neighborPos);
-                if (neighborTE != null) neighborTE.markDirty();
-            }
-        }
+        // Use consolidated 3x3x3 notification for wrappable/corner connections
+        Utils.notifyNodeNeighbors(world, pos);
 
-        world.notifyNeighborsRespectDebug(pos, block, true);
-        world.markBlockRangeForRenderUpdate(pos.add(-1, -1, -1), pos.add(1, 1, 1));
         world.notifyBlockUpdate(pos, oldState, newState, 3);
-        
         sixNode.setNeedPublish(true);
         sixNode.publishToAllPlayer();
     }
