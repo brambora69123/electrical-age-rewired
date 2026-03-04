@@ -162,7 +162,7 @@ public class ConsoleListener extends CommandBase {
         } else if (cmd.equalsIgnoreCase(cmdNameStr_generateLangFileTemplate)) {
             cprint(sender, Color.COLOR_DARK_CYAN + "ELN > " + Color.COLOR_DARK_YELLOW + cmdNameStr_generateLangFileTemplate);
             cprint(sender, strOffsetL0 + "New language system parses source code, see here how to generate language " +
-                "files: https://github.com/Electrical-Age/ElectricalAge");
+                "files: https://github.com/brambora69123/electrical-age-rewired");
         } else {
             cprint(sender, Color.COLOR_DARK_CYAN + "ELN > " + Color.COLOR_DARK_RED + "Error: Unknown command.");
         }

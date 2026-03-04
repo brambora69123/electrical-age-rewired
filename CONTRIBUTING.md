@@ -7,11 +7,10 @@ This is an open source project. We appreciate any help from the community to imp
 Did you found a bug or do you have an idea how to improve the mod? We are happy to hear from you.
 
 - [Discord](https://discord.gg/YjK2JAD)
-- [IRC Channel](https://qchat.rizon.net/?channels=electricalage)
-- [Bug Tracker](https://github.com/Electrical-Age/ElectricalAge/issues)
+- [Bug Tracker](https://github.com/brambora69123/electrical-age-rewired/issues)
 
-Contributions via [pull request](https://github.com/Electrical-Age/ElectricalAge/pulls),
-and [bug reports](https://github.com/Electrical-Age/ElectricalAge/issues) are welcome!
+Contributions via [pull request](https://github.com/brambora69123/electrical-age-rewired/pulls),
+and [bug reports](https://github.com/brambora69123/electrical-age-rewired/issues) are welcome!
 Please submit your pull request to the `develop` branch and use the GitHub issue tracker to report issues.
 
 ### Translations

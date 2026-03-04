@@ -5,7 +5,7 @@
 - Fixed a world-destroying bug in the saving code, which only affected Windows.
 
   If you've been affected, see
-  https://github.com/Electrical-Age/ElectricalAge/issues/673 for a possible
+  https://github.com/brambora69123/electrical-age-rewired/issues/673 for a possible
   recovery method.
   
 - Typing /eln without a parameter will now list the commands.
@@ -119,7 +119,7 @@ As always, we will grant wiki editing access to anyone who shows up
 - You are now able to burn a few more fuel variants...
 
   Anything not already on the list is due to oversights. Take a look at
-  [FuelRegistry.kt](https://github.com/Electrical-Age/ElectricalAge/blob/3e7db53eac084b4f2770139949630d01f72a8767/src/main/java/mods/eln/fluid/FuelRegistry.kt),
+  [FuelRegistry.kt](https://github.com/brambora69123/electrical-age-rewired/blob/3e7db53eac084b4f2770139949630d01f72a8767/src/main/java/mods/eln/fluid/FuelRegistry.kt),
   check if your preferred fuel is there, and if not consider opening an issue or
   filing a pull request.
   

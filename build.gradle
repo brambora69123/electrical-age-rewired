@@ -308,7 +308,7 @@ tasks.named('clean') {
 // Helper to get Minecraft directory for copying JAR
 def getMinecraftDir() {
     String outDir = ""
-    final String osName = System.getProperty("os.name").lowercase()
+    final String osName = System.getProperty("os.name").toLowercase()
     if (osName.contains('windows'))
         outDir = System.getenv("APPDATA") + "/.minecraft"
     else if (osName.contains('os x') || osName.contains('mac'))

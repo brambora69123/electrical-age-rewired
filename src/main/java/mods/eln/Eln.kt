@@ -192,14 +192,14 @@ class Eln {
         const val VERSION = "2.0"
         const val ACCEPTABLE_SAVE_VERSIONS = "[2.0)"
         const val ACCEPTABLE_MINECRAFT_VERSION = "1.12.2"
-        const val NAME = "Electrical Age"
+        const val NAME = "Electrical Age: Re-Wired"
         const val DEPENDENCIES = ""
-        const val URL = "https://electrical-age.net"
+        const val URL = "https://github.com/brambora69123/electrical-age-rewired"
         // TODO(1.12): Use Mod.updateJSON.
-        const val UPDATE_URL = "https://github.com/Electrical-Age/ElectricalAge/releases"
-        const val SRC_URL = "https://github.com/Electrical-Age"
+        const val UPDATE_URL = "https://github.com/brambora69123/electrical-age-rewired/releases"
+        const val SRC_URL = "https://github.com/brambora69123/electrical-age-rewired"
         @JvmField
-        val AUTHORS = arrayOf("Dolu1990", "lambdaShade", "cm0x4D", "metc", "Baughn")
+        val AUTHORS = arrayOf("brambora69123", "Dolu1990", "lambdaShade", "cm0x4D", "metc", "Baughn")
 
         // Client proxy - initialized by Forge via @SidedProxy
         @SidedProxy(clientSide = "mods.eln.client.ClientProxy", serverSide = "mods.eln.CommonProxy")
