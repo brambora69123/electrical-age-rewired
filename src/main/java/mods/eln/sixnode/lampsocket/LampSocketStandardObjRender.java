@@ -8,7 +8,7 @@ import mods.eln.misc.UtilsClient;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
-public class LampSocketStandardObjRender { // implements LampSocketObjRender {
+public class LampSocketStandardObjRender implements LampSocketObjRender {
 
     private Obj3D obj;
     private Obj3DPart socket, socket_unlightable, socket_lightable, lampOn, lampOff, lightAlphaPlane, lightAlphaPlaneNoDepth;
@@ -31,32 +31,13 @@ public class LampSocketStandardObjRender { // implements LampSocketObjRender {
         }
     }
 
-    // TODO(1.10): Fix item rendering.
-//    @Override
-//    public void draw(LampSocketDescriptor descriptor, ItemRenderType type, double distanceToPlayer) {
-//        if (type == ItemRenderType.INVENTORY) {
-//            if (descriptor.hasGhostGroup()) {
-//                GL11.glScalef(0.5f, 0.5f, 0.5f);
-//                GL11.glRotatef(90, 0, -1, 0);
-//                GL11.glTranslatef(-1.5f, 0f, 0f);
-//            }
-//        } else if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
-//            if (descriptor.hasGhostGroup()) {
-//                GL11.glScalef(0.3f, 0.3f, 0.3f);
-//                GL11.glRotatef(90, 0, -1, 0);
-//                GL11.glTranslatef(-0.5f, 0f, -1f);
-//            }
-//        }
-//        draw(LRDU.Up, 0, (byte) 0, true, 15, distanceToPlayer);
-//    }
-
-//    @Override
-//    public void draw(LampSocketRender render, double distanceToPlayer) {
-//        int color = 15;
-//        if (render.descriptor.paintable)
-//            color = render.paintColor;
-//        draw(render.front, render.alphaZ, render.light, render.lampDescriptor != null, color, distanceToPlayer);
-//    }
+    @Override
+    public void draw(LampSocketRender render, double distanceToPlayer) {
+        int color = 15;
+        if (render.descriptor.paintable)
+            color = render.paintColor;
+        draw(render.front, render.alphaZ, render.light, render.lampDescriptor != null, color, distanceToPlayer);
+    }
 
     public void draw(LRDU front, float alphaZ, byte light, boolean hasBulb, int color, double distanceToPlayer) {
         front.glRotateOnX();

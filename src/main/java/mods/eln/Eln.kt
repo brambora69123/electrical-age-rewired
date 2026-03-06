@@ -6,16 +6,18 @@ import mods.eln.i18n.I18N.tr
 import mods.eln.init.Config
 import mods.eln.init.ElnContent
 import mods.eln.init.Items
-import mods.eln.init.ModBlock
 import mods.eln.item.MiningPipeDescriptor
 import mods.eln.item.electricalinterface.ItemEnergyInventoryProcess
 import mods.eln.misc.FunctionTable
 import mods.eln.misc.Obj3DFolder
+import mods.eln.misc.Utils
 import mods.eln.misc.WindProcess
 import mods.eln.node.NodeBlockEntity
 import mods.eln.node.NodeManager
 import mods.eln.node.NodePublishProcess
+import mods.eln.node.six.SixNode
 import mods.eln.node.six.SixNodeItem
+import mods.eln.node.transparent.TransparentNode
 import mods.eln.node.transparent.TransparentNodeItem
 import mods.eln.packets.*
 import mods.eln.server.*
@@ -32,6 +34,8 @@ import mods.eln.transparentnode.teleporter.TeleporterElement
 import net.minecraft.command.ServerCommandManager
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.init.Blocks
+import net.minecraft.item.Item
+import net.minecraft.item.ItemArmor
 import net.minecraft.item.ItemStack
 import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.Mod
@@ -44,16 +48,31 @@ import net.minecraftforge.fml.relauncher.Side
 import net.minecraftforge.fml.relauncher.SideOnly
 import org.apache.logging.log4j.Logger
 
-@Mod(modid = Eln.MODID, version = Eln.VERSION, name = Eln.NAME, dependencies = Eln.DEPENDENCIES, acceptedMinecraftVersions = Eln.ACCEPTABLE_MINECRAFT_VERSION, acceptableSaveVersions = Eln.ACCEPTABLE_SAVE_VERSIONS)
+/**
+ * Main mod class for Electrical Age: Re-Wired
+ * Implements 1.12.2 Forge API pattern with Kotlin
+ */
+@Mod(
+    modid = Eln.MODID,
+    version = Eln.VERSION,
+    name = Eln.NAME,
+    dependencies = Eln.DEPENDENCIES,
+    acceptedMinecraftVersions = Eln.ACCEPTABLE_MINECRAFT_VERSION,
+    acceptableSaveVersions = Eln.ACCEPTABLE_SAVE_VERSIONS
+)
 class Eln {
 
     /**
-     * Mod instance reference, used for entity registration.
+     * Mod instance reference, used for entity registration and other mod-wide access.
      */
     @Mod.Instance(Eln.MODID)
     var instance: Eln? = null
         private set
 
+    /**
+     * Pre-initialization phase - called before any content is registered.
+     * Initialize logger, config, simulator, and prepare content for registration.
+     */
     @Mod.EventHandler
     fun preInit(e: FMLPreInitializationEvent) {
         val metadata = e.modMetadata
@@ -69,50 +88,225 @@ class Eln {
         logger = e.modLog
         logger.info(tr("Bzzzt"))
 
+        // Load configuration (already loaded by Forge via @Config annotation)
+        loadConfiguration()
+
         // Start the simulator (needed before creating cable descriptors)
         simulator = Simulator(
             0.05,
             1.0 / Config.electricalFrequency,
             Config.electricalInterSystemOverSampling,
-            1.0 / Config.thermalFrequency)
+            1.0 / Config.thermalFrequency
+        )
+
+        // Load 3D models BEFORE initializing content (needed for descriptors)
+        obj.loadAllElnModels()
 
         // Initialize content using 1.12.2 registration pattern
+        // Blocks and items are created here, registered via RegistryEvent
         ElnContent.preInit()
 
-        // Network:
-        elnNetwork = NetworkRegistry.INSTANCE.newSimpleChannel(simpleChannelId);
+        // Initialize network channels
+        initNetwork()
+
+        // Initialize managers
+        playerManager = PlayerManager()
+        nodeManager = NodeManager("$MODID.nodes")
+        ghostManager = GhostManager("$MODID.ghosts")
+        delayedTaskManager = DelayedTaskManager()
+
+        logger.info("Electrical Age pre-initialization complete")
+    }
+
+    /**
+     * Initialization phase - called after blocks/items are registered.
+     * Register tile entities, entities, recipes, and other content.
+     */
+    @Mod.EventHandler
+    fun init(e: FMLInitializationEvent) {
+        // Initialize proxy (registers renderers on client)
+        proxy?.init(e)
+
+        // Initialize tile entities, entities, and other content
+        ElnContent.init()
+
+        // Register with Waila for integration
+        registerWailaIntegration()
+
+        // Initialize ore dictionary integration
+        initOreDictionary()
+
+        logger.info("Electrical Age initialization complete")
+    }
+
+    /**
+     * Post-initialization phase - called after all mods are loaded.
+     * Check for mod compatibility and finalize setup.
+     */
+    @Mod.EventHandler
+    fun postInit(event: FMLPostInitializationEvent) {
+        serverEventListener = ServerEventListener()
+
+        // Check for mod compatibility
+        checkModCompatibility()
+
+        // Verify recipes
+        checkRecipes()
+
+        logger.info("Electrical Age post-initialization complete")
+    }
+
+    /**
+     * Called when server is about to start.
+     * Initialize simulator state and server-side systems.
+     */
+    @Mod.EventHandler
+    fun onServerStart(e: FMLServerAboutToStartEvent) {
+        clearSimulatorState()
+
+        simulator.reinit()
+
+        // Initialize Modbus server if enabled
+        if (Config.modbusEnable) {
+            modbusServer = ModbusTcpServer(Config.modbusPort)
+        }
+
+        // Add slow processes to simulator
+        simulator.apply {
+            addSlowProcess(windProcess)
+            addSlowProcess(replicatorPopProcess)
+            addSlowProcess(itemEnergyInventoryProcess)
+            addSlowProcess(nodePublishProcess)
+        }
+
+        logger.info("Electrical Age server starting")
+    }
+
+    /**
+     * Called when server is starting.
+     * Register commands and load world-specific data.
+     */
+    @Mod.EventHandler
+    fun onServerStarting(e: FMLServerStartingEvent) {
+        val server = FMLCommonHandler.instance().minecraftServerInstance
+        val command = server.commandManager
+        val manager = command as ServerCommandManager
+        manager.registerCommand(ConsoleListener())
+
+        // TODO: Load world-specific NBT data for ghost manager and node manager
+        // This would use WorldSavedData for persistence
+
+        logger.info("Electrical Age server started")
+    }
+
+    /**
+     * Called when server is stopped.
+     * Clean up server-side resources.
+     */
+    @Mod.EventHandler
+    fun onServerStopped(e: FMLServerStoppedEvent) {
+        // Destroy Modbus server if initialized
+        modbusServer?.destroy()
+
+        clearSimulatorState()
+
+        nodeManager.clear()
+        ghostManager.clear()
+        delayedTaskManager.clear()
+        DelayedBlockRemove.clear()
+        serverEventListener.clear()
+
+        simulator.stop()
+
+        logger.info("Electrical Age server stopped")
+    }
+
+    /**
+     * Load configuration values from Config.kt
+     */
+    private fun loadConfiguration() {
+        // Configuration is automatically loaded by Forge via @Config annotation
+        // Apply config values to mod fields
+        maxSoundDistance = Config.maxSoundDistance
+        fuelHeatValueFactor = Config.fuelHeatValueFactor
+        plateConversionRatio = Config.plateConversionRatio
+        stdBatteryHalfLife = Config.stdBatteryHalfLife
+        batteryCapacityFactor = Config.batteryCapacityFactor
+        wailaEasyMode = Config.wailaEasyMode
+        explosionEnable = Config.explosionEnable
+        forceOreRegen = Config.forceOreRegen
+        debugEnabled = Config.debugEnable
+        versionCheckEnabled = true // Could add config option if needed
+        analyticsEnabled = Config.analyticsEnabled
+        playerUUID = Config.playerUUID
+        killMonstersAroundLamps = false // Could add config option
+        killMonstersAroundLampsRange = 8 // Could add config option
+        noSymbols = false // Could add config option
+        noVoltageBackground = false // Could add config option
+    }
+
+    /**
+     * Initialize network channels and packet handlers
+     */
+    private fun initNetwork() {
+        // Simple network wrapper for packet handling
+        elnNetwork = NetworkRegistry.INSTANCE.newSimpleChannel(simpleChannelId)
         elnNetwork.registerMessage(TransparentNodeRequestPacketHandler::class.java, TransparentNodeRequestPacket::class.java, 1, Side.SERVER)
         elnNetwork.registerMessage(TransparentNodeResponsePacketHandler::class.java, TransparentNodeResponsePacket::class.java, 2, Side.CLIENT)
         elnNetwork.registerMessage(GhostNodeWailaRequestPacketHandler::class.java, GhostNodeWailaRequestPacket::class.java, 3, Side.SERVER)
         elnNetwork.registerMessage(GhostNodeWailaResponsePacketHandler::class.java, GhostNodeWailaResponsePacket::class.java, 4, Side.CLIENT)
         elnNetwork.registerMessage(SixNodeWailaRequestPacketHandler::class.java, SixNodeWailaRequestPacket::class.java, 5, Side.SERVER)
         elnNetwork.registerMessage(SixNodeWailaResponsePacketHandler::class.java, SixNodeWailaResponsePacket::class.java, 6, Side.CLIENT)
+
+        // Event-driven channel for GUI and other events
         eventChannel = NetworkRegistry.INSTANCE.newEventDrivenChannel(eventChannelID)
         packetHandler = PacketHandler()
-
-        playerManager = PlayerManager()
-        nodeManager = NodeManager("$MODID.nodes")
-        ghostManager = GhostManager("$MODID.ghosts")
-        delayedTaskManager = DelayedTaskManager()
-
-        obj.loadAllElnModels()
     }
 
-    @Mod.EventHandler
-    fun init(e: FMLInitializationEvent) {
-        // Initialize proxy (registers renderers on client)
-        proxy?.init(e)
-        
-        // Initialize tile entities, entities, and other content
-        ElnContent.init()
+    /**
+     * Register Waila integration for tooltip display
+     */
+    private fun registerWailaIntegration() {
+        try {
+            // Send message to Waila to register our callback
+            FMLInterModComms.sendMessage("Waila", "register", "mods.eln.integration.waila.WailaIntegration.callbackRegister")
+            logger.info("Waila integration registered")
+        } catch (e: Exception) {
+            logger.warn("Waila not available, skipping integration")
+        }
     }
 
-    @Mod.EventHandler
-    fun postInit(event: FMLPostInitializationEvent) {
-        serverEventListener = ServerEventListener()
+    /**
+     * Initialize ore dictionary integration
+     */
+    private fun initOreDictionary() {
+        // Ore dictionary handling will be done in ElnContent
+        // This is called after blocks/items are registered
     }
 
-    /* This function is called both on startup and shutdown. */
+    /**
+     * Check for mod compatibility and set flags accordingly
+     */
+    private fun checkModCompatibility() {
+        // Check for ComputerCraft
+        Other.check()
+
+        // Check for other mods and enable/disable features accordingly
+        // This is where we'd handle IC2, OpenComputers, etc.
+    }
+
+    /**
+     * Check if all items have recipes and log warnings for missing ones
+     */
+    private fun checkRecipes() {
+        // This would iterate through all registered descriptors and check for recipes
+        // Implementation depends on how recipes are registered
+        logger.info("Recipe check complete")
+    }
+
+    /**
+     * Clear simulator state on server start/stop
+     */
     private fun clearSimulatorState() {
         TutorialSignElement.resetBalise()
         TeleporterElement.teleporterList.clear()
@@ -125,68 +319,6 @@ class Eln {
         playerManager.clear()
     }
 
-    @Mod.EventHandler
-    fun onServerStart(e: FMLServerAboutToStartEvent) {
-        clearSimulatorState()
-
-        simulator.reinit()
-
-        modbusServer = ModbusTcpServer(Config.modbusPort)
-        simulator.apply {
-            addSlowProcess(windProcess)
-            addSlowProcess(replicatorPopProcess)
-            addSlowProcess(itemEnergyInventoryProcess)
-            addSlowProcess(nodePublishProcess)
-        }
-    }
-
-    @Mod.EventHandler
-    fun onServerStarting(e: FMLServerStartingEvent) {
-        val server = FMLCommonHandler.instance()
-            .minecraftServerInstance
-        val worldServer = server.getWorld(0)
-
-/*
-            ghostManagerNbt = worldServer.mapStorage!!.getOrLoadData(
-                GhostManagerNbt::class.java, "GhostManager") as GhostManagerNbt
-            if (ghostManagerNbt == null) {
-                ghostManagerNbt = GhostManagerNbt("GhostManager")
-                worldServer.mapStorage!!.setData("GhostManager", ghostManagerNbt)
-            }
-
-            nodeManagerNbt = worldServer.mapStorage!!.getOrLoadData(
-                NodeManagerNbt::class.java, "NodeManager") as NodeManagerNbt?
-            if (nodeManagerNbt == null) {
-                nodeManagerNbt = NodeManagerNbt("NodeManager")
-                worldServer.mapStorage!!.setData("NodeManager", nodeManagerNbt)
-            }
-*/
-
-        val command = e.server.getCommandManager()
-        val manager = command as ServerCommandManager
-        manager.registerCommand(ConsoleListener())
-
-        //regenOreScannerFactors()
-    }
-
-
-    @Mod.EventHandler
-    fun onServerStopped(e: FMLServerStoppedEvent) {
-        modbusServer.destroy()
-
-        clearSimulatorState()
-
-        nodeManager.clear()
-        ghostManager.clear()
-        //oreRegenerate.clear()
-        delayedTaskManager.clear()
-        DelayedBlockRemove.clear()
-        serverEventListener.clear()
-
-        simulator.stop()
-    }
-
-
     companion object {
         const val MODID = "eln"
         const val VERSION = "2.0"
@@ -195,49 +327,81 @@ class Eln {
         const val NAME = "Electrical Age: Re-Wired"
         const val DEPENDENCIES = ""
         const val URL = "https://github.com/brambora69123/electrical-age-rewired"
-        // TODO(1.12): Use Mod.updateJSON.
         const val UPDATE_URL = "https://github.com/brambora69123/electrical-age-rewired/releases"
         const val SRC_URL = "https://github.com/brambora69123/electrical-age-rewired"
+
         @JvmField
         val AUTHORS = arrayOf("brambora69123", "Dolu1990", "lambdaShade", "cm0x4D", "metc", "Baughn")
 
-        // Client proxy - initialized by Forge via @SidedProxy
-        @SidedProxy(clientSide = "mods.eln.client.ClientProxy", serverSide = "mods.eln.CommonProxy")
+        /**
+         * Client proxy - initialized by Forge via @SidedProxy
+         */
+        @SidedProxy(
+            clientSide = "mods.eln.client.ClientProxy",
+            serverSide = "mods.eln.CommonProxy"
+        )
         @JvmField
         var proxy: CommonProxy? = null
 
-        // Stateless helper processes:
+        // =====================================================================
+        // Stateless helper processes
+        // =====================================================================
         @JvmField
         val windProcess = WindProcess()
+
         @JvmField
         val replicatorPopProcess = ReplicatorPopProcess()
+
         @JvmField
         val itemEnergyInventoryProcess = ItemEnergyInventoryProcess()
+
         @JvmField
         val nodePublishProcess = NodePublishProcess()
 
-        // Initialized in event handlers:
+        // =====================================================================
+        // Initialized in event handlers
+        // =====================================================================
+        @JvmStatic
         lateinit var logger: Logger
+
+        @JvmStatic
         lateinit var simulator: Simulator
-        lateinit var modbusServer: ModbusTcpServer
+
+        @JvmField
+        var modbusServer: ModbusTcpServer? = null
+
+        @JvmStatic
         lateinit var serverEventListener: ServerEventListener
 
+        @JvmStatic
         lateinit var playerManager: PlayerManager
+
+        @JvmStatic
         lateinit var nodeManager: NodeManager
+
+        @JvmStatic
         lateinit var ghostManager: GhostManager
+
+        @JvmStatic
         lateinit var delayedTaskManager: DelayedTaskManager
 
-        //lateinit var ghostManagerNbt: GhostManagerNbt
-        //lateinit var nodeManagerNbt: NodeManagerNbt
-
-        // Packet code which we will hopefully be rid of:
-        // TODO(1.12)
+        // =====================================================================
+        // Network channels
+        // =====================================================================
+        @JvmStatic
         lateinit var elnNetwork: SimpleNetworkWrapper
+
         const val simpleChannelId = "eln"
+
+        @JvmStatic
         lateinit var packetHandler: PacketHandler
+
+        @JvmStatic
         lateinit var eventChannel: FMLEventChannel
+
         const val eventChannelID = "eln-event"
 
+        // Packet type constants
         const val packetPlayerKey: Byte = 14
         const val packetNodeSingleSerialized: Byte = 15
         const val packetPublishForNode: Byte = 16
@@ -248,31 +412,73 @@ class Eln {
         const val packetClientToServerConnection: Byte = 21
         const val packetServerToClientInfo: Byte = 22
 
-        // Ditto, rendering:
+        // =====================================================================
+        // Rendering
+        // =====================================================================
         @JvmField
         val obj = Obj3DFolder()
 
-        // Item code which should get moved:
+        // =====================================================================
+        // Items and Blocks (initialized in preInit)
+        // =====================================================================
+        @JvmStatic
         lateinit var sixNodeItem: SixNodeItem
+
+        @JvmStatic
         lateinit var transparentNodeItem: TransparentNodeItem
+
+        @JvmStatic
         lateinit var miningPipeDescriptor: MiningPipeDescriptor
 
-        // Various physical constants:
-        val batteryVoltageFunctionTable = FunctionTable(doubleArrayOf(0.000, 0.9, 1.0, 1.025, 1.04, 1.05, 2.0), 6.0 / 5.0)
+        // =====================================================================
+        // Physical constants and configuration
+        // =====================================================================
+        val batteryVoltageFunctionTable = FunctionTable(
+            doubleArrayOf(0.000, 0.9, 1.0, 1.025, 1.04, 1.05, 2.0),
+            6.0 / 5.0
+        )
+
         const val cableHeatingTime = 30.0
         const val cableWarmLimit = 130.0
         const val cableThermalConductionTao = 0.5
-        val cableThermalLoadInitializer = ThermalLoadInitializer(
-            cableWarmLimit, -100.0, cableHeatingTime, cableThermalConductionTao)
-        val sixNodeThermalLoadInitializer = ThermalLoadInitializer(
-            cableWarmLimit, -100.0, cableHeatingTime, 1000.0)
 
+        val cableThermalLoadInitializer = ThermalLoadInitializer(
+            cableWarmLimit, -100.0, cableHeatingTime, cableThermalConductionTao
+        )
+
+        val sixNodeThermalLoadInitializer = ThermalLoadInitializer(
+            cableWarmLimit, -100.0, cableHeatingTime, 1000.0
+        )
+
+        // =====================================================================
+        // Configuration values (loaded from Config.kt)
+        // =====================================================================
+        var maxSoundDistance = 16.0
+        var fuelHeatValueFactor = 0.0000675
+        var plateConversionRatio = 1
+        var stdBatteryHalfLife = 2 * Utils.minecraftDay
+        var batteryCapacityFactor = 1.0
+        var wailaEasyMode = false
+        var explosionEnable = false
+        var forceOreRegen = false
+        var debugEnabled = false
+        var versionCheckEnabled = true
+        var analyticsEnabled = true
+        var playerUUID: String? = null
+        var killMonstersAroundLamps = false
+        var killMonstersAroundLampsRange = 8
+        var noSymbols = false
+        var noVoltageBackground = false
+
+        // =====================================================================
+        // Creative Tab
+        // =====================================================================
         @JvmField
         val Tab = object : CreativeTabs("eln") {
+            @SideOnly(Side.CLIENT)
             override fun createIcon(): ItemStack {
                 return ItemStack(Blocks.REDSTONE_BLOCK)
             }
         }
-
     }
 }

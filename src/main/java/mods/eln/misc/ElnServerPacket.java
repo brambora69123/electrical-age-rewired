@@ -11,7 +11,6 @@ public class ElnServerPacket implements Packet {
 
     private String channelName;
     private byte[] buf;
-    private static final String __OBFID = "CL_00001297";
 
     public ElnServerPacket(ByteBuf buf) {
         this(Eln.eventChannelID, buf);

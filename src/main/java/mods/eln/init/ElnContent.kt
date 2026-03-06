@@ -1,23 +1,39 @@
 package mods.eln.init
 
 import mods.eln.Eln
+import mods.eln.generic.GenericItemUsingDamageDescriptor
+import mods.eln.ghost.GhostBlock
+import mods.eln.ghost.GhostManager
+import mods.eln.item.MiningPipeDescriptor
+import mods.eln.item.TreeResin
+import mods.eln.item.electricalinterface.ItemEnergyInventoryProcess
+import mods.eln.misc.Obj3DFolder
 import mods.eln.node.NodeBlockEntity
 import mods.eln.node.NodeManager
+import mods.eln.node.NodePublishProcess
 import mods.eln.node.six.SixNode
+import mods.eln.node.six.SixNodeBlock
 import mods.eln.node.six.SixNodeEntity
 import mods.eln.node.six.SixNodeItem
 import mods.eln.node.transparent.TransparentNode
+import mods.eln.node.transparent.TransparentNodeBlock
 import mods.eln.node.transparent.TransparentNodeEntity
 import mods.eln.node.transparent.TransparentNodeEntityWithFluid
 import mods.eln.node.transparent.TransparentNodeItem
+import mods.eln.server.DelayedTaskManager
+import mods.eln.server.PlayerManager
+import mods.eln.sixnode.lampsocket.LightBlock
 import mods.eln.sixnode.lampsocket.LightBlockEntity
+import mods.eln.sixnode.modbusrtu.ModbusTcpServer
 import net.minecraft.block.Block
 import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
 import net.minecraftforge.event.RegistryEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.registry.EntityRegistry
 import net.minecraftforge.fml.common.registry.GameRegistry
+import net.minecraftforge.oredict.OreDictionary
 import java.util.ArrayList
 
 /**
@@ -25,21 +41,25 @@ import java.util.ArrayList
  * Follows the 1.12.2 Forge registration pattern using event-driven registry.
  *
  * Registration flow:
- * 1. PreInit: Create block/item instances and add to ArrayLists (do NOT register yet)
+ * 1. PreInit: Create blocks/items and add to ArrayLists (do NOT register yet)
  * 2. Registry Events (@SubscribeEvent): Register blocks and items with proper registry names
- * 3. Init: Register Tile Entities, Entities, and other content
+ * 3. Init: Register Tile Entities, Entities, recipes, and other content
  */
 @Mod.EventBusSubscriber(modid = Eln.MODID)
 object ElnContent {
 
+    // =====================================================================
     // Lists to hold blocks and items before registry events fire
+    // =====================================================================
     @JvmField
     val registeredBlocks = ArrayList<Block>()
 
     @JvmField
     val registeredItems = ArrayList<Item>()
 
-    // Block instances - created in preInit via ModBlock, registered via event
+    // =====================================================================
+    // Block instances - created in preInit via ModBlock
+    // =====================================================================
     val oreBlock get() = ModBlock.oreBlock
     val rubberBlock get() = ModBlock.rubberBlock
     val flubberBlock get() = ModBlock.flubberBlock
@@ -48,31 +68,42 @@ object ElnContent {
     val transparentNodeBlock get() = ModBlock.transparentNodeBlock
     val lightBlock get() = ModBlock.lightBlock
 
+    // =====================================================================
     // Initialize content - call during preInit
+    // =====================================================================
     @JvmStatic
     fun preInit() {
+        Eln.logger.info("Pre-initializing Electrical Age content...")
+
         // Initialize blocks via ModBlock (creates static fields for Java compatibility)
         ModBlock.init()
 
         // Add blocks to registration list
-        registeredBlocks.addAll(listOf(
-            ModBlock.oreBlock,
-            ModBlock.rubberBlock,
-            ModBlock.flubberBlock,
-            ModBlock.ghostBlock,
-            ModBlock.sixNodeBlock,
-            ModBlock.transparentNodeBlock,
-            ModBlock.lightBlock
-        ))
+        registeredBlocks.addAll(
+            listOf(
+                ModBlock.oreBlock,
+                ModBlock.rubberBlock,
+                ModBlock.flubberBlock,
+                ModBlock.ghostBlock,
+                ModBlock.sixNodeBlock,
+                ModBlock.transparentNodeBlock,
+                ModBlock.lightBlock
+            )
+        )
 
         // Initialize SixNodeItem and TransparentNodeItem
         Eln.sixNodeItem = SixNodeItem(ModBlock.sixNodeBlock).setCreativeTab(Eln.Tab) as SixNodeItem
         Eln.transparentNodeItem = TransparentNodeItem(ModBlock.transparentNodeBlock).setCreativeTab(Eln.Tab) as TransparentNodeItem
-        
+
         // Register descriptors (adds sub-items to SixNodeItem/TransparentNodeItem)
         Descriptors.preInit()
+
+        // Initialize mining pipe descriptor
+        Eln.miningPipeDescriptor = MiningPipeDescriptor("Mining Pipe")
+
+        Eln.logger.info("Electrical Age pre-initialization complete")
     }
-    
+
     /**
      * Register blocks when the RegistryEvent.Register<Block> fires.
      * This is the correct 1.12.2 way to register blocks.
@@ -89,7 +120,7 @@ object ElnContent {
         }
         Eln.logger.info("Registered ${registeredBlocks.size} Electrical Age blocks")
     }
-    
+
     /**
      * Register items when the RegistryEvent.Register<Item> fires.
      * This is the correct 1.12.2 way to register items.
@@ -123,7 +154,7 @@ object ElnContent {
 
         Eln.logger.info("Registered ${registeredBlocks.size + registeredItems.size} Electrical Age items")
     }
-    
+
     /**
      * Initialize Tile Entities, Entities, and other content.
      * Call this during the init phase, after blocks and items are registered.
@@ -134,19 +165,22 @@ object ElnContent {
 
         // Register Tile Entities
         registerTileEntities()
-        
+
         // Register node UUIDs for save/load
         registerNodeUuids()
 
         // Register Entities (mobs, projectiles, etc.)
         registerEntities()
 
+        // Initialize ore dictionary
+        initOreDictionary()
+
         // Register other content (multiblocks, recipes, etc.)
         registerOtherContent()
 
         Eln.logger.info("Electrical Age content initialization complete")
     }
-    
+
     /**
      * Register node UUIDs for save/load functionality.
      * This must be called before any nodes are loaded from NBT.
@@ -154,32 +188,32 @@ object ElnContent {
     @JvmStatic
     private fun registerNodeUuids() {
         // SixNode uses "s" UUID
-        NodeManager.registerUuid("s", SixNode::class.java)
-        // TransparentNode uses "t" UUID  
-        NodeManager.registerUuid("t", TransparentNode::class.java)
+        NodeManager.registerUuid(sixNodeBlock.nodeUuid, SixNode::class.java)
+        // TransparentNode uses "t" UUID
+        NodeManager.registerUuid(transparentNodeBlock.nodeUuid, TransparentNode::class.java)
     }
-    
+
     /**
      * Register all Tile Entities using GameRegistry.
      */
     @JvmStatic
     private fun registerTileEntities() {
         // Base node tile entities
-        GameRegistry.registerTileEntity(SixNodeEntity::class.java, "$Eln.MODID:SixNodeEntity")
-        GameRegistry.registerTileEntity(TransparentNodeEntity::class.java, "$Eln.MODID:TransparentNodeEntity")
-        GameRegistry.registerTileEntity(TransparentNodeEntityWithFluid::class.java, "$Eln.MODID:TransparentNodeEntityWF")
-        
+        GameRegistry.registerTileEntity(SixNodeEntity::class.java, Eln.MODID + ":SixNodeEntity")
+        GameRegistry.registerTileEntity(TransparentNodeEntity::class.java, Eln.MODID + ":TransparentNodeEntity")
+        GameRegistry.registerTileEntity(TransparentNodeEntityWithFluid::class.java, Eln.MODID + ":TransparentNodeEntityWF")
+
         // Special tile entities
-        GameRegistry.registerTileEntity(LightBlockEntity::class.java, "$Eln.MODID:LightBlockEntity")
-        GameRegistry.registerTileEntity(NodeBlockEntity::class.java, "$Eln.MODID:NodeBlockEntity")
-        
+        GameRegistry.registerTileEntity(LightBlockEntity::class.java, Eln.MODID + ":LightBlockEntity")
+        GameRegistry.registerTileEntity(NodeBlockEntity::class.java, Eln.MODID + ":NodeBlockEntity")
+
         // TODO: Register additional tile entities as they are migrated
         // registerTile(TileEntityCokeOven::class.java)
         // registerTile(TileEntityBlastFurnace::class.java)
-        
+
         Eln.logger.info("Registered Electrical Age tile entities")
     }
-    
+
     /**
      * Register all entities using EntityRegistry.
      */
@@ -202,7 +236,23 @@ object ElnContent {
 
         Eln.logger.info("Registered $entityId Electrical Age entities")
     }
-    
+
+    /**
+     * Initialize ore dictionary integration
+     */
+    @JvmStatic
+    private fun initOreDictionary() {
+        // Register ores for ore dictionary
+        if (Config.generateCopper) {
+            OreDictionary.registerOre("oreCopper", ItemStack(oreBlock, 1, 0))
+        }
+        if (Config.generateLead) {
+            OreDictionary.registerOre("oreLead", ItemStack(oreBlock, 1, 1))
+        }
+
+        Eln.logger.info("Registered Electrical Age ore dictionary entries")
+    }
+
     /**
      * Register other content like recipes, multiblocks, etc.
      */
@@ -211,8 +261,20 @@ object ElnContent {
         // TODO: Register multiblocks
         // TODO: Register recipes
         // Recipes.init()
+
+        // Initialize managers
+        Eln.playerManager = PlayerManager()
+        Eln.nodeManager = NodeManager("${Eln.MODID}.nodes")
+        Eln.ghostManager = GhostManager("${Eln.MODID}.ghosts")
+        Eln.delayedTaskManager = DelayedTaskManager()
+
+        // Initialize simulator processes
+        Eln.simulator.addSlowProcess(Eln.windProcess)
+        Eln.simulator.addSlowProcess(Eln.replicatorPopProcess)
+        Eln.simulator.addSlowProcess(Eln.itemEnergyInventoryProcess)
+        Eln.simulator.addSlowProcess(Eln.nodePublishProcess)
     }
-    
+
     /**
      * Helper method to register a Tile Entity with a simplified name.
      * Removes "TileEntity" prefix from the class name.
@@ -223,6 +285,6 @@ object ElnContent {
         if (name.startsWith("TileEntity")) {
             name = name.substring("TileEntity".length)
         }
-        GameRegistry.registerTileEntity(tileClass, "$Eln.MODID:$name")
+        GameRegistry.registerTileEntity(tileClass, "${Eln.MODID}:$name")
     }
 }

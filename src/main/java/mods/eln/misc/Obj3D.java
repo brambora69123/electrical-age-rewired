@@ -587,7 +587,16 @@ public class Obj3D {
     }
 
     public Obj3DPart getPart(String part) {
-        return nameToPartHash.get(part);
+        Obj3DPart partPtr = nameToPartHash.get(part);
+        if (partPtr == null) {
+            // Case-insensitive fallback lookup for compatibility
+            for (java.util.Map.Entry<String, Obj3DPart> entry : nameToPartHash.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(part)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return partPtr;
     }
 
     public void draw(String part) {
@@ -597,6 +606,15 @@ public class Obj3D {
     }
 
     public String getString(String name) {
-        return nameToStringHash.get(name); // Property read fromFacing the txt file
+        String value = nameToStringHash.get(name);
+        if (value == null) {
+            // Case-insensitive fallback lookup for compatibility
+            for (java.util.Map.Entry<String, String> entry : nameToStringHash.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(name)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return value; // Property read fromFacing the txt file
     }
 }

@@ -43,13 +43,15 @@ public abstract class NodeBlock extends Block {//BlockContainer
     @Override
     public int getWeakPower(IBlockState blockState, IBlockAccess blockAccess, BlockPos pos, EnumFacing side) {
         NodeBlockEntity entity = (NodeBlockEntity) blockAccess.getTileEntity(pos);
+        if (entity == null) return 0;
         return entity.isProvidingWeakPower(Direction.fromFacing(side));
     }
 
     @Override
     public boolean canConnectRedstone(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing side) {
         NodeBlockEntity entity = (NodeBlockEntity) world.getTileEntity(pos);
-        return entity.canConnectRedstone(Direction.XN);
+        if (entity == null) return false;
+        return entity.canConnectRedstone(Direction.fromFacing(side));
     }
 
     @Override

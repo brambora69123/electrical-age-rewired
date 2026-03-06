@@ -91,7 +91,16 @@ public class Obj3DFolder {
     }
 
     public Obj3D getObj(String obj3DName) {
-        return nameToObjHash.get(obj3DName);
+        Obj3D obj = nameToObjHash.get(obj3DName);
+        if (obj == null) {
+            // Case-insensitive fallback lookup for compatibility
+            for (Map.Entry<String, Obj3D> entry : nameToObjHash.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(obj3DName)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return obj;
     }
 
     public Obj3DPart getPart(String objName, String partName) {

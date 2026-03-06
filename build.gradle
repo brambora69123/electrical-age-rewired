@@ -295,16 +295,6 @@ jar {
 
 }
 
-// Clean task - remove generated files but preserve saves
-tasks.named('clean') {
-    doFirst {
-        // We use the 'project.minecraft' reference and access the property lazily
-        def mc = project.extensions.getByType(com.gtnewhorizons.retrofuturagradle.MinecraftExtension)
-        delete(file("${mc.runDir.get()}/logs"))
-        delete(file("${mc.runDir.get()}/crash-reports"))
-    }
-}
-
 // Helper to get Minecraft directory for copying JAR
 def getMinecraftDir() {
     String outDir = ""
