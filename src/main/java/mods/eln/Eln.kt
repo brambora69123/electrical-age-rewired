@@ -63,13 +63,6 @@ import org.apache.logging.log4j.Logger
 class Eln {
 
     /**
-     * Mod instance reference, used for entity registration and other mod-wide access.
-     */
-    @Mod.Instance(Eln.MODID)
-    var instance: Eln? = null
-        private set
-
-    /**
      * Pre-initialization phase - called before any content is registered.
      * Initialize logger, config, simulator, and prepare content for registration.
      */
@@ -106,6 +99,10 @@ class Eln {
         // Blocks and items are created here, registered via RegistryEvent
         ElnContent.preInit()
 
+        // Initialize shared items (multi-meter, thermometer, etc.)
+        sharedItem = mods.eln.generic.SharedItem()
+        Items.init()
+
         // Initialize network channels
         initNetwork()
 
@@ -126,6 +123,8 @@ class Eln {
     fun init(e: FMLInitializationEvent) {
         // Initialize proxy (registers renderers on client)
         proxy?.init(e)
+
+        NetworkRegistry.INSTANCE.registerGuiHandler(instance, GuiHandler())
 
         // Initialize tile entities, entities, and other content
         ElnContent.init()
@@ -320,6 +319,10 @@ class Eln {
     }
 
     companion object {
+        @JvmStatic
+        @Mod.Instance(MODID)
+        lateinit var instance: Eln
+
         const val MODID = "eln"
         const val VERSION = "2.0"
         const val ACCEPTABLE_SAVE_VERSIONS = "[2.0)"
@@ -399,6 +402,21 @@ class Eln {
         @JvmStatic
         lateinit var eventChannel: FMLEventChannel
 
+        // =====================================================================
+        // Items and Blocks
+        // =====================================================================
+        @JvmStatic
+        lateinit var sharedItem: mods.eln.generic.SharedItem
+
+        @JvmStatic
+        lateinit var sixNodeItem: SixNodeItem
+
+        @JvmStatic
+        lateinit var transparentNodeItem: TransparentNodeItem
+
+        @JvmStatic
+        lateinit var miningPipeDescriptor: MiningPipeDescriptor
+
         const val eventChannelID = "eln-event"
 
         // Packet type constants
@@ -417,18 +435,6 @@ class Eln {
         // =====================================================================
         @JvmField
         val obj = Obj3DFolder()
-
-        // =====================================================================
-        // Items and Blocks (initialized in preInit)
-        // =====================================================================
-        @JvmStatic
-        lateinit var sixNodeItem: SixNodeItem
-
-        @JvmStatic
-        lateinit var transparentNodeItem: TransparentNodeItem
-
-        @JvmStatic
-        lateinit var miningPipeDescriptor: MiningPipeDescriptor
 
         // =====================================================================
         // Physical constants and configuration

@@ -3,6 +3,7 @@ package mods.eln.transparentnode.solarpanel;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Utils;
 import mods.eln.sim.IProcess;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -40,7 +41,8 @@ public class SolarPanelSlowProcess implements IProcess {
         //	Utils.print("solarAlpha : " + solarAlpha + "  ");
         if (solarAlpha >= Math.PI) return 0.0;
 
-        if (!solarPanel.getInventory().getStackInSlot(SolarPanelContainer.trackerSlotId).isEmpty()) {
+        ItemStack trackerStack = solarPanel.getInventory().getStackInSlot(SolarPanelContainer.trackerSlotId);
+        if (trackerStack != null && !trackerStack.isEmpty()) {
             solarPanel.panelAlpha = solarPanel.descriptor.alphaTrunk(solarAlpha);
         }
 

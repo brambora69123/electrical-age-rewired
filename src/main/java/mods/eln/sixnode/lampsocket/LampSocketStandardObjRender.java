@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 public class LampSocketStandardObjRender implements LampSocketObjRender {
 
     private Obj3D obj;
-    private Obj3DPart socket, socket_unlightable, socket_lightable, lampOn, lampOff, lightAlphaPlane, lightAlphaPlaneNoDepth;
+    private Obj3DPart base, socket, lamp, socket_unlightable, socket_lightable, lampOn, lampOff, lightAlphaPlane, lightAlphaPlaneNoDepth;
     ResourceLocation tOn, tOff;
     private boolean onOffModel;
 
@@ -19,7 +19,9 @@ public class LampSocketStandardObjRender implements LampSocketObjRender {
         this.obj = obj;
         this.onOffModel = onOffModel;
         if (obj != null) {
+            base = obj.getPart("base");
             socket = obj.getPart("socket");
+            lamp = obj.getPart("lamp");
             lampOn = obj.getPart("lampOn");
             lampOff = obj.getPart("lampOff");
             socket_unlightable = obj.getPart("socket_unlightable");
@@ -45,8 +47,10 @@ public class LampSocketStandardObjRender implements LampSocketObjRender {
         UtilsClient.disableCulling();
 
         Utils.setGlColorFromLamp(color);
+        if (base != null) base.draw();
         if (!onOffModel) {
             if (socket != null) socket.draw();
+            if (hasBulb && lamp != null) lamp.draw();
         } else {
             //
             if (light > 8) {

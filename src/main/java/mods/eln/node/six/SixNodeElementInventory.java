@@ -10,6 +10,8 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
+
 public class SixNodeElementInventory implements IInventory, INBTTReady {
     SixNodeElementRender sixnodeRender = null;
     SixNodeElement sixNodeElement = null;
@@ -44,7 +46,6 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @NotNull
     @Override
     public ItemStack getStackInSlot(int slot) {
-
         if (slot >= getInv().length) return null;
         return getInv()[slot];
     }
@@ -54,21 +55,36 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @Override
     public ItemStack decrStackSize(int slot, int amt) {
         ItemStack stack = getStackInSlot(slot);
-        stack.splitStack(amt);
-        return stack;
+        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        if (stack.getCount() <= amt) {
+            getInv()[slot] = null;
+            return stack;
+        }
+
+        ItemStack result = stack.splitStack(amt);
+        if (stack.isEmpty() || stack.getCount() <= 0) {
+            getInv()[slot] = null;
+        }
+        return result;
     }
 
     @NotNull
     @Override
     public ItemStack removeStackFromSlot(int slot) {
         ItemStack stack = getStackInSlot(slot);
-        stack.setCount(0);
+        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        getInv()[slot] = null;
         return stack;
     }
 
 
     @Override
     public void setInventorySlotContents(int slot, @NotNull ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            getInv()[slot] = null;
+            return;
+        }
+
         getInv()[slot] = stack;
         int stackLimit = getInventoryStackLimit();
         if (stack.getCount() > stackLimit) {
@@ -147,7 +163,7 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
 
     @Override
     public void clear() {
-
+        Arrays.fill(inv, null);
     }
 
     @Override
@@ -165,7 +181,7 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @Override
     public boolean isEmpty() {
         for (ItemStack itemStack : inv) {
-            if (itemStack.getCount() > 0) return false;
+            if (itemStack != null && !itemStack.isEmpty() && itemStack.getCount() > 0) return false;
         }
         return true;
     }

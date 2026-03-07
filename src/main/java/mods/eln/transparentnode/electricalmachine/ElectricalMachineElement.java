@@ -130,7 +130,8 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
     }
 
     private void setPhysicalValue() {
-        int boosterCount = getInventory().getStackInSlot(boosterSlotId).getCount();
+        ItemStack boosterStack = getInventory().getStackInSlot(boosterSlotId);
+        int boosterCount = boosterStack == null || boosterStack.isEmpty() ? 0 : boosterStack.getCount();
         double speedUp = Math.pow(descriptor.boosterSpeedUp, boosterCount);
         slowRefreshProcess.setEfficiency(Math.pow(descriptor.boosterEfficiency, boosterCount));
         slowRefreshProcess.setSpeedUp(speedUp);

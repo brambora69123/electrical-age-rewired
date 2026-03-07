@@ -21,7 +21,9 @@ public class LampSlot extends GenericItemUsingDamageSlot {
     @Override
     public boolean isItemValid(ItemStack itemStack) {
         if (!super.isItemValid(itemStack)) return false;
-        LampDescriptor descriptor = (LampDescriptor) Utils.getItemObject(itemStack);
+        Object descriptorObject = Utils.getItemObject(itemStack);
+        if (!(descriptorObject instanceof LampDescriptor)) return false;
+        LampDescriptor descriptor = (LampDescriptor) descriptorObject;
         return descriptor.socket == socket;
     }
 }

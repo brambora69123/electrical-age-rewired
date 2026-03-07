@@ -123,7 +123,6 @@ public class LampSocketElement extends SixNodeElement {
                     break;
                 case tooglePowerSupplyType:
                     setPoweredByLampSupply(!poweredByLampSupply);
-
                     reconnect();
                     break;
                 case setChannel:
@@ -162,6 +161,7 @@ public class LampSocketElement extends SixNodeElement {
     @Override
     protected void inventoryChanged() {
         computeElectricalLoad();
+        needPublish();
         reconnect();
     }
 
@@ -181,7 +181,7 @@ public class LampSocketElement extends SixNodeElement {
 
     @Override
     public ElectricalLoad getElectricalLoad(LRDU lrdu) {
-        if (acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId) == null) return null;
+        if (!hasCable()) return null;
         if (poweredByLampSupply) return null;
 
         if (grounded) return positiveLoad;
@@ -195,7 +195,7 @@ public class LampSocketElement extends SixNodeElement {
 
     @Override
     public int getConnectionMask(LRDU lrdu) {
-        if (acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId) == null) return 0;
+        if (!hasCable()) return 0;
         if (poweredByLampSupply) return 0;
         if (grounded) return NodeBase.maskElectricalPower;
 
@@ -225,7 +225,7 @@ public class LampSocketElement extends SixNodeElement {
             }
             info.put(I18N.tr("Voltage"), Utils.plotVolt("", positiveLoad.getU()));
             ItemStack lampStack = acceptingInventory.getInventory().getStackInSlot(0);
-            if (lampStack != null && lampDescriptor != null) {
+            if (lampStack != null && !lampStack.isEmpty() && lampDescriptor != null) {
                 info.put(I18N.tr("Life"), Utils.plotValue(lampDescriptor.getLifeInTag(lampStack)));
             }
 
@@ -275,7 +275,8 @@ public class LampSocketElement extends SixNodeElement {
             //cableDescriptor.applied(negativeLoad, grounded,5);
         }
 
-        lampDescriptor = (LampDescriptor) Utils.getItemObject(lamp);
+        Object lampObject = Utils.getItemObject(lamp);
+        lampDescriptor = lampObject instanceof LampDescriptor ? (LampDescriptor) lampObject : null;
 
         if (lampDescriptor == null) {
             lampResistor.setR(Double.POSITIVE_INFINITY);
@@ -295,7 +296,7 @@ public class LampSocketElement extends SixNodeElement {
         }
 
         ItemStack currentItemStack = entityPlayer.getHeldItemMainhand();
-        if (currentItemStack != null) {
+        if (currentItemStack != null && !currentItemStack.isEmpty()) {
             GenericItemUsingDamageDescriptor itemDescriptor = GenericItemUsingDamageDescriptor.getDescriptor(currentItemStack);
             if (itemDescriptor != null) {
                 if (itemDescriptor instanceof BrushDescriptor) {
@@ -310,11 +311,16 @@ public class LampSocketElement extends SixNodeElement {
             }
         }
 
-        return acceptingInventory.take(entityPlayer.getHeldItemMainhand(), this, true, false);
+        return acceptingInventory.take(entityPlayer.getHeldItemMainhand(), this, true, true);
     }
 
     public int getLightValue() {
         return lampProcess.getBlockLight();
+    }
+
+    public boolean hasCable() {
+        ItemStack cableStack = acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId);
+        return cableStack != null && !cableStack.isEmpty();
     }
 
     @Override

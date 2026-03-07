@@ -27,23 +27,26 @@ public class HeatFurnaceInventoryProcess implements IProcess, INBTTReady {
         ItemStack isolatorChamberStack = furnace.inventory.getStackInSlot(HeatFurnaceContainer.isolatorId);
 
         double isolationFactor = 1;
-        if (isolatorChamberStack != null) {
-            if (furnace.thermalLoad.Tc > ((ThermalIsolatorElement)ThermalIsolatorElement.getDescriptor(isolatorChamberStack)).getTmax()) {
+        if (isolatorChamberStack != null && !isolatorChamberStack.isEmpty()) {
+            ThermalIsolatorElement isolatorDescriptor = (ThermalIsolatorElement) ThermalIsolatorElement.getDescriptor(isolatorChamberStack);
+            if (isolatorDescriptor != null && furnace.thermalLoad.Tc > isolatorDescriptor.getTmax()) {
                 furnace.inventory.decrStackSize(HeatFurnaceContainer.isolatorId, 1);
-            } else {
+            } else if (isolatorChamberStack.getItem() instanceof GenericItemUsingDamage) {
                 ThermalIsolatorElement iso = (ThermalIsolatorElement) ((GenericItemUsingDamage) isolatorChamberStack.getItem()).getDescriptor(isolatorChamberStack);
-                isolationFactor = iso.getConductionFactor();
+                if (iso != null) {
+                    isolationFactor = iso.getConductionFactor();
+                }
             }
         }
         furnace.thermalLoad.setRp(furnace.descriptor.thermal.Rp / isolationFactor);
 
-        int combustionChamberNbr = combustionChamberStack.getCount();
+        int combustionChamberNbr = combustionChamberStack == null || combustionChamberStack.isEmpty() ? 0 : combustionChamberStack.getCount();
         furnace.furnaceProcess.nominalPower = furnace.descriptor.nominalPower + furnace.descriptor.combustionChamberPower * combustionChamberNbr;
 
         if (furnace.getTakeFuel() && SaveConfig.instance != null) {
             if (!SaveConfig.instance.heatFurnaceFuel) {
                 combustibleBuffer = furnace.furnaceProcess.nominalCombustibleEnergy;
-            } else if (!combustibleStack.isEmpty()) {
+            } else if (combustibleStack != null && !combustibleStack.isEmpty()) {
                 double itemEnergy = Utils.getItemEnergie(combustibleStack);
                 if (itemEnergy != 0) {
                     if (furnace.furnaceProcess.combustibleEnergy + combustibleBuffer < furnace.furnaceProcess.nominalCombustibleEnergy) {

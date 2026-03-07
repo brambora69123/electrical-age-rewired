@@ -24,6 +24,7 @@ public class WirelessSignalSourceRender extends SixNodeElementRender {
 
     String channel;
     boolean state = false;
+    boolean boot = true;
 
     public WirelessSignalSourceRender(SixNodeEntity tileEntity, Direction side, SixNodeDescriptor descriptor) {
         super(tileEntity, side, descriptor);
@@ -60,6 +61,12 @@ public class WirelessSignalSourceRender extends SixNodeElementRender {
         try {
             channel = stream.readUTF();
             state = stream.readBoolean();
+            if (boot) {
+                float value = state ? 1f : 0f;
+                interpolator.setValue(value);
+                interpolator.setTarget(value);
+                boot = false;
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -143,8 +143,13 @@ object ElnContent {
         }
 
         // Register custom ItemBlocks for SixNode and TransparentNode
-        event.registry.register(Eln.sixNodeItem.setRegistryName(ModBlock.sixNodeBlock.registryName))
-        event.registry.register(Eln.transparentNodeItem.setRegistryName(ModBlock.transparentNodeBlock.registryName))
+        Eln.sixNodeItem.registryName = ModBlock.sixNodeBlock.registryName
+        Eln.transparentNodeItem.registryName = ModBlock.transparentNodeBlock.registryName
+        event.registry.register(Eln.sixNodeItem)
+        event.registry.register(Eln.transparentNodeItem)
+
+        // Register shared items (multi-meter, thermometer, etc.)
+        event.registry.register(Eln.sharedItem)
 
         // Register standalone items
         for (item in registeredItems) {

@@ -24,6 +24,7 @@ import net.minecraft.entity.passive.EntityChicken;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.MathHelper;
 
@@ -173,7 +174,8 @@ public class EggIncubatorElement extends TransparentNodeElement {
     public void networkSerialize(DataOutputStream stream) {
         super.networkSerialize(stream);
         try {
-            stream.writeByte(inventory.getStackInSlot(EggIncubatorContainer.EggSlotId).getCount());
+            ItemStack eggStack = inventory.getStackInSlot(EggIncubatorContainer.EggSlotId);
+            stream.writeByte(eggStack == null || eggStack.isEmpty() ? 0 : eggStack.getCount());
 
             node.lrduCubeMask.getTranslate(front.down()).serialize(stream);
 
@@ -187,7 +189,8 @@ public class EggIncubatorElement extends TransparentNodeElement {
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Has egg"), !inventory.getStackInSlot(EggIncubatorContainer.EggSlotId).isEmpty() ?
+        ItemStack eggStack = inventory.getStackInSlot(EggIncubatorContainer.EggSlotId);
+        info.put(I18N.tr("Has egg"), eggStack != null && !eggStack.isEmpty() ?
             I18N.tr("Yes") : I18N.tr("No"));
         if (Config.INSTANCE.getWailaEasyMode()) {
             info.put(I18N.tr("Power consumption"), Utils.plotPower("", powerResistor.getP()));

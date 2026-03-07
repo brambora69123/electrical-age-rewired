@@ -95,7 +95,7 @@ public class PacketHandler {
     void packetOpenLocalGui(DataInputStream stream, NetworkManager manager, EntityPlayer player) {
         EntityPlayer clientPlayer = (EntityPlayer) player;
         try {
-            clientPlayer.openGui(Eln.Companion, stream.readInt(),
+            clientPlayer.openGui(Eln.instance, stream.readInt(),
                 clientPlayer.world, stream.readInt(), stream.readInt(),
                 stream.readInt());
         } catch (IOException e) {

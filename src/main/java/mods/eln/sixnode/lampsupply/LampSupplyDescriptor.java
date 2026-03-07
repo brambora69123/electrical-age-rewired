@@ -25,7 +25,6 @@ public class LampSupplyDescriptor extends SixNodeDescriptor {
 
     public LampSupplyDescriptor(String name, Obj3D obj, int range) {
         super(name, LampSupplyElement.class, LampSupplyRender.class);
-        this.isWireless = isWireless;
         this.range = range;
         this.obj = obj;
         if (obj != null) {

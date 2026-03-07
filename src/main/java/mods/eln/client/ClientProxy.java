@@ -22,6 +22,8 @@ public class ClientProxy extends CommonProxy {
 
     public static UuidManager uuidManager;
     public static SoundClientEventListener soundClientEventListener;
+    public static ClientPacketHandler clientPacketHandler;
+    public static FrameTime frameTime;
 
     /**
      * Called during preInit phase on client side.
@@ -30,6 +32,7 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         uuidManager = new UuidManager();
         soundClientEventListener = new SoundClientEventListener(uuidManager);
+        frameTime = new FrameTime();
     }
 
     /**
@@ -38,6 +41,7 @@ public class ClientProxy extends CommonProxy {
      */
     @Override
     public void init(FMLInitializationEvent event) {
+        clientPacketHandler = new ClientPacketHandler();
         // Register TESRs for SixNode and TransparentNode
         ClientRegistry.bindTileEntitySpecialRenderer(SixNodeEntity.class, new SixNodeRender());
         ClientRegistry.bindTileEntitySpecialRenderer(TransparentNodeEntity.class, new TransparentNodeRender());

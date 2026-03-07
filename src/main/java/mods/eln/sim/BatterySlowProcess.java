@@ -26,7 +26,7 @@ public abstract class BatterySlowProcess implements IProcess {
             destroy();
             return;
         }
-        if (SaveConfig.instance.batteryAging) {
+        if (SaveConfig.instance == null || SaveConfig.instance.batteryAging) {
             double newLife = batteryProcess.life;
             double normalisedCurrent = Math.abs(batteryProcess.getDischargeCurrent()) / lifeNominalCurrent;
             newLife -= normalisedCurrent * normalisedCurrent * lifeNominalLost * time;

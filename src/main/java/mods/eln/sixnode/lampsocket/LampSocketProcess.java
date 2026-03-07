@@ -4,7 +4,6 @@ import mods.eln.Eln;
 import mods.eln.generic.GenericItemUsingDamage;
 import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.init.Config;
-import mods.eln.init.ModBlock;
 import mods.eln.item.LampDescriptor;
 import mods.eln.item.LampDescriptor.Type;
 import mods.eln.misc.Coordinate;
@@ -18,8 +17,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-
 import net.minecraft.util.math.Vec3d;
 
 import java.io.ByteArrayOutputStream;
@@ -50,18 +47,48 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
 
     double updateLifeTimeout = 0, updateLifeTimeoutMax = 5;
 
-    Coordinate lbCoord;
 
     public LampSocketProcess(LampSocketElement l) {
         this.lamp = l;
-        lbCoord = new Coordinate(l.sixNode.coordinate);
+    }
+
+    private LampDescriptor getLampDescriptor(ItemStack lampStack) {
+        if (lampStack == null || lampStack.isEmpty()) return null;
+        if (!(lampStack.getItem() instanceof GenericItemUsingDamage)) return null;
+
+        GenericItemUsingDamageDescriptor descriptor =
+            ((GenericItemUsingDamage<GenericItemUsingDamageDescriptor>) lampStack.getItem()).getDescriptor(lampStack);
+        return descriptor instanceof LampDescriptor ? (LampDescriptor) descriptor : null;
+    }
+
+    private double getEffectiveLampVoltage(LampDescriptor lampDescriptor) {
+        double resistorVoltage = Math.abs(lamp.lampResistor.getU());
+        double loadVoltage = Math.abs(lamp.positiveLoad.getU());
+
+        // In the broken 1.12 path the node voltage can be correct while the one-ended resistor
+        // still reports 0V. Prefer the physically larger reading instead of letting the lamp stay dark.
+        if (loadVoltage > resistorVoltage) {
+            return loadVoltage;
+        }
+        return resistorVoltage;
+    }
+
+    private double getEffectiveLampPower(LampDescriptor lampDescriptor, double effectiveVoltage) {
+        double resistorPower = lamp.lampResistor.getP();
+        double inferredPower = effectiveVoltage * effectiveVoltage / lampDescriptor.getR();
+
+        if (!Double.isFinite(resistorPower) || resistorPower < 0) {
+            return inferredPower;
+        }
+        return Math.max(resistorPower, inferredPower);
     }
 
     @Override
     public void process(double time) {
         ItemStack lampStack = lamp.getInventory().getStackInSlot(0);
+        LampDescriptor lampDescriptor = getLampDescriptor(lampStack);
 
-        if (!lamp.poweredByLampSupply || lamp.getInventory().getStackInSlot(LampSocketContainer.cableSlotId) == null) {
+        if (!lamp.poweredByLampSupply || !lamp.hasCable()) {
             lamp.setIsConnectedToLampSupply(false);
             oldLampSupply = null;
         } else {
@@ -79,8 +106,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
                 }
             }
             if (best != null && best.element.getChannelState(best.id)) {
-                if (lampStack != null) {
-                    LampDescriptor lampDescriptor = (LampDescriptor) ((GenericItemUsingDamage<GenericItemUsingDamageDescriptor>) lampStack.getItem()).getDescriptor(lampStack);
+                if (lampDescriptor != null) {
                     best.element.addToRp(lampDescriptor.getR());
                 }
                 lamp.positiveLoad.state = best.element.powerLoad.state;
@@ -93,9 +119,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
             lamp.setIsConnectedToLampSupply(best != null);
         }
 
-        if (lampStack != null) {
-            LampDescriptor lampDescriptor = (LampDescriptor) ((GenericItemUsingDamage<GenericItemUsingDamageDescriptor>) lampStack.getItem()).getDescriptor(lampStack);
-
+        if (lampDescriptor != null) {
             if (lamp.getCoordinate().doesBlockExist() && lampDescriptor.vegetableGrowRate != 0.0) {
                 double randTarget = 1.0 / lampDescriptor.vegetableGrowRate * time * (1.0 * light / lampDescriptor.nominalLight / 15.0);
                 if (randTarget > Math.random()) {
@@ -115,7 +139,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
 
                     for (int idx = 0; idx < lamp.socketDescriptor.range + light; idx++) {
                         // newCoord.move(lamp.side.getInverse());
-                        vp.add(vv.x, vv.y, vv.z);
+                        vp = vp.add(vv.x, vv.y, vv.z);
                         c.setPosition(vp);
 
                         if (!c.doesBlockExist()) {
@@ -123,7 +147,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
                             break;
                         }
                         if (isOpaque(c)) {
-                            vp.add(-vv.x, -vv.y, -vv.z);
+                            vp = vp.add(-vv.x, -vv.y, -vv.z);
                             c.setPosition(vp);
                             break;
                         }
@@ -150,26 +174,27 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
         int oldLight = light;
         int newLight = 0;
 
-        if (!boot && (lampStack != lampStackLast || lampStack == null)) {
+        ItemStack currentStack = lampStack != null ? lampStack : ItemStack.EMPTY;
+        ItemStack lastStack = lampStackLast != null ? lampStackLast : ItemStack.EMPTY;
+        if (!boot && (!ItemStack.areItemStacksEqual(currentStack, lastStack) || lampDescriptor == null)) {
             stableProb = 0;
         }
 
-        if (lampStack != null) {
-            LampDescriptor lampDescriptor = (LampDescriptor) ((GenericItemUsingDamage<GenericItemUsingDamageDescriptor>) lampStack.getItem()).getDescriptor(lampStack);
-
+        if (lampDescriptor != null) {
             if (stableProb < 0)
                 stableProb = 0;
 
+            double effectiveVoltage = getEffectiveLampVoltage(lampDescriptor);
             double lightDouble = 0;
             switch (lampDescriptor.type) {
                 case Incandescent:
                 case LED:
-                    lightDouble = lampDescriptor.nominalLight * (Math.abs(lamp.lampResistor.getU()) - lampDescriptor.minimalU) / (lampDescriptor.nominalU - lampDescriptor.minimalU);
+                    lightDouble = lampDescriptor.nominalLight * (effectiveVoltage - lampDescriptor.minimalU) / (lampDescriptor.nominalU - lampDescriptor.minimalU);
                     lightDouble = (lightDouble * 16);
                     break;
 
                 case eco:
-                    double U = Math.abs(lamp.lampResistor.getU());
+                    double U = effectiveVoltage;
                     if (U < lampDescriptor.minimalU) {
                         stableProb = 0;
                         lightDouble = 0;
@@ -208,7 +233,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
 			/*
              * double overFactor = (lamp.electricalLoad.Uc-lampDescriptor.minimalU) /(lampDescriptor.nominalU-lampDescriptor.minimalU);
 			 */
-            double overFactor = (lamp.lampResistor.getP()) / (lampDescriptor.nominalP);
+            double overFactor = getEffectiveLampPower(lampDescriptor, effectiveVoltage) / lampDescriptor.nominalP;
             if (overFactor < 0)
                 overFactor = 0;
 
@@ -237,7 +262,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
                 // lifeLost *= overFactor;
 
                 double life = lampDescriptor.getLifeInTag(lampStack) - lifeLost;
-                if (SaveConfig.instance.electricalLampAging) {
+                if (SaveConfig.instance == null || SaveConfig.instance.electricalLampAging) {
                     lampDescriptor.setLifeInTag(lampStack, life);
                 }
                 if (life < 0 || overFactor > 3) {
@@ -259,99 +284,19 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
 
         lampStackLast = lampStack;
 
-        placeSpot(newLight);
+        // Set light directly on the node (like emergency lamp), no LightBlockEntity
+        setLight(newLight);
     }
 
     // ElectricalConnectionOneWay connection = null;
 
-    public void rotateAroundZ(Vec3d v, float par1) {
-        float f1 = MathHelper.cos(par1);
-        float f2 = MathHelper.sin(par1);
-        double d0 = v.x * (double) f1 + v.y * (double) f2;
-        double d1 = v.y * (double) f1 - v.x * (double) f2;
-        double d2 = v.z;
-        v = new Vec3d(d0, d1, d2);
-    }
-
-    void placeSpot(int newLight) {
-        boolean exit = false;
-        if (!lbCoord.doesBlockExist())
-            return;
-        Vec3d vv = new Vec3d(1, 0, 0);
-        Vec3d vp = Utils.getVec05(myCoord());
-
-        rotateAroundZ(vv, (float) (alphaZ * Math.PI / 180.0));
-
-        lamp.front.rotateOnXnLeft(vv);
-        lamp.side.rotateFromXN(vv);
-
-        Coordinate newCoord = new Coordinate(myCoord());
-        for (int idx = 0; idx < lamp.socketDescriptor.range; idx++) {
-            // newCoord.move(lamp.side.getInverse());
-            vp.add(vv);
-            newCoord.setPosition(vp);
-            if (!newCoord.doesBlockExist()) {
-                exit = true;
-                break;
-            }
-            if (isOpaque(newCoord)) {
-                vp.add(new Vec3d(-vv.x, -vv.y, -vv.z));
-                newCoord.setPosition(vp);
-                break;
-            }
-        }
-        if (!exit) {
-            int count = 0;
-            while (!newCoord.equals(myCoord())) {
-                Block block = newCoord.getBlockState().getBlock();
-                if (newCoord.world().isAirBlock(newCoord.pos) || block == ModBlock.lightBlock) {
-                    count++;
-                    if (count == 2)
-                        break;
-                }
-                vp.add(new Vec3d(-vv.x, -vv.y, -vv.z));
-                newCoord.setPosition(vp);
-            }
-        }
-        if (!exit)
-            setLightAt(newCoord, newLight);
-    }
-
-    public boolean isOpaque(Coordinate coord) {
-        Block block = coord.getBlockState().getBlock();
-        boolean isNotOpaque = coord.world().isAirBlock(coord.pos)|| !block.isOpaqueCube(block.getBlockState().getBaseState());
-        if (block == Blocks.FARMLAND)
-
-            isNotOpaque = false;
-        return !isNotOpaque;
-    }
-
-    public void publish() {
-        Utils.print("Light published");
-    }
-
-    public void setLightAt(Coordinate coord, int value) {
-        Coordinate oldLbCoord = lbCoord;
-        lbCoord = new Coordinate(coord);
+    public void setLight(int newLight) {
         int oldLight = light;
-        boolean same = coord.equals(oldLbCoord);
-        light = value;
-
-        if (!same && oldLbCoord.equals(myCoord())) {
-            lamp.sixNode.recalculateLightValue();
-        }
-
-        if (lbCoord.equals(myCoord())) {
-            if (light != oldLight || !same)
-                lamp.sixNode.recalculateLightValue();
-        } else {
-			/*
-			 * if(same) LightBlockEntity.remplaceLight(lbCoord, oldLight, light); else LightBlockEntity.addLight(lbCoord, light);
-			 */
-            LightBlockEntity.addLight(lbCoord, light, 5);
-        }
+        light = newLight;
 
         if (light != oldLight) {
+            lamp.sixNode.recalculateLightValue();
+
             ByteArrayOutputStream bos = new ByteArrayOutputStream(64);
             DataOutputStream packet = new DataOutputStream(bos);
 
@@ -362,6 +307,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
                 e.printStackTrace();
             }
             lamp.sendPacketToAllClient(bos);
+            lamp.needPublish();
         }
     }
 
@@ -370,20 +316,12 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
     }
 
     public void destructor() {
-        // if(lbCoord.equals(myCoord()) == false && lbCoord.getBlockId() ==
-        // Eln.lightBlockId)
-        // lbCoord.setBlock(0,0);
-        // TODO
-
-		/*
-		 * LightBlockEntity.removeObserver(this); if(lbCoord.equals(myCoord()) == false) LightBlockEntity.removeLight(lbCoord, light);
-		 */
+        // No longer uses LightBlockEntity, nothing to clean up
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt, String str) {
         stableProb = nbt.getDouble(str + "LSP" + "stableProb");
-        lbCoord.readFromNBT(nbt, str + "lbCoordInst");
         alphaZ = nbt.getFloat(str + "alphaZ");
         light = nbt.getInteger(str + "light");
     }
@@ -391,21 +329,20 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt, String str) {
         nbt.setDouble(str + "LSP" + "stableProb", stableProb);
-        lbCoord.writeToNBT(nbt, str + "lbCoordInst");
         nbt.setFloat(str + "alphaZ", (float) alphaZ);
         nbt.setInteger(str + "light", light);
         return nbt;
     }
 
     public int getBlockLight() {
-        if (lbCoord.equals(myCoord())) {
-            return light;
-        } else {
-            return 0;
-        }
+        return light;
     }
-	/*
-	 * 
-	 * @Override public void lightBlockDestructor(Coordinate coord) { if(coord.equals(lbCoord)) { light = 0; lbCoord = new Coordinate(myCoord()); //placeSpot(light); } }
-	 */
+
+    public boolean isOpaque(Coordinate coord) {
+        Block block = coord.getBlockState().getBlock();
+        boolean isNotOpaque = coord.isAir() || !block.isOpaqueCube(block.getBlockState().getBaseState());
+        if (block == Blocks.FARMLAND)
+            isNotOpaque = false;
+        return !isNotOpaque;
+    }
 }

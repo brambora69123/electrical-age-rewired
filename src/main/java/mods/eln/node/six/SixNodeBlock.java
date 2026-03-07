@@ -19,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
@@ -201,11 +202,22 @@ public class SixNodeBlock extends NodeBlock {
 
     }
 
-    /*
-     * @Override public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer entityPlayer, int minecraftSide, float vx, float vy, float vz) { SixNodeEntity tileEntity = (SixNodeEntity) world.getBlockTileEntity(x, y, z);
-     *
-     * return tileEntity.onBlockActivated(entityPlayer, Direction.fromIntMinecraftSide(minecraftSide),vx,vy,vz); }
-     */
+    @Override
+    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer entityPlayer, EnumHand hand, EnumFacing side, float vx, float vy, float vz) {
+        if (hand != EnumHand.MAIN_HAND) {
+            return false;
+        }
+        if (world.isRemote) {
+            return true; // Let server handle it
+        }
+
+        SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
+        if (tileEntity == null) {
+            return false;
+        }
+
+        return tileEntity.onBlockActivated(entityPlayer, Direction.fromFacing(side), vx, vy, vz);
+    }
 
     @Override
     public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer entityPlayer, boolean willHarvest) {

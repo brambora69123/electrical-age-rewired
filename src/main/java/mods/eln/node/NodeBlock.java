@@ -12,6 +12,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
@@ -77,7 +78,8 @@ public abstract class NodeBlock extends Block {//BlockContainer
     }
 
 
-    public int getLightValue(IBlockAccess world, BlockPos pos) {
+    @Override
+    public int getLightValue(IBlockState state, IBlockAccess world, BlockPos pos) {
         final TileEntity entity = world.getTileEntity(pos);
         if (entity == null || !(entity instanceof NodeBlockEntity)) return 0;
         NodeBlockEntity tileEntity = (NodeBlockEntity) entity;
@@ -135,7 +137,8 @@ public abstract class NodeBlock extends Block {//BlockContainer
     }
 
     //client server
-    public boolean onBlockActivated(World world, BlockPos pos, EntityPlayer entityPlayer, EnumFacing side, float vx, float vy, float vz) {
+    @Override
+    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer entityPlayer, EnumHand hand, EnumFacing side, float vx, float vy, float vz) {
         NodeBlockEntity entity = (NodeBlockEntity) world.getTileEntity(pos);
 //    	entityPlayer.openGui( Eln.instance, 0,world,x ,y, z);
         return entity.onBlockActivated(entityPlayer, Direction.fromFacing(side), vx, vy, vz);

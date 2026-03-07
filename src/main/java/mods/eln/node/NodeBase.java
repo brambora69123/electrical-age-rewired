@@ -10,6 +10,7 @@ import mods.eln.misc.*;
 import mods.eln.node.six.SixNode;
 import mods.eln.sim.*;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
@@ -232,7 +233,7 @@ public abstract class NodeBase {
             }
         }
         if (hasGui(side)) {
-            entityPlayer.openGui(Eln.Companion, GuiHandler.nodeBaseOpen + side.getInt(), coordinate.world(), coordinate.pos.getX(), coordinate.pos.getY(), coordinate.pos.getZ());
+            entityPlayer.openGui(Eln.instance, GuiHandler.nodeBaseOpen + side.getInt(), coordinate.world(), coordinate.pos.getX(), coordinate.pos.getY(), coordinate.pos.getZ());
             return true;
         }
 
@@ -486,11 +487,11 @@ public abstract class NodeBase {
         //Profiler p = new Profiler();
 
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+        if (server == null || bos == null) return;
 
-        for (Object obj : server.getEntityWorld().playerEntities) {
-
-            EntityPlayerMP player = (EntityPlayerMP) obj;
+        for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
             WorldServer worldServer = server.getWorld(player.dimension);
+            if (worldServer == null) continue;
 
             if (player.dimension != this.coordinate.getDimension()) continue;
             if (!worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16)) continue;
@@ -531,21 +532,23 @@ public abstract class NodeBase {
 
     public void publishToAllPlayer() {
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
-        WorldServer[] worlds = server.worlds;
-        for (int dimId = 0; dimId < worlds.length; dimId++) {
-            WorldServer worldServer = worlds[dimId];
-            if (worldServer == null) continue;
-            for (Object obj : worldServer.playerEntities) {
-                EntityPlayerMP player = (EntityPlayerMP) obj;
-                if (player.dimension != this.coordinate.getDimension()) continue;
-                boolean watching = worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16);
-                System.out.println("publishToAllPlayer: player=" + player.getName() + " pos=" + coordinate.pos + " watching=" + watching);
-                if (!watching) continue;
+        if (server == null) return;
 
-                ByteArrayOutputStream packet = getPublishPacket();
-                System.out.println("publishToAllPlayer: packet size=" + (packet != null ? packet.size() : "null"));
+        ByteArrayOutputStream packet = getPublishPacket();
+        if (packet != null) {
+            for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
+                WorldServer worldServer = server.getWorld(player.dimension);
+                if (worldServer == null) continue;
+                if (player.dimension != this.coordinate.getDimension()) continue;
+                if (!worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16)) continue;
+
                 Utils.sendPacketToClient(packet, player);
             }
+        }
+        World world = coordinate.world();
+        if (world != null) {
+            IBlockState state = world.getBlockState(coordinate.pos);
+            world.notifyBlockUpdate(coordinate.pos, state, state, 3);
         }
         if (needNotify) {
             needNotify = false;
@@ -555,7 +558,15 @@ public abstract class NodeBase {
     }
 
     public void publishToPlayer(EntityPlayerMP player) {
-        Utils.sendPacketToClient(getPublishPacket(), player);
+        World world = coordinate.world();
+        if (world != null) {
+            IBlockState state = world.getBlockState(coordinate.pos);
+            world.notifyBlockUpdate(coordinate.pos, state, state, 3);
+        }
+        ByteArrayOutputStream packet = getPublishPacket();
+        if (packet != null) {
+            Utils.sendPacketToClient(packet, player);
+        }
     }
 
     @Deprecated  // WTF

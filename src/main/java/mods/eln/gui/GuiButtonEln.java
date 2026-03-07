@@ -1,9 +1,8 @@
 package mods.eln.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.audio.SoundHandler;
 import org.lwjgl.opengl.GL11;
 
 import java.util.ArrayList;
@@ -47,13 +46,14 @@ public class GuiButtonEln extends GuiButton implements IGuiObject {
 
     @Override
     public void imouseClicked(int x, int y, int code) {
-//        if (mousePressed(Minecraft.getMinecraft(), x, y)) {
-//            Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.(new ResourceLocation("gui.button.press"), 1.0F));
-//            onMouseClicked();
-//            if (observer != null) {
-//                observer.guiObjectEvent(this);
-//            }
-//        }
+        if (mousePressed(Minecraft.getMinecraft(), x, y)) {
+            SoundHandler soundHandler = Minecraft.getMinecraft().getSoundHandler();
+            playPressSound(soundHandler);
+            onMouseClicked();
+            if (observer != null) {
+                observer.guiObjectEvent(this);
+            }
+        }
     }
 
     @Override
@@ -66,7 +66,7 @@ public class GuiButtonEln extends GuiButton implements IGuiObject {
 
     @Override
     public void idraw2(int x, int y) {
-        if (helper != null && visible && x >= x && y >= y && x < x + width && y < y + height)
+        if (helper != null && visible && x >= this.x && y >= this.y && x < this.x + width && y < this.y + height)
             helper.drawHoveringText(comment, x, y, Minecraft.getMinecraft().fontRenderer);
     }
 

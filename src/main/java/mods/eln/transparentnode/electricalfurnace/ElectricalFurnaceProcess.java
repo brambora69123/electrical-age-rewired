@@ -29,7 +29,7 @@ public class ElectricalFurnaceProcess implements IProcess {
     public void process(double time) {
         ItemStack itemStack = inventory.getStackInSlot(furnace.thermalIsolatorSlotId);
 
-        if (itemStack == null) {
+        if (itemStack == null || itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             furnace.descriptor.refreshTo(furnace.thermalLoad, 1);
         } else {
             ThermalIsolatorElement element = ((GenericItemUsingDamage<ThermalIsolatorElement>) itemStack.getItem()).getDescriptor(itemStack);
@@ -94,14 +94,16 @@ public class ElectricalFurnaceProcess implements IProcess {
      * Returns true if the furnace can smelt an item, i.e. has a source item, destination stack isn't full, etc.
      */
     private boolean smeltCan() {
-        if (inventory.getStackInSlot(ElectricalFurnaceElement.inSlotId).isEmpty()) {
+        ItemStack inputStack = inventory.getStackInSlot(ElectricalFurnaceElement.inSlotId);
+        if (inputStack == null || inputStack.isEmpty()) {
             return false;
         } else {
             ItemStack var1 = getSmeltResult();
             if (var1 == null) return false;
-            if (inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId).isEmpty()) return true;
-            if (!inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId).isItemEqual(var1)) return false;
-            int result = inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId).getCount() + var1.getCount();
+            ItemStack outputStack = inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId);
+            if (outputStack == null || outputStack.isEmpty()) return true;
+            if (!outputStack.isItemEqual(var1)) return false;
+            int result = outputStack.getCount() + var1.getCount();
 
             //energyNeeded = 1000.0;
             return (result <= inventory.getInventoryStackLimit() && result <= var1.getMaxStackSize());
@@ -118,10 +120,11 @@ public class ElectricalFurnaceProcess implements IProcess {
     public void smeltItem() {
         if (this.smeltCan()) {
             ItemStack var1 = getSmeltResult();
+            ItemStack outputStack = inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId);
 
-            if (inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId) == null) {
+            if (outputStack == null || outputStack.isEmpty()) {
                 inventory.setInventorySlotContents(1, var1.copy());
-            } else if (inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId).isItemEqual(var1)) {
+            } else if (outputStack.isItemEqual(var1)) {
                 inventory.decrStackSize(ElectricalFurnaceElement.outSlotId, -var1.getCount());
             }
 

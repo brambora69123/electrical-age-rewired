@@ -5,9 +5,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.vertex.VertexFormat;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -293,16 +294,15 @@ public class GuiHelper {
         GL11.glDisable(GL11.GL_ALPHA_TEST);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glShadeModel(GL11.GL_SMOOTH);
-        // TODO(1.10): Just no. Use LibLib.
-        //  Tessellator tessellator = Tessellator.instance;
-//        tessellator.startDrawingQuads();
-//        tessellator.setColorRGBA_F(f1, f2, f3, f);
-//        tessellator.addVertex((double) par3, (double) par2, 0);
-//        tessellator.addVertex((double) par1, (double) par2, 0);
-//        tessellator.setColorRGBA_F(f5, f6, f7, f4);
-//        tessellator.addVertex((double) par1, (double) par4, 0);
-//        tessellator.addVertex((double) par3, (double) par4, 0);
+
+        BufferBuilder buffer = tessellator.getBuffer();
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
+        buffer.pos(par3, par2, 0).color(f1, f2, f3, f).endVertex();
+        buffer.pos(par1, par2, 0).color(f1, f2, f3, f).endVertex();
+        buffer.pos(par1, par4, 0).color(f5, f6, f7, f4).endVertex();
+        buffer.pos(par3, par4, 0).color(f5, f6, f7, f4).endVertex();
         tessellator.draw();
+
         GL11.glShadeModel(GL11.GL_FLAT);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_ALPHA_TEST);

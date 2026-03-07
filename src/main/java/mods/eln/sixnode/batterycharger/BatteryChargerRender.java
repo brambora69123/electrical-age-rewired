@@ -5,16 +5,14 @@ import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
+import mods.eln.misc.UtilsClient;
 import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElementInventory;
 import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.entity.Render;
-import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
-import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -65,25 +63,7 @@ public class BatteryChargerRender extends SixNodeElementRender {
     }
 
     public void drawEntityItem(EntityItem entityItem, double x, double y, double z, float roty, float scale) {
-        if (entityItem == null) return;
-
-        entityItem.hoverStart = 0.0f;
-        entityItem.rotationYaw = 0.0f;
-        entityItem.motionX = 0.0;
-        entityItem.motionY = 0.0;
-        entityItem.motionZ = 0.0;
-        //scale *= 10;
-        Render var10;
-        // TODO(1.10): Render items.
-//        var10 = RenderManager.instance.getEntityRenderObject(entityItem);
-//        GL11.glPushMatrix();
-//        GL11.glTranslatef((float) x, (float) y, (float) z);
-//        GL11.glRotatef(90, 0f, 1f, 0f);
-//        GL11.glRotatef(roty, 0, 1, 0);
-//        GL11.glScalef(scale, scale, scale);
-//        GL11.glTranslatef(0.0f, -0.25f, 0.0f);
-//        var10.doRender(entityItem, 0, 0, 0, 0, 0);
-//        GL11.glPopMatrix();
+        UtilsClient.drawEntityItem(entityItem, x, y, z, roty, scale);
     }
 
     @Override

@@ -220,7 +220,7 @@ public class LampSupplyElement extends SixNodeElement {
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < descriptor.channelCount; ++i) {
             Entry e = entries.get(i);
             if (!e.powerChannel.isEmpty()) {
                 info.put(I18N.tr("Channel") + " " + (i + 1), e.powerChannel + " = " +
@@ -329,8 +329,13 @@ public class LampSupplyElement extends SixNodeElement {
         ItemStack cableStack = getInventory().getStackInSlot(LampSupplyContainer.cableSlotId);
         if (cableStack != null) {
             ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack);
-            desc.applyTo(powerLoad);
-            voltageWatchdog.setUNominal(desc.electricalNominalVoltage);
+            if (desc != null) {
+                desc.applyTo(powerLoad);
+                voltageWatchdog.setUNominal(desc.electricalNominalVoltage);
+            } else {
+                voltageWatchdog.setUNominal(10000);
+                powerLoad.highImpedance();
+            }
         } else {
             voltageWatchdog.setUNominal(10000);
             powerLoad.highImpedance();
@@ -355,10 +360,8 @@ public class LampSupplyElement extends SixNodeElement {
                 case setWirelessName: {
                     int id = stream.readByte();
                     String newName = stream.readUTF();
-                    channelRemove(this, id, entries.get(id).wirelessChannel);
                     entries.get(id).wirelessChannel = newName;
                     needPublish();
-                    channelRegister(this, id, newName);
                     break;
                 }
                 case setSelectedAggregator:
@@ -405,7 +408,7 @@ public class LampSupplyElement extends SixNodeElement {
     }
 
     private int getRange(LampSupplyDescriptor desc, IInventory inventory2) {
-        ItemStack stack = getInventory().getStackInSlot(LampSupplyContainer.cableSlotId);
-        return desc.range + stack.getCount();
+        ItemStack stack = inventory2.getStackInSlot(LampSupplyContainer.cableSlotId);
+        return desc.range + (stack == null ? 0 : stack.getCount());
     }
 }

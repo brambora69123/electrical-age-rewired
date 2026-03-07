@@ -10,6 +10,9 @@ public class SharedItem extends GenericItemUsingDamage<GenericItemUsingDamageDes
 
     public SharedItem() {
         super();
+        setTranslationKey("eln:shared_item");
+        setRegistryName("eln:shared_item");
+        setCreativeTab(mods.eln.Eln.Tab);
     }
 
     @Override

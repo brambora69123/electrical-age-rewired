@@ -204,14 +204,10 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
     public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
         if (!world.isRemote) {
             if (getNode() == null) return false;
-            getNode().onBlockActivated(entityPlayer, side, vx, vy, vz);
-            return true;
+            return getNode().onBlockActivated(entityPlayer, side, vx, vy, vz);
         }
-        //if(entityPlayer.getCurrentEquippedItem().getItem() instanceof ItemBlock)
-        {
-            return true;
-        }
-        //return true;
+        // On client side, always return true to prevent block use (like placing blocks)
+        return true;
     }
 
     public void onNeighborBlockChange() {

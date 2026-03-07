@@ -1,6 +1,5 @@
 package mods.eln.sixnode.lampsocket;
 
-import mods.eln.Eln;
 import mods.eln.init.ModBlock;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.INBTTReady;
@@ -9,7 +8,10 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
@@ -17,9 +19,10 @@ import net.minecraft.world.World;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class LightBlockEntity extends TileEntity {
+public class LightBlockEntity extends TileEntity implements ITickable {
 
     ArrayList<LightHandle> lightList = new ArrayList<LightHandle>();
+    private byte currentLight = 0;
 
     public static final ArrayList<LightBlockObserver> observers = new ArrayList<LightBlockObserver>();
 
@@ -66,7 +69,7 @@ public class LightBlockEntity extends TileEntity {
 
     void addLight(int light, int timeout) {
         lightList.add(new LightHandle((byte) light, timeout));
-        lightManager();
+        refreshLightValue();
     }
 
 	/*void removeLight(int light) {
@@ -101,48 +104,60 @@ public class LightBlockEntity extends TileEntity {
 		return light;
 	}*/
 
-    void lightManager() {
-		/*if (lightList.size() == 0) {
-			world.setBlock(xCoord, yCoord, zCoord, 0);
-		} else {
-			int light = getLight();
-			if (light != world.getBlockMetadata(xCoord, yCoord, zCoord)) {
-				world.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, light, 2);
-				world.updateLightByType(EnumSkyBlock.Block, xCoord, yCoord, zCoord);
-			}
-		}*/
+    private void refreshLightValue() {
+        int maxLight = 0;
+        for (LightHandle handle : lightList) {
+            if (maxLight < handle.value) {
+                maxLight = handle.value;
+            }
+        }
+        setCurrentLight(maxLight);
     }
 
-    public void updateEntity() {
+    private void setCurrentLight(int light) {
+        byte newLight = (byte) Math.max(0, Math.min(15, light));
+        if (currentLight == newLight) return;
+
+        currentLight = newLight;
+        if (world != null) {
+            IBlockState state = world.getBlockState(pos);
+            markDirty();
+            world.checkLightFor(EnumSkyBlock.BLOCK, pos);
+            world.notifyBlockUpdate(pos, state, state, 3);
+        }
+    }
+
+    public int getCurrentLight() {
+        return currentLight & 0xFF;
+    }
+
+    @Override
+    public void update() {
         if (world.isRemote) return;
-        BlockPos pos = this.pos;
+
         if (lightList.isEmpty()) {
-            //	world.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 1, 2);
+            setCurrentLight(0);
             world.setBlockToAir(pos);
-            //world.updateLightByType(EnumSkyBlock.Block, xCoord, yCoord, zCoord);
-            //Eln.tileEntityDestructor.add(this);
             Utils.println("Destroy light at " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " ");
             return;
         }
 
-        int light = 0;
         Iterator<LightHandle> iterator = lightList.iterator();
-        
         while (iterator.hasNext()) {
             LightHandle l = iterator.next();
-            if (light < l.value) light = l.value;
-
             l.timeout--;
             if (l.timeout <= 0) {
                 iterator.remove();
             }
         }
-        IBlockState state = world.getBlockState(pos);
-        Block block = state.getBlock();
-        if (light != block.getMetaFromState(state)) {
-            block.setLightLevel(2);
-            world.notifyLightSet(pos);
+
+        if (lightList.isEmpty()) {
+            setCurrentLight(0);
+            world.setBlockToAir(pos);
+            return;
         }
+
+        refreshLightValue();
     }
 
     public static void addLight(World w, BlockPos pos, int light, int timeout) {
@@ -150,7 +165,7 @@ public class LightBlockEntity extends TileEntity {
         if (block != ModBlock.lightBlock) {
             if (block != Blocks.AIR) return;
             w.setBlockState(pos, ModBlock.lightBlock.getDefaultState());
-            w.setLightFor(EnumSkyBlock.BLOCK, pos, 2);
+            w.checkLightFor(EnumSkyBlock.BLOCK, pos);
         }
 
         TileEntity t = w.getTileEntity(pos);
@@ -185,4 +200,52 @@ public class LightBlockEntity extends TileEntity {
 	}
 	
 	int clientLight = 0;*/
+
+    @Override
+    public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
+        super.writeToNBT(nbt);
+        nbt.setByte("currentLight", currentLight);
+        nbt.setInteger("lightCount", lightList.size());
+        for (int i = 0; i < lightList.size(); i++) {
+            lightList.get(i).writeToNBT(nbt, "light" + i);
+        }
+        return nbt;
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbt) {
+        super.readFromNBT(nbt);
+        currentLight = nbt.getByte("currentLight");
+        lightList.clear();
+        int lightCount = nbt.getInteger("lightCount");
+        for (int i = 0; i < lightCount; i++) {
+            LightHandle handle = new LightHandle();
+            handle.readFromNBT(nbt, "light" + i);
+            lightList.add(handle);
+        }
+    }
+
+    @Override
+    public NBTTagCompound getUpdateTag() {
+        return writeToNBT(super.getUpdateTag());
+    }
+
+    @Override
+    public void handleUpdateTag(NBTTagCompound tag) {
+        readFromNBT(tag);
+        if (world != null) {
+            world.checkLightFor(EnumSkyBlock.BLOCK, pos);
+            world.markBlockRangeForRenderUpdate(pos, pos);
+        }
+    }
+
+    @Override
+    public SPacketUpdateTileEntity getUpdatePacket() {
+        return new SPacketUpdateTileEntity(pos, 0, getUpdateTag());
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
+        handleUpdateTag(pkt.getNbtCompound());
+    }
 }

@@ -150,7 +150,7 @@ public class Coordinate implements INBTTReady {
     }
 
     public boolean doesBlockExist() {
-        return !world().isAirBlock(pos);
+        return world().isBlockLoaded(pos);
     }
 
     public boolean doesWorldExist() {

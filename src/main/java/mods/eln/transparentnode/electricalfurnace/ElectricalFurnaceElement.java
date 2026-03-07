@@ -164,21 +164,30 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         ItemStack itemStack;
         heatingCorpResistor.setState(powerOn);
         itemStack = inventory.getStackInSlot(heatingCorpSlotId);
-        if (itemStack == null) {
+        if (itemStack == null || itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             thermalRegulator.setRmin(MnaConst.highImpedance);
             voltageWatchdog.setUNominal(100000);
         } else {
             HeatingCorpElement element = ((GenericItemUsingDamage<HeatingCorpElement>) itemStack.getItem()).getDescriptor(itemStack);
-            element.applyTo(thermalRegulator);
-            voltageWatchdog.setUNominal(element.electricalNominalU);
+            if (element != null) {
+                element.applyTo(thermalRegulator);
+                voltageWatchdog.setUNominal(element.electricalNominalU);
+            } else {
+                thermalRegulator.setRmin(MnaConst.highImpedance);
+                voltageWatchdog.setUNominal(100000);
+            }
         }
 
         itemStack = inventory.getStackInSlot(thermalRegulatorSlotId);
-        if (itemStack == null) {
+        if (itemStack == null || itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             thermalRegulator.setNone();
         } else {
             IRegulatorDescriptor element = ((GenericItemUsingDamage<IRegulatorDescriptor>) itemStack.getItem()).getDescriptor(itemStack);
-            element.applyTo(thermalRegulator, 500.0, 10.0, 0.1, 0.1);
+            if (element != null) {
+                element.applyTo(thermalRegulator, 500.0, 10.0, 0.1, 0.1);
+            } else {
+                thermalRegulator.setNone();
+            }
         }
     }
 

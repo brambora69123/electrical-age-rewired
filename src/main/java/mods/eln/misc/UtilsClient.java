@@ -91,7 +91,7 @@ public class UtilsClient {
     public static void clientOpenGui(GuiScreen gui) {
         guiLastOpen = gui;
         EntityPlayerSP clientPlayer = getClientPlayer();
-        clientPlayer.openGui(Eln.Companion, GuiHandler.genericOpen, clientPlayer.world, 0, 0, 0);
+        clientPlayer.openGui(Eln.instance, GuiHandler.genericOpen, clientPlayer.world, 0, 0, 0);
     }
 
     public static void drawHalo(Obj3DPart halo, float r, float g, float b, World w, BlockPos pos, boolean bilinear) {
@@ -378,25 +378,28 @@ public class UtilsClient {
         GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
-//    static public void drawEntityItem(EntityItem entityItem, double x, double y, double z, float roty, float scale) {
-//        if (entityItem == null)
-//            return;
-//
-//        entityItem.hoverStart = 0.0f;
-//        entityItem.rotationYaw = 0.0f;
-//        entityItem.motionX = 0.0;
-//        entityItem.motionY = 0.0;
-//        entityItem.motionZ = 0.0;
-//
-//        Render var10;
-//        var10 = RenderManager.instance.getEntityRenderObject(entityItem);
-//        GL11.glPushMatrix();
-//        GL11.glTranslatef((float) x, (float) y, (float) z);
-//        GL11.glRotatef(roty, 0, 1, 0);
-//        GL11.glScalef(scale, scale, scale);
-//        var10.doRender(entityItem, 0, 0, 0, 0, 0);
-//        GL11.glPopMatrix();
-//    }
+    static public void drawEntityItem(EntityItem entityItem, double x, double y, double z, float roty, float scale) {
+        if (entityItem == null) return;
+
+        entityItem.hoverStart = 0.0f;
+        entityItem.rotationYaw = 0.0f;
+        entityItem.motionX = 0.0;
+        entityItem.motionY = 0.0;
+        entityItem.motionZ = 0.0;
+
+        Render<? super EntityItem> render = Minecraft.getMinecraft().getRenderManager().getEntityRenderObject(entityItem);
+        if (render == null) return;
+
+        GL11.glPushMatrix();
+        RenderHelper.enableStandardItemLighting();
+        GL11.glTranslatef((float) x, (float) y, (float) z);
+        GL11.glRotatef(roty, 0, 1, 0);
+        GL11.glScalef(scale, scale, scale);
+        GL11.glTranslatef(0.0f, -0.25f, 0.0f);
+        render.doRender(entityItem, 0, 0, 0, 0, Minecraft.getMinecraft().getRenderPartialTicks());
+        RenderHelper.disableStandardItemLighting();
+        GL11.glPopMatrix();
+    }
 
     static public void drawConnectionPinSixNode(float d, float w, float h) {
         d += 0.1f;

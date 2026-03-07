@@ -2,6 +2,7 @@ package mods.eln.generic;
 
 import mods.eln.misc.UtilsClient;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,12 +12,15 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDescriptor> extends Item implements IGenericItemUsingDamage {
     public Hashtable<Integer, Descriptor> subItemList = new Hashtable<Integer, Descriptor>();
@@ -92,15 +96,18 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
 //        }
 //    }
 
-    // TODO(1.12): Whatever this was, it's broken.
-//    @Override
-//    @SideOnly(Side.CLIENT)
-//    public void getSubItems(Items itemID, CreativeTabs tabs, List list) {
-//        // You can also take a more direct approach and do each one individual but I prefer the lazy / right way
-//        for (int id : orderList) {
-//            subItemList.get(id).getSubItems(list);
-//        }
-//    }
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void getSubItems(CreativeTabs tabs, NonNullList<ItemStack> items) {
+        if (!isInCreativeTab(tabs)) return;
+
+        for (int id : orderList) {
+            Descriptor descriptor = subItemList.get(id);
+            if (descriptor != null) {
+                descriptor.getSubItems(items);
+            }
+        }
+    }
 
     public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List list, boolean par4) {
 		/*Descriptor desc = getDescriptor(itemStack);

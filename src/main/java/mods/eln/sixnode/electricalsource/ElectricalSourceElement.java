@@ -18,6 +18,7 @@ import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.VoltageSource;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -163,5 +164,15 @@ public class ElectricalSourceElement extends SixNodeElement {
     @Override
     public boolean hasGui() {
         return true;
+    }
+
+    @Override
+    public Container newContainer(Direction side, EntityPlayer player) {
+        return new Container() {
+            @Override
+            public boolean canInteractWith(EntityPlayer playerIn) {
+                return true;
+            }
+        };
     }
 }

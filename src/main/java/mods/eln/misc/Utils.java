@@ -376,6 +376,7 @@ public class Utils {
 
     public static void readFromNBT(NBTTagCompound nbt, String str, IInventory inventory) {
         NBTTagList var2 = nbt.getTagList(str, 10);
+        inventory.clear();
 
         for (int var3 = 0; var3 < var2.tagCount(); ++var3) {
             NBTTagCompound var4 = (NBTTagCompound) var2.getCompoundTagAt(var3);
@@ -391,10 +392,11 @@ public class Utils {
         NBTTagList var2 = new NBTTagList();
 
         for (int var3 = 0; var3 < inventory.getSizeInventory(); ++var3) {
-            if (!inventory.getStackInSlot(var3).isEmpty()) {
+            ItemStack stack = inventory.getStackInSlot(var3);
+            if (stack != null && !stack.isEmpty()) {
                 NBTTagCompound var4 = new NBTTagCompound();
                 var4.setByte("Slot", (byte) var3);
-                inventory.getStackInSlot(var3).writeToNBT(var4);
+                stack.writeToNBT(var4);
                 var2.appendTag(var4);
             }
         }
@@ -585,6 +587,7 @@ public class Utils {
 
     public static boolean tryPutStackInInventory(ItemStack stack, IInventory inventory) {
         if (inventory == null) return false;
+        if (stack == null || stack.isEmpty()) return true;
         int limit = inventory.getInventoryStackLimit();
 
         // First, make a list of possible target slots.
@@ -592,13 +595,14 @@ public class Utils {
         int need = stack.getCount();
         for (int i = 0; i < inventory.getSizeInventory() && need > 0; i++) {
             ItemStack slot = inventory.getStackInSlot(i);
-            if (!slot.isEmpty() && slot.getCount() < limit && slot.isItemEqual(stack)) {
+            if (slot != null && !slot.isEmpty() && slot.getCount() < limit && slot.isItemEqual(stack)) {
                 slots.add(i);
                 need -= limit - slot.getCount();
             }
         }
         for (int i = 0; i < inventory.getSizeInventory() && need > 0; i++) {
-            if (inventory.getStackInSlot(i).isEmpty()) {
+            ItemStack slot = inventory.getStackInSlot(i);
+            if (slot == null || slot.isEmpty()) {
                 slots.add(i);
                 need -= limit;
             }
@@ -613,7 +617,7 @@ public class Utils {
         int toPut = stack.getCount();
         for (Integer slot : slots) {
             ItemStack target = inventory.getStackInSlot(slot);
-            if (target.isEmpty()) {
+            if (target == null || target.isEmpty()) {
                 int amount = Math.min(toPut, limit);
                 inventory.setInventorySlotContents(slot, new ItemStack(stack.getItem(), amount, stack.getItemDamage()));
                 toPut -= amount;
@@ -636,8 +640,9 @@ public class Utils {
         ItemStack[] inputStack = new ItemStack[stackList.length];
 
         for (int idx = 0; idx < outputStack.length; idx++) {
-            if (!inventory.getStackInSlot(slotsIdList[idx]).isEmpty())
-                outputStack[idx] = inventory.getStackInSlot(slotsIdList[idx]).copy();
+            ItemStack inventoryStack = inventory.getStackInSlot(slotsIdList[idx]);
+            if (inventoryStack != null && !inventoryStack.isEmpty())
+                outputStack[idx] = inventoryStack.copy();
         }
         for (int idx = 0; idx < stackList.length; idx++) {
             inputStack[idx] = stackList[idx].copy();
@@ -685,7 +690,7 @@ public class Utils {
         for (ItemStack stack : stackList) {
             for (int i : slotsIdList) {
                 ItemStack targetStack = inventory.getStackInSlot(i);
-                if (targetStack.isEmpty()) {
+                if (targetStack == null || targetStack.isEmpty()) {
                     inventory.setInventorySlotContents(i, stack.copy());
                     stack.setCount(0);
                     break;
@@ -723,7 +728,7 @@ public class Utils {
 	 */
 
     public static void serialiseItemStack(DataOutputStream stream, ItemStack stack) throws IOException {
-        if (stack == null) {
+        if (stack == null || stack.isEmpty() || stack.getItem() == null || stack.getItem() == Item.getItemFromBlock(Blocks.AIR)) {
             stream.writeShort(-1);
             stream.writeShort(-1);
         } else {
@@ -736,7 +741,7 @@ public class Utils {
         short id, damage;
         id = stream.readShort();
         damage = stream.readShort();
-        if (id == -1)
+        if (id == -1 || id == 0)
             return null;
         return Utils.newItemStack(id, 1, damage);
     }
@@ -748,6 +753,9 @@ public class Utils {
             return null;
 
         } else {
+            if (itemId == 0) {
+                return null;
+            }
             ItemDamage = stream.readShort();
             if (old == null || Item.getIdFromItem(old.getItem().getItem()) != itemId || old.getItem().getItemDamage() != ItemDamage) {
                 BlockPos pos = tileEntity.getPos();
@@ -873,9 +881,12 @@ public class Utils {
     }
 
     public static Object getItemObject(ItemStack stack) {
-        if (stack == null)
+        if (stack == null || stack.isEmpty())
             return null;
         Item i = stack.getItem();
+        if (i == null || i == Item.getItemFromBlock(Blocks.AIR)) {
+            return null;
+        }
         if (i instanceof GenericItemUsingDamage) {
             return ((GenericItemUsingDamage) i).getDescriptor(stack);
         }

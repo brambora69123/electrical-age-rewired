@@ -97,8 +97,8 @@ public class TransparentNodeBlock extends NodeBlock {
 //    }
 
     @Override
-    public int getLightValue(IBlockAccess world, BlockPos pos) {
-        return (world.getBlockState(pos).getBlock().getMetaFromState(world.getBlockState(pos)) & 3) << 6;
+    public int getLightValue(IBlockState state, IBlockAccess world, BlockPos pos) {
+        return (state.getBlock().getMetaFromState(state) & 3) << 6;
     }
 
     @Nullable

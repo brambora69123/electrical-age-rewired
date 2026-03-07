@@ -37,17 +37,14 @@ public class LightBlock extends BlockContainer {
         return true;
     }
 
-    // TODO(1.10): Block states for light levels? Or setLightLevel?
-//    @Override
-//    public int getLightValue(IBlockAccess world, int x, int y, int z) {
-//        /*if (FMLCommonHandler.instance().getEffectiveSide().isClient()) {
-//    		Utils.println("Light at " + x + ":" + y + ":" + z + " " + FMLCommonHandler.instance().getEffectiveSide().toString() + " get light " + world.getBlockMetadata(x, y, z));
-//    	}*/
-//        //	Utils.println("Light at " + x + ":" + y + ":" + z + " " + FMLCommonHandler.instance().getEffectiveSide().toString() + " get light " + world.getBlockMetadata(x, y, z));
-//        return world.getBlockMetadata(x, y, z);
-//
-//        //return ((LightBlockEntity)world.getBlockTileEntity(x, y, z)).getClientLight();
-//    }
+    @Override
+    public int getLightValue(IBlockState state, IBlockAccess world, BlockPos pos) {
+        TileEntity tileEntity = world.getTileEntity(pos);
+        if (tileEntity instanceof LightBlockEntity) {
+            return ((LightBlockEntity) tileEntity).getCurrentLight();
+        }
+        return 0;
+    }
 
     @Override
     public TileEntity createNewTileEntity(World worldIn, int meta) {

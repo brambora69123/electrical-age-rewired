@@ -265,8 +265,11 @@ public class TransformerElement extends TransparentNodeElement {
     public void networkSerialize(DataOutputStream stream) {
         super.networkSerialize(stream);
         try {
-            stream.writeByte(inventory.getStackInSlot(0).getCount());
-            stream.writeByte(inventory.getStackInSlot(1).getCount());
+            ItemStack primaryStack = inventory.getStackInSlot(0);
+            ItemStack secondaryStack = inventory.getStackInSlot(1);
+            ItemStack casingStack = inventory.getStackInSlot(3);
+            stream.writeByte(primaryStack == null || primaryStack.isEmpty() ? 0 : primaryStack.getCount());
+            stream.writeByte(secondaryStack == null || secondaryStack.isEmpty() ? 0 : secondaryStack.getCount());
 
             Utils.serialiseItemStack(stream, inventory.getStackInSlot(TransformerContainer.ferromagneticSlotId));
             Utils.serialiseItemStack(stream, inventory.getStackInSlot(TransformerContainer.primaryCableSlotId));
@@ -281,7 +284,7 @@ public class TransformerElement extends TransparentNodeElement {
                     secondaryLoad.getI() / secondaryMaxCurrent), 0f, 1f);
             }
             stream.writeFloat(load);
-            stream.writeBoolean(!inventory.getStackInSlot(3).isEmpty());
+            stream.writeBoolean(casingStack != null && !casingStack.isEmpty());
 
         } catch (IOException e) {
             e.printStackTrace();

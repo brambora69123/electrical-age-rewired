@@ -76,14 +76,16 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
         //GL11.glEnable(GL11.GL_TEXTURE_2D);
 
         //Glass (reflections)
-        UtilsClient.enableBlend();
-        obj.bindTexture("Reflection.png");
-        float rotYaw = Minecraft.getMinecraft().player.rotationYaw / 360.f;
-        float rotPitch = Minecraft.getMinecraft().player.rotationPitch / 180.f;
-        float pos = (((float) Minecraft.getMinecraft().player.posX) - ((float) (objPosMX * 2)) + ((float) Minecraft.getMinecraft().player.posZ) - ((float) (objPosMZ * 2))) / 24.f;
-        GL11.glColor4f(1, 1, 1, reflc);
-        reflection.draw(rotYaw + pos, rotPitch * 0.857f);
-        UtilsClient.disableBlend();
+        if (reflection != null) {
+            UtilsClient.enableBlend();
+            obj.bindTexture("Reflection.png");
+            float rotYaw = Minecraft.getMinecraft().player.rotationYaw / 360.f;
+            float rotPitch = Minecraft.getMinecraft().player.rotationPitch / 180.f;
+            float pos = (((float) Minecraft.getMinecraft().player.posX) - ((float) (objPosMX * 2)) + ((float) Minecraft.getMinecraft().player.posZ) - ((float) (objPosMZ * 2))) / 24.f;
+            GL11.glColor4f(1, 1, 1, reflc);
+            reflection.draw(rotYaw + pos, rotPitch * 0.857f);
+            UtilsClient.disableBlend();
+        }
 
         //Plot
         if (log != null) {

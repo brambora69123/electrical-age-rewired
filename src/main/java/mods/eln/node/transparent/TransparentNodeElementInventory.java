@@ -8,7 +8,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentString;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Arrays;
 
 public class TransparentNodeElementInventory implements ISidedInventory, INBTTReady {
     protected TransparentNodeElementRender transparentNodeRender = null;
@@ -43,25 +46,41 @@ public class TransparentNodeElementInventory implements ISidedInventory, INBTTRe
     @NotNull
     @Override
     public ItemStack getStackInSlot(int slot) {
+        if (slot >= getInv().length) return null;
         return getInv()[slot];
     }
 
     @Override
     public ItemStack decrStackSize(int slot, int amt) {
         ItemStack stack = getStackInSlot(slot);
-        stack.splitStack(amt);
-        return stack;
+        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        if (stack.getCount() <= amt) {
+            getInv()[slot] = null;
+            return stack;
+        }
+
+        ItemStack result = stack.splitStack(amt);
+        if (stack.isEmpty() || stack.getCount() <= 0) {
+            getInv()[slot] = null;
+        }
+        return result;
     }
 
     @Override
     public ItemStack removeStackFromSlot(int slot) {
         ItemStack stack = getStackInSlot(slot);
-        stack.setCount(0);
+        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        getInv()[slot] = null;
         return stack;
     }
 
     @Override
     public void setInventorySlotContents(int slot, @NotNull ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            getInv()[slot] = null;
+            return;
+        }
+
         getInv()[slot] = stack;
         if (stack.getCount() > getInventoryStackLimit()) {
             stack.setCount(getInventoryStackLimit());
@@ -81,7 +100,7 @@ public class TransparentNodeElementInventory implements ISidedInventory, INBTTRe
     @Override
     public boolean isEmpty() {
         for (ItemStack stack : getInv()) {
-            if (!stack.isEmpty()) return false;
+            if (stack != null && !stack.isEmpty()) return false;
         }
         return true;
     }
@@ -150,7 +169,7 @@ public class TransparentNodeElementInventory implements ISidedInventory, INBTTRe
 
     @Override
     public void clear() {
-
+        Arrays.fill(inv, null);
     }
 
     @Override
@@ -161,7 +180,7 @@ public class TransparentNodeElementInventory implements ISidedInventory, INBTTRe
 
     @Override
     public ITextComponent getDisplayName() {
-        return null;
+        return new TextComponentString("TransparentNodeInventory");
     }
 
     @Override

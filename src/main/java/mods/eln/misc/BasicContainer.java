@@ -52,9 +52,11 @@ public class BasicContainer extends Container {
     }
 
     public ItemStack transferStackInSlot(EntityPlayer player, int slotId) {
+        ItemStack movedStack = ItemStack.EMPTY;
         Slot slot = this.inventorySlots.get(slotId);
         if (slot != null && slot.getHasStack()) {
             ItemStack stack = slot.getStack();
+            movedStack = stack.copy();
             int invSize = inventory.getSizeInventory();
             if (slotId < invSize) {
                 this.mergeItemStack(stack, invSize, inventorySlots.size(), true);
@@ -75,90 +77,11 @@ public class BasicContainer extends Container {
             }
         }
 
-        return null;
+        return movedStack;
     }
 
     protected boolean mergeItemStack(ItemStack par1ItemStack, int par2, int par3, boolean par4) {
-        boolean flag1 = false;
-        int k = par2;
-
-        if (par4) {
-            k = par3 - 1;
-        }
-
-        Slot slot;
-        ItemStack itemstack1;
-
-        if (par1ItemStack.isStackable()) {
-            while (!par1ItemStack.isEmpty() && (!par4 && k < par3 || par4 && k >= par2)) {
-                slot = this.inventorySlots.get(k);
-
-                itemstack1 = slot.getStack();
-
-                if (slot.isItemValid(par1ItemStack) && !itemstack1.isEmpty() && itemstack1.getItem() == par1ItemStack.getItem() && (!par1ItemStack.getHasSubtypes() || par1ItemStack.getItemDamage() == itemstack1.getItemDamage()) && ItemStack.areItemStackTagsEqual(par1ItemStack, itemstack1)) {
-                    int l = itemstack1.getCount() + par1ItemStack.getCount();
-                    int maxSize = Math.min(slot.getSlotStackLimit(), par1ItemStack.getMaxStackSize());
-                    if (l <= maxSize) {
-                        par1ItemStack.setCount(0);
-                        itemstack1.setCount(1);
-                        slot.onSlotChanged();
-                        flag1 = true;
-                    } else if (itemstack1.getCount() < maxSize) {
-                        par1ItemStack.splitStack(maxSize - itemstack1.getCount());
-                        itemstack1.setCount(maxSize);
-                        slot.onSlotChanged();
-                        flag1 = true;
-                    }
-                }
-
-                if (par4) {
-                    --k;
-                } else {
-                    ++k;
-                }
-            }
-        }
-
-        if (!par1ItemStack.isEmpty()) {
-            if (par4) {
-                k = par3 - 1;
-            } else {
-                k = par2;
-            }
-
-            while (!par4 && k < par3 || par4 && k >= par2) {
-                slot = this.inventorySlots.get(k);
-                itemstack1 = slot.getStack();
-
-                if (!itemstack1.isEmpty() && slot.isItemValid(par1ItemStack)) {
-                    int l = par1ItemStack.getCount();
-                    int maxSize = Math.min(slot.getSlotStackLimit(), par1ItemStack.getMaxStackSize());
-                    if (l <= maxSize) {
-                        slot.putStack(par1ItemStack.copy());
-                        slot.onSlotChanged();
-                        par1ItemStack.setCount(0);
-                        flag1 = true;
-                        break;
-                    } else {
-                        par1ItemStack.splitStack(maxSize);
-                        ItemStack newItemStack = par1ItemStack.copy();
-                        newItemStack.setCount(maxSize);
-                        slot.putStack(newItemStack);
-                        slot.onSlotChanged();
-                        flag1 = true;
-                        break;
-                    }
-                }
-
-                if (par4) {
-                    --k;
-                } else {
-                    ++k;
-                }
-            }
-        }
-
-        return flag1;
+        return super.mergeItemStack(par1ItemStack, par2, par3, par4);
     }
 
     @Override
@@ -169,7 +92,7 @@ public class BasicContainer extends Container {
             Utils.sendMessage(arg3, "message from Electrical age.");
             Utils.sendMessage(arg3, "Could you send me a message about that?");
             Utils.sendMessage(arg3, "Thanks :D");
-            return null;
+            return ItemStack.EMPTY;
         }
         return super.slotClick(arg0, arg1, type, arg3);
     }

@@ -5,6 +5,7 @@ import mods.eln.node.six.SixNodeElementInventory;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 
 import static mods.eln.i18n.I18N.tr;
 
@@ -97,7 +98,8 @@ public class LampSocketGuiDraw extends GuiContainerEln {
         if (lampRender.poweredByLampSupply) {
             buttonSupplyType.displayString = tr("Powered by Lamp Supply");
             channel.setVisible(true);
-            if (inventory.getStackInSlot(LampSocketContainer.cableSlotId) == null)
+            ItemStack cableStack = inventory.getStackInSlot(LampSocketContainer.cableSlotId);
+            if (cableStack == null || cableStack.isEmpty())
                 channel.setComment(1, "§4" + tr("Cable slot empty"));
             else if (lampRender.isConnectedToLampSupply)
                 channel.setComment(1, "§2" + tr("connected to " + lampRender.channel));

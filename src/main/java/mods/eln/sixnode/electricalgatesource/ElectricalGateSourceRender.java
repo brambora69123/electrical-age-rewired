@@ -69,7 +69,9 @@ public class ElectricalGateSourceRender extends SixNodeElementRender {
 
             if (boot) {
                 boot = false;
-                interpolator.setValue((float) (voltageSyncValue / Cable.SVU));
+                float value = (float) (voltageSyncValue / Cable.SVU);
+                interpolator.setValue(value);
+                interpolator.setTarget(value);
             }
         } catch (IOException e) {
             e.printStackTrace();
