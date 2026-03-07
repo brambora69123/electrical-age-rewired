@@ -10,6 +10,6 @@ public abstract class GhostNode extends NodeBase {
 
     @Override
     public String getNodeUuid() {
-        return ModBlock.ghostBlock.getUuid();
+        return ModBlock.ghostBlock.getNodeUuid();
     }
 }

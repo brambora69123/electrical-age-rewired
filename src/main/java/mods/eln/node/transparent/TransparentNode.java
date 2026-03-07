@@ -44,25 +44,9 @@ public class TransparentNode extends Node {
 
         elementId = nbt.getShort("eid");
         try {
-            TransparentNodeDescriptor descriptor = null; //TODO(1.12): Eln.transparentNodeItem.getDescriptor(elementId);
+            TransparentNodeDescriptor descriptor = Eln.transparentNodeItem.getDescriptor(elementId);
             element = (TransparentNodeElement) descriptor.ElementClass.getConstructor(TransparentNode.class, TransparentNodeDescriptor.class).newInstance(this, descriptor);
-        } catch (InstantiationException e) {
-
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-
-            e.printStackTrace();
-        } catch (SecurityException e) {
-
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
         element.readFromNBT(nbt.getCompoundTag("element"));
@@ -138,35 +122,13 @@ public class TransparentNode extends Node {
     @Override
     public void initializeFromThat(Direction side, EntityLivingBase entityLiving, ItemStack itemStack) {
         try {
-            // Direction front = null;
-            TransparentNodeDescriptor descriptor = null; // TODO(1.12): Eln.transparentNodeItem.getDescriptor(itemStack);
-            /*
-			 * switch(descriptor.getFrontType()) { case BlockSide: front = side; break; case PlayerView: front = Utils.entityLivingViewDirection(entityLiving).getInverse(); break; case PlayerViewHorizontal: front = Utils.entityLivingHorizontalViewDirection(entityLiving).getInverse(); break;
-			 * 
-			 * }
-			 */
+            TransparentNodeDescriptor descriptor = Eln.transparentNodeItem.getDescriptor(itemStack);
 
             int metadata = itemStack.getItemDamage();
             elementId = metadata;
             element = (TransparentNodeElement) descriptor.ElementClass.getConstructor(TransparentNode.class, TransparentNodeDescriptor.class).newInstance(this, descriptor);
             element.initializeFromThat(side, entityLiving, itemStack.getTagCompound());
-        } catch (InstantiationException e) {
-
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-
-            e.printStackTrace();
-        } catch (SecurityException e) {
-
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
             e.printStackTrace();
         }
 

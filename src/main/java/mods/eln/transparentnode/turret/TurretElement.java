@@ -20,7 +20,6 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.nbt.NbtResistor;
-import mods.eln.sixnode.lampsocket.LightBlockEntity;
 import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.player.EntityPlayer;
@@ -99,10 +98,6 @@ public class TurretElement extends TransparentNodeElement {
     }
 
     public void shoot() {
-        Coordinate lightSourceCoordinate = new Coordinate();
-        lightSourceCoordinate.copyFrom(coordinate());
-        lightSourceCoordinate.move(front);
-        LightBlockEntity.addLight(lightSourceCoordinate, 25, 2);
         if (simulation.shoot()) needPublish();
     }
 

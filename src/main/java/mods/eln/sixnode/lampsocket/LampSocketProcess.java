@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObserver*/ {
+public class LampSocketProcess implements IProcess, INBTTReady {
 
     double time = 0;
     double deltaTBase = 0.2;
@@ -87,6 +87,14 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
     public void process(double time) {
         ItemStack lampStack = lamp.getInventory().getStackInSlot(0);
         LampDescriptor lampDescriptor = getLampDescriptor(lampStack);
+
+        if (boot) {
+            if (light == 0) {
+                // If light is zero on boot, ensure the world light is also zero
+                // to fix the reload issue where it might be stuck at a higher value
+                lamp.sixNode.setLightValue(0);
+            }
+        }
 
         if (!lamp.poweredByLampSupply || !lamp.hasCable()) {
             lamp.setIsConnectedToLampSupply(false);
@@ -284,7 +292,7 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
 
         lampStackLast = lampStack;
 
-        // Set light directly on the node (like emergency lamp), no LightBlockEntity
+        // Set light directly on the node (like emergency lamp)
         setLight(newLight);
     }
 
@@ -316,7 +324,6 @@ public class LampSocketProcess implements IProcess, INBTTReady /*,LightBlockObse
     }
 
     public void destructor() {
-        // No longer uses LightBlockEntity, nothing to clean up
     }
 
     @Override

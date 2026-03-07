@@ -17,7 +17,6 @@ import mods.eln.sim.mna.component.Resistor;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
-import mods.eln.sixnode.lampsocket.LightBlockEntity;
 import mods.eln.sound.SoundCommand;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
@@ -327,8 +326,6 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
 
             if (++blinkCounter >= 9) {
                 blinkCounter = 0;
-                if ((powerLoad.getU() / descriptor.cable.electricalNominalVoltage - 0.5) * 3 > Math.random())
-                    LightBlockEntity.addLight(lightCoordinate, 12, 11);
             }
             switch (state) {
                 case StateReserved:

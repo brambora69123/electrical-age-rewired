@@ -8,11 +8,15 @@ import net.minecraftforge.common.ISpecialArmor;
 
 public class SharedItem extends GenericItemUsingDamage<GenericItemUsingDamageDescriptor> implements ISpecialArmor {
 
-    public SharedItem() {
+    public SharedItem(String name) {
         super();
-        setTranslationKey("eln:shared_item");
-        setRegistryName("eln:shared_item");
+        setTranslationKey(name);
+        setRegistryName(name);
         setCreativeTab(mods.eln.Eln.Tab);
+    }
+
+    public SharedItem() {
+        this("eln:shared_item");
     }
 
     @Override

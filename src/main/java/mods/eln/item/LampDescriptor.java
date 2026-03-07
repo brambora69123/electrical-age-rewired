@@ -40,6 +40,7 @@ public class LampDescriptor extends GenericItemUsingDamageDescriptorUpgrade {
         this.nominalP = nominalP;
         this.nominalLight = nominalLight;
         this.nominalLife = nominalLife;
+        this.serverNominalLife = nominalLife / 3600.0;
         this.vegetableGrowRate = vegetableGrowRate;
 
         switch (type) {

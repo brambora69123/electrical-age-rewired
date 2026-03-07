@@ -261,6 +261,14 @@ public class LampSocketElement extends SixNodeElement {
         computeElectricalLoad();
     }
 
+    @Override
+    public void globalBoot() {
+        super.globalBoot();
+        computeElectricalLoad();
+        sixNode.recalculateLightValue();
+        sixNode.forceLightValueUpdate();
+    }
+
     public void computeElectricalLoad() {
         ItemStack lamp = acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.lampSlotId);
         ItemStack cable = acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId);

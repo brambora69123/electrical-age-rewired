@@ -17,10 +17,13 @@ public abstract class Node extends NodeBase {
         if (light < 0) light = 0;
         if (lastLight != light) {
             lastLight = light;
-            coordinate.world().setLightFor(EnumSkyBlock.BLOCK, coordinate.pos, light);
+            forceLightValueUpdate();
             setNeedPublish(true);
         }
+    }
 
+    public void forceLightValueUpdate() {
+        coordinate.world().setLightFor(EnumSkyBlock.BLOCK, coordinate.pos, lastLight);
     }
 
     public int getLightValue() {

@@ -15,6 +15,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ITickable;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
@@ -26,7 +27,7 @@ import java.io.*;
 import java.util.LinkedList;
 
 
-public abstract class NodeBlockEntity extends TileEntity implements ITileEntitySpawnClient, INodeEntity {
+public abstract class NodeBlockEntity extends TileEntity implements ITileEntitySpawnClient, INodeEntity, ITickable {
 
     public static final LinkedList<NodeBlockEntity> clientList = new LinkedList<NodeBlockEntity>();
 
@@ -38,6 +39,24 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
     boolean redstone = false;
     int lastLight = 0xFF;
     boolean firstUnserialize = true;
+    boolean firstUpdate = true;
+
+    @Override
+    public void update() {
+        if (firstUpdate) {
+            firstUpdate = false;
+            if (!world.isRemote) {
+                // Reset light map on first update to fix reload issues
+                world.setLightFor(EnumSkyBlock.BLOCK, pos, 0);
+                Node node = getNode();
+                if (node != null) {
+                    node.forceLightValueUpdate();
+                }
+            } else {
+                clientList.add(this);
+            }
+        }
+    }
 
     @Override
     public void serverPublishUnserialize(DataInputStream stream) {
@@ -153,19 +172,6 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
     void onBlockPlacedBy(Direction front, EntityLivingBase entityLiving, IBlockState state) {
 
     }
-
-
-    @Override
-    public void onLoad()
-    {
-        if (!world.isRemote) {
-            // Don't call getNode() here - NodeManager hasn't loaded yet!
-            // The node will be lazily loaded when first accessed (rendering/interaction)
-        } else {
-            clientList.add(this);
-        }
-    }
-
 
 
     public void onBlockAdded() {

@@ -52,7 +52,7 @@ public class TransparentNodeEntity extends NodeBlockEntity implements ISidedInve
             } else {
                 if (id != elementRenderId) {
                     elementRenderId = id;
-                    TransparentNodeDescriptor descriptor = null; // TODO(1.12): Eln.transparentNodeItem.getDescriptor(id);
+                    TransparentNodeDescriptor descriptor = Eln.transparentNodeItem.getDescriptor(id);
                     elementRender = (TransparentNodeElementRender) descriptor.RenderClass.getConstructor(TransparentNodeEntity.class, TransparentNodeDescriptor.class).newInstance(this, descriptor);
                 }
                 elementRender.networkUnserialize(stream);

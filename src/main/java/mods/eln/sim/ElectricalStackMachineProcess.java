@@ -62,8 +62,9 @@ public class ElectricalStackMachineProcess implements IProcess {
     @Override
     public void process(double time) {
         ItemStack itemStackIn = inventory.getStackInSlot(inputSlotId);
+        if (itemStackIn == null) itemStackIn = ItemStack.EMPTY;
 
-        boolean itemTypeChanged = !itemStackIn.isItemEqual(itemStackInOld);
+        boolean itemTypeChanged = !Utils.areSame(itemStackIn, itemStackInOld);
 
         if (itemTypeChanged || (!smeltCan()) || !smeltInProcess) {
             smeltInit();
@@ -81,6 +82,7 @@ public class ElectricalStackMachineProcess implements IProcess {
     }
 
     public double getPower() {
+        if (electricalResistor == null) return 0.0;
         return electricalResistor.getP() * efficiency;
     }
 
@@ -90,35 +92,41 @@ public class ElectricalStackMachineProcess implements IProcess {
             smeltInProcess = false;
             energyNeeded = 1.0;
             energyCounter = 0.0;
-            electricalResistor.highImpedance();
+            if (electricalResistor != null) electricalResistor.highImpedance();
         } else {
             smeltInProcess = true;
-            energyNeeded = recipesList.getRecipe(inventory.getStackInSlot(inputSlotId)).energy;
+            ItemStack stack = inventory.getStackInSlot(inputSlotId);
+            if (stack == null) stack = ItemStack.EMPTY;
+            Recipe r = recipesList.getRecipe(stack);
+            energyNeeded = r != null ? r.energy : 1.0;
             energyCounter = 0.0;
-            electricalResistor.setR(resistorValue / speedUp);
+            if (electricalResistor != null) electricalResistor.setR(resistorValue / speedUp);
         }
     }
 
     public void setResistorValue(double value) {
         resistorValue = value;
-        if (smeltInProcess) electricalResistor.setR(resistorValue / speedUp);
+        if (smeltInProcess && electricalResistor != null) electricalResistor.setR(resistorValue / speedUp);
     }
 
     /**
      * Returns true if the furnace can smelt an item, i.e. has a source item, destination stack isn't full, etc.
      */
     public boolean smeltCan() {
-        if (inventory.getStackInSlot(inputSlotId) == null) {
+        ItemStack stack = inventory.getStackInSlot(inputSlotId);
+        if (stack == null || stack.isEmpty()) {
             return false;
         } else {
             ItemStack[] output = getSmeltResult();
             if (output == null) return false;
-            return Utils.canPutStackInInventory(getSmeltResult(), inventory, outSlotIdList);
+            return Utils.canPutStackInInventory(output, inventory, outSlotIdList);
         }
     }
 
     public ItemStack[] getSmeltResult() {
-        Recipe recipe = recipesList.getRecipe(inventory.getStackInSlot(inputSlotId));
+        ItemStack stack = inventory.getStackInSlot(inputSlotId);
+        if (stack == null || stack.isEmpty()) return null;
+        Recipe recipe = recipesList.getRecipe(stack);
         if (recipe == null) return null;
         return recipe.output;
     }
@@ -128,7 +136,10 @@ public class ElectricalStackMachineProcess implements IProcess {
      */
     public void smeltItem() {
         if (this.smeltCan()) {
-            Recipe recipe = recipesList.getRecipe(inventory.getStackInSlot(inputSlotId));
+            ItemStack stack = inventory.getStackInSlot(inputSlotId);
+            if (stack == null || stack.isEmpty()) return;
+            Recipe recipe = recipesList.getRecipe(stack);
+            if (recipe == null) return;
             Utils.tryPutStackInInventory(recipe.getOutputCopy(), inventory, outSlotIdList);
             inventory.decrStackSize(inputSlotId, recipe.input.getCount());
             if (observer != null) observer.done(this);

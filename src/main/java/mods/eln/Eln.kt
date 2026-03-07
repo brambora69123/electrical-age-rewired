@@ -23,7 +23,6 @@ import mods.eln.packets.*
 import mods.eln.server.*
 import mods.eln.sim.Simulator
 import mods.eln.sim.ThermalLoadInitializer
-import mods.eln.sixnode.lampsocket.LightBlockEntity
 import mods.eln.sixnode.lampsupply.LampSupplyElement
 import mods.eln.sixnode.modbusrtu.ModbusTcpServer
 import mods.eln.sixnode.powersocket.PowerSocketElement
@@ -100,7 +99,10 @@ class Eln {
         ElnContent.preInit()
 
         // Initialize shared items (multi-meter, thermometer, etc.)
-        sharedItem = mods.eln.generic.SharedItem()
+        sharedItem = mods.eln.generic.SharedItem("shared_item")
+        sharedItemStackOne = mods.eln.generic.SharedItem("shared_item_stack_one").apply {
+            setMaxStackSize(1)
+        }
         Items.init()
 
         // Initialize network channels
@@ -309,7 +311,6 @@ class Eln {
     private fun clearSimulatorState() {
         TutorialSignElement.resetBalise()
         TeleporterElement.teleporterList.clear()
-        LightBlockEntity.observers.clear()
         NodeBlockEntity.clientList.clear()
         WirelessSignalTxElement.channelMap.clear()
         IWirelessSignalSpot.spots.clear()
@@ -407,6 +408,9 @@ class Eln {
         // =====================================================================
         @JvmStatic
         lateinit var sharedItem: mods.eln.generic.SharedItem
+
+        @JvmStatic
+        lateinit var sharedItemStackOne: mods.eln.generic.SharedItem
 
         @JvmStatic
         lateinit var sixNodeItem: SixNodeItem

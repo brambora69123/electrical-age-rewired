@@ -10,6 +10,8 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.block.SoundType;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -27,42 +29,74 @@ public class TransparentNodeItem extends GenericItemBlockUsingDamage<Transparent
 
 
     @Override
-    public boolean placeBlockAt(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, IBlockState state) {
-        if (world.isRemote) return false;
-        TransparentNodeDescriptor descriptor = getDescriptor(stack);
-        Direction direction = Direction.fromFacing(side).getInverse();
-        Direction front = descriptor.getFrontFromPlace(direction, player);
-        int[] v = new int[]{descriptor.getSpawnDeltaX(), descriptor.getSpawnDeltaY(), descriptor.getSpawnDeltaZ()};
-        front.rotateFromXN(v);
-        pos = pos.add(v[0], v[1], v[2]);
+    public EnumActionResult onItemUse(EntityPlayer player, World world, BlockPos pos, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
+        ItemStack stack = player.getHeldItem(hand);
+        if (stack.isEmpty()) return EnumActionResult.FAIL;
 
-        Block bb = world.getBlockState(pos).getBlock();
-        if (bb.isReplaceable(world, pos)) ;
-        //if(world.getBlock(x, y, z) != ModBlock.air) return false;
+        IBlockState iblockstate = world.getBlockState(pos);
+        Block block = iblockstate.getBlock();
 
-        Coordinate coord = new Coordinate(pos, world);
-
-
-        String error;
-        if ((error = descriptor.checkCanPlace(coord, front)) != null) {
-            Utils.sendMessage(player, error);
-            return false;
+        if (!block.isReplaceable(world, pos)) {
+            pos = pos.offset(facing);
         }
 
-        GhostGroup ghostgroup = descriptor.getGhostGroup(front);
-        if (ghostgroup != null) ghostgroup.plot(coord, coord, descriptor.getGhostGroupUuid());
+        if (player.canPlayerEdit(pos, facing, stack) && world.mayPlace(this.block, pos, false, facing, null)) {
+            TransparentNodeDescriptor descriptor = getDescriptor(stack);
+            if (descriptor == null) return EnumActionResult.FAIL;
 
-        TransparentNode node = new TransparentNode();
-        node.onBlockPlacedBy(coord, front, player, stack);
-        //TODO: Probably use getStateForPlacement instead
-        world.setBlockState(pos, Block.getBlockFromItem(this).getStateFromMeta(node.getBlockMetadata() & 0x03));//caca1.5.1
-        ((NodeBlock) Block.getBlockFromItem(this)).onBlockPlacedBy(world, pos, direction, player, state);
+            Direction direction = Direction.fromFacing(facing).getInverse();
+            Direction front = descriptor.getFrontFromPlace(direction, player);
 
+            // Apply spawn delta
+            int[] v = new int[]{descriptor.getSpawnDeltaX(), descriptor.getSpawnDeltaY(), descriptor.getSpawnDeltaZ()};
+            front.rotateFromXN(v);
+            BlockPos adjustedPos = pos.add(v[0], v[1], v[2]);
 
-        node.checkCanStay(true);
+            if (!world.getBlockState(adjustedPos).getBlock().isReplaceable(world, adjustedPos)) {
+                return EnumActionResult.FAIL;
+            }
 
-        return true;
+            Coordinate coord = new Coordinate(adjustedPos, world);
+            String error = descriptor.checkCanPlace(coord, front);
+            if (error != null) {
+                if (!world.isRemote) Utils.sendMessage(player, error);
+                return EnumActionResult.FAIL;
+            }
 
+            if (world.isRemote) return EnumActionResult.SUCCESS;
+
+            // Plot ghosts
+            GhostGroup ghostgroup = descriptor.getGhostGroup(front);
+            if (ghostgroup != null) ghostgroup.plot(coord, coord, descriptor.getGhostGroupUuid());
+
+            // Create Node
+            TransparentNode node = new TransparentNode();
+            node.onBlockPlacedBy(coord, front, player, stack);
+
+            // Set block state
+            int metadata = node.getBlockMetadata();
+            IBlockState newState = this.block.getStateFromMeta(metadata);
+            if (world.setBlockState(adjustedPos, newState, 3)) {
+                // Play placement sound
+                SoundType soundtype = this.block.getSoundType(newState, world, adjustedPos, player);
+                world.playSound(player, adjustedPos, soundtype.getPlaceSound(), SoundCategory.BLOCKS, (soundtype.getVolume() + 1.0F) / 2.0F, soundtype.getPitch() * 0.8F);
+                
+                // Notify block
+                ((NodeBlock) this.block).onBlockPlacedBy(world, adjustedPos, front, player, newState);
+                
+                stack.shrink(1);
+                node.checkCanStay(true);
+                return EnumActionResult.SUCCESS;
+            }
+        }
+
+        return EnumActionResult.FAIL;
+    }
+
+    @Override
+    public boolean placeBlockAt(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, IBlockState state) {
+        // Handled in onItemUse
+        return false;
     }
 
     // TODO(1.10): Fix item rendering.

@@ -12,7 +12,7 @@ import java.util.List;
 
 public class GenericItemBlockUsingDamageDescriptor {
 
-    String iconName;
+    public String IconName;
     public String name;
 
     public Item parentItem;
@@ -28,9 +28,7 @@ public class GenericItemBlockUsingDamageDescriptor {
     }
 
     public void setDefaultIcon(String name) {
-        String iconName = name.replaceAll(" ", "").toLowerCase();
-
-        this.iconName = iconName;
+        this.IconName = name.replaceAll(" ", "").toLowerCase();
     }
 
     public NBTTagCompound getDefaultNBT() {

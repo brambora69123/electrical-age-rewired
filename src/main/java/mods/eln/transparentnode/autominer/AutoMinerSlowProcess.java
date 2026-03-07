@@ -10,7 +10,6 @@ import mods.eln.misc.Coordinate;
 import mods.eln.misc.INBTTReady;
 import mods.eln.misc.Utils;
 import mods.eln.sim.IProcess;
-import mods.eln.sixnode.lampsocket.LightBlockEntity;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockOre;
 import net.minecraft.block.BlockRedstoneOre;
@@ -78,7 +77,6 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
             blinkCounter = 0;
             if ((miner.inPowerLoad.getU() / miner.descriptor.nominalVoltage - 0.5) * 3 > Math.random()) {
                 miner.setPowerOk(true);
-                LightBlockEntity.addLight(miner.lightCoordinate, 12, 11);
             } else {
                 miner.setPowerOk(false);
             }

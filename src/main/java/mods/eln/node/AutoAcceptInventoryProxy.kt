@@ -18,18 +18,18 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
     }
 
     private abstract class ItemAcceptor(val index: Int) {
-        abstract fun take(itemStack: ItemStack?, inventory: IInventory): Boolean
+        abstract fun take(itemStack: ItemStack, inventory: IInventory): Boolean
 
         protected fun slotIsEmpty(inventory: IInventory): Boolean {
             val stack = inventory.getStackInSlot(index)
-            return stack == null || stack.isEmpty
+            return stack.isEmpty
         }
     }
 
     private open class ItemAcceptorIfEmpty(index: Int, val acceptedItems: Array<out Class<out Any>>)
         : ItemAcceptor(index) {
-        override fun take(itemStack: ItemStack?, inventory: IInventory): Boolean {
-            if (itemStack == null || itemStack.isEmpty) return false
+        override fun take(itemStack: ItemStack, inventory: IInventory): Boolean {
+            if (itemStack.isEmpty) return false
 
             // Do nothing if we already have a stack.
             if (slotIsEmpty(inventory)) {
@@ -41,14 +41,14 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
                         (desc as? IItemEnergyBattery)?.let { it.setEnergy(newItemStack, it.getEnergy(itemStack)) }
                         inventory.setInventorySlotContents(index, newItemStack)
                         // And decrement the one we're taking from.
-                        itemStack.count -= 1
+                        itemStack.shrink(1)
                         return true
                     }
                 }
 
                 GenericItemBlockUsingDamageDescriptor.getDescriptor(itemStack)?.let { desc ->
                     if (acceptedItems.any { it.isAssignableFrom(desc.javaClass) }) {
-                        itemStack.count -= 1
+                        itemStack.shrink(1)
                         inventory.setInventorySlotContents(index, desc.newItemStack())
                         return true
                     }
@@ -61,20 +61,20 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
 
     private open class ItemAcceptorIfIncrement(index: Int, val maxItems: Int, acceptedItems: Array<out Class<out Any>>)
         : ItemAcceptorIfEmpty(index, acceptedItems) {
-        override fun take(itemStack: ItemStack?, inventory: IInventory): Boolean {
+        override fun take(itemStack: ItemStack, inventory: IInventory): Boolean {
             if (super.take(itemStack, inventory)) return true
-            if (itemStack == null || itemStack.isEmpty) return false
+            if (itemStack.isEmpty) return false
 
             val existingStack = inventory.getStackInSlot(index)
-            if (existingStack == null || existingStack.isEmpty) return false
+            if (existingStack.isEmpty) return false
             if (existingStack.count >= maxItems) return false
 
             val existingItemDescriptor = GenericItemUsingDamageDescriptor.getDescriptor(existingStack)
             val itemDescriptor = GenericItemUsingDamageDescriptor.getDescriptor(itemStack)
 
             if (existingItemDescriptor != null && existingItemDescriptor == itemDescriptor) {
-                itemStack.count -= 1
-                existingStack.count += 1
+                itemStack.shrink(1)
+                existingStack.grow(1)
                 return true
             }
 
@@ -82,8 +82,8 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
             val itemBlockDescriptor = GenericItemBlockUsingDamageDescriptor.getDescriptor(itemStack)
 
             if (existingItemBlockDescriptor != null && existingItemBlockDescriptor == itemBlockDescriptor) {
-                itemStack.count -= 1
-                existingStack.count += 1
+                itemStack.shrink(1)
+                existingStack.grow(1)
                 return true
             }
 
@@ -94,16 +94,16 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
     private class ItemAcceptorAlways(index: Int, maxItems: Int, acceptedItems: Array<out Class<out Any>>,
                                      val existingItemHandler: ExistingItemHandler?)
         : ItemAcceptorIfIncrement(index, maxItems, acceptedItems) {
-        override fun take(itemStack: ItemStack?, inventory: IInventory): Boolean {
+        override fun take(itemStack: ItemStack, inventory: IInventory): Boolean {
             if (super.take(itemStack, inventory)) return true
-            if (itemStack == null || itemStack.isEmpty) return false
+            if (itemStack.isEmpty) return false
 
             // TODO: What do we do with the item that is actually in the slot? For the moment it just disappears.
             GenericItemUsingDamageDescriptor.getDescriptor(itemStack)?.let {
                 if (acceptedItems.contains(it.javaClass)) {
-                    itemStack.count -= 1
+                    itemStack.shrink(1)
                     val inSlot = inventory.getStackInSlot(index)
-                    if (inSlot != null && !inSlot.isEmpty && inSlot.count > 0) {
+                    if (!inSlot.isEmpty && inSlot.count > 0) {
                         existingItemHandler?.handleExistingInventoryItem(inSlot)
                     }
                     inventory.setInventorySlotContents(index, it.newItemStack())
@@ -113,9 +113,9 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
 
             GenericItemBlockUsingDamageDescriptor.getDescriptor(itemStack)?.let {
                 if (acceptedItems.contains(it.javaClass)) {
-                    itemStack.count -= 1
+                    itemStack.shrink(1)
                     val inSlot = inventory.getStackInSlot(index)
-                    if (inSlot != null && !inSlot.isEmpty && inSlot.count > 0) {
+                    if (!inSlot.isEmpty && inSlot.count > 0) {
                         existingItemHandler?.handleExistingInventoryItem(inSlot)
                     }
                     inventory.setInventorySlotContents(index, it.newItemStack())
@@ -151,9 +151,9 @@ class AutoAcceptInventoryProxy(val inventory: IInventory) {
         return this
     }
 
-    fun take(itemStack: ItemStack?) = itemAcceptors.filterNotNull().any { it.take(itemStack, inventory) }
+    fun take(itemStack: ItemStack) = itemAcceptors.filterNotNull().any { it.take(itemStack, inventory) }
 
-    fun take(itemStack: ItemStack?, nodeElement: INodeElement?, publish: Boolean = false,
+    fun take(itemStack: ItemStack, nodeElement: INodeElement?, publish: Boolean = false,
              notifyInventoryChange: Boolean = false) =
         if (take(itemStack)) {
             if (publish) {

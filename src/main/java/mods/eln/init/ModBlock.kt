@@ -1,6 +1,7 @@
 package mods.eln.init
 
 import mods.eln.Eln
+import mods.eln.ghost.GhostBlock
 import mods.eln.node.six.SixNodeBlock
 import mods.eln.node.six.SixNodeEntity
 import mods.eln.node.transparent.TransparentNodeBlock
@@ -32,16 +33,13 @@ object ModBlock {
     lateinit var flubberBlock: RubberBlock
 
     @JvmStatic
-    lateinit var ghostBlock: ElnBlockMod
+    lateinit var ghostBlock: GhostBlock
 
     @JvmStatic
     lateinit var sixNodeBlock: SixNodeBlock
 
     @JvmStatic
     lateinit var transparentNodeBlock: TransparentNodeBlock
-
-    @JvmStatic
-    lateinit var lightBlock: ElnBlockMod
 
     /**
      * Initialize all blocks - called by ElnContent.preInit()
@@ -51,7 +49,10 @@ object ModBlock {
         oreBlock = ElnOreBlock("copper_ore", "lead_ore")
         rubberBlock = RubberBlock("rubber", 0.75f)
         flubberBlock = RubberBlock("flubber", 2f)
-        ghostBlock = ElnBlockMod("ghost", Material.ROCK, "g")
+        ghostBlock = GhostBlock().apply {
+            setTranslationKey("ghost")
+            setRegistryName("ghost")
+        }
         sixNodeBlock = SixNodeBlock(Material.ROCK, SixNodeEntity::class.java).apply {
             setRegistryName("sixnode")
             setTranslationKey("sixnode")
@@ -62,7 +63,6 @@ object ModBlock {
             setTranslationKey("transparentnode")
             setCreativeTab(Eln.Tab)
         }
-        lightBlock = ElnBlockMod("light", Material.GROUND, "l")
 
         // Set creative tab for all blocks
         val tab = Eln.Tab
@@ -72,7 +72,6 @@ object ModBlock {
         ghostBlock.creativeTab = tab
         sixNodeBlock.creativeTab = tab
         transparentNodeBlock.creativeTab = tab
-        lightBlock.creativeTab = tab
     }
 }
 

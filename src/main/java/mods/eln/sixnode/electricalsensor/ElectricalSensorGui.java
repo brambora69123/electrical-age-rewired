@@ -61,18 +61,19 @@ public class ElectricalSensorGui extends GuiContainerEln {
             float lowVoltage, highVoltage;
 
             try {
+                if (lowValue == null || highValue == null) return;
                 lowVoltage = NumberFormat.getInstance().parse(lowValue.getText()).floatValue();
                 highVoltage = NumberFormat.getInstance().parse(highValue.getText()).floatValue();
                 render.clientSetFloat(ElectricalSensorElement.setValueId, lowVoltage, highVoltage);
             } catch (ParseException e) {
             }
-        } else if (object == currentType) {
+        } else if (currentType != null && object == currentType) {
             render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.currantType);
-        } else if (object == voltageType) {
+        } else if (voltageType != null && object == voltageType) {
             render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.voltageType);
-        } else if (object == powerType) {
+        } else if (powerType != null && object == powerType) {
             render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.powerType);
-        } else if (object == dirType) {
+        } else if (dirType != null && object == dirType) {
             render.dirType = (byte) ((render.dirType + 1) % 3);
             render.clientSetByte(ElectricalSensorElement.setDirType, render.dirType);
         }
@@ -82,30 +83,34 @@ public class ElectricalSensorGui extends GuiContainerEln {
     protected void preDraw(float f, int x, int y) {
         super.preDraw(f, x, y);
         if (!render.descriptor.voltageOnly) {
-            switch (render.dirType) {
-                case ElectricalSensorElement.dirNone:
-                    dirType.displayString = "\u00a72\u25CF\u00a77 <=> \u00a71\u25CF";
-                    break;
-                case ElectricalSensorElement.dirAB:
-                    dirType.displayString = "\u00a72\u25CF\u00a77 => \u00a71\u25CF";
-                    break;
-                case ElectricalSensorElement.dirBA:
-                    dirType.displayString = "\u00a72\u25CF\u00a77 <= \u00a71\u25CF";
-                    break;
+            if (dirType != null) {
+                switch (render.dirType) {
+                    case ElectricalSensorElement.dirNone:
+                        dirType.displayString = "\u00a72\u25CF\u00a77 <=> \u00a71\u25CF";
+                        break;
+                    case ElectricalSensorElement.dirAB:
+                        dirType.displayString = "\u00a72\u25CF\u00a77 => \u00a71\u25CF";
+                        break;
+                    case ElectricalSensorElement.dirBA:
+                        dirType.displayString = "\u00a72\u25CF\u00a77 <= \u00a71\u25CF";
+                        break;
+                }
             }
 
-            if (render.typeOfSensor == ElectricalSensorElement.currantType) {
-                powerType.enabled = true;
-                currentType.enabled = false;
-                voltageType.enabled = true;
-            } else if (render.typeOfSensor == ElectricalSensorElement.voltageType) {
-                powerType.enabled = true;
-                currentType.enabled = true;
-                voltageType.enabled = false;
-            } else if (render.typeOfSensor == ElectricalSensorElement.powerType) {
-                powerType.enabled = false;
-                currentType.enabled = true;
-                voltageType.enabled = true;
+            if (currentType != null && voltageType != null && powerType != null) {
+                if (render.typeOfSensor == ElectricalSensorElement.currantType) {
+                    powerType.enabled = true;
+                    currentType.enabled = false;
+                    voltageType.enabled = true;
+                } else if (render.typeOfSensor == ElectricalSensorElement.voltageType) {
+                    powerType.enabled = true;
+                    currentType.enabled = true;
+                    voltageType.enabled = false;
+                } else if (render.typeOfSensor == ElectricalSensorElement.powerType) {
+                    powerType.enabled = false;
+                    currentType.enabled = true;
+                    voltageType.enabled = true;
+                }
             }
         }
     }

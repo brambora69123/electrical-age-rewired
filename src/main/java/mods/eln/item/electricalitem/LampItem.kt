@@ -2,7 +2,6 @@ package mods.eln.item.electricalitem
 
 import mods.eln.Eln
 import mods.eln.generic.GenericItemUsingDamageDescriptor
-import mods.eln.sixnode.lampsocket.LightBlockEntity
 import net.minecraft.entity.Entity
 import net.minecraft.item.ItemStack
 import net.minecraft.util.math.BlockPos
@@ -56,7 +55,8 @@ abstract class LampItem(name: String) : GenericItemUsingDamageDescriptor(name) {
                 val state = world.getBlockState(pos)
                 val block = state.block
                 if (block.isAir(state, world, pos)) {
-                    LightBlockEntity.addLight(world, pos, light, 10)
+                    // LightBlock is removed, so we can't easily add light in air anymore
+                    // without a replacement system.
                     stride = 3
                 }
                 pos.setPos(pos.x - v.x * stride, pos.y - v.y * stride, pos.z - v.z * stride)

@@ -890,7 +890,7 @@ public class Eln_old {
             name = TR_NAME(Type.NONE, "Very High Voltage Cable");
 
             stdCableRender3200V = new CableRenderDescriptor("eln",
-                "sprites/cableVHV.png", 3.95f, 1.95f);
+                "sprites/cablevhv.png", 3.95f, 1.95f);
 
             desc = new ElectricalCableDescriptor(name, stdCableRender3200V,
                 "miaou2", false);

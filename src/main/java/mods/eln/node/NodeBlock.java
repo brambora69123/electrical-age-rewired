@@ -73,8 +73,7 @@ public abstract class NodeBlock extends Block {//BlockContainer
 
     @Override
     public EnumBlockRenderType getRenderType(IBlockState state) {
-        //-1
-        return this.getRenderType(state);
+        return EnumBlockRenderType.ENTITYBLOCK_ANIMATED;
     }
 
 
@@ -105,14 +104,15 @@ public abstract class NodeBlock extends Block {//BlockContainer
     }
 
 
-    @SideOnly(Side.SERVER)
-    public void breakBlock(World par1World, BlockPos pos, Block par5, int par6) {
-        if(!par1World.isRemote)
-        {
-            NodeBlockEntity entity = (NodeBlockEntity) par1World.getTileEntity(pos);
-            entity.onBreakBlock();
-            super.breakBlock(par1World, pos, par5.getStateFromMeta( par6));
+    @Override
+    public void breakBlock(World world, BlockPos pos, IBlockState state) {
+        if (!world.isRemote) {
+            NodeBlockEntity entity = (NodeBlockEntity) world.getTileEntity(pos);
+            if (entity != null) {
+                entity.onBreakBlock();
+            }
         }
+        super.breakBlock(world, pos, state);
     }
 
     @Override

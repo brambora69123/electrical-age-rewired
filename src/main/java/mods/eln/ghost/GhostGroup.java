@@ -13,7 +13,17 @@ import java.util.ArrayList;
 
 public class GhostGroup {
 
+    private int uuid = -1;
+
     public GhostGroup() {
+    }
+
+    public int getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(int uuid) {
+        this.uuid = uuid;
     }
 
     class GhostGroupElement {

@@ -183,8 +183,7 @@ public class TransparentNodeDescriptor extends GenericItemBlockUsingDamageDescri
     }
 
     public int getGhostGroupUuid() {
-
-        return -1;
+        return ghostGroup == null ? -1 : ghostGroup.getUuid();
     }
 
     public int getSpawnDeltaX() {

@@ -29,14 +29,35 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Random;
 
+import net.minecraft.block.properties.PropertyInteger;
+import net.minecraft.block.state.BlockStateContainer;
+
 public class GhostBlock extends Block {
+
+    public static final PropertyInteger META = PropertyInteger.create("meta", 0, 15);
 
     public static final int tCube = 0;
     public static final int tFloor = 1;
     public static final int tLadder = 2;
 
     public GhostBlock() {
-        super(Material.IRON);
+        super(Material.GLASS);
+        setDefaultState(blockState.getBaseState().withProperty(META, 0));
+    }
+
+    @Override
+    protected BlockStateContainer createBlockState() {
+        return new BlockStateContainer(this, META);
+    }
+
+    @Override
+    public IBlockState getStateFromMeta(int meta) {
+        return getDefaultState().withProperty(META, meta);
+    }
+
+    @Override
+    public int getMetaFromState(IBlockState state) {
+        return state.getValue(META);
     }
 
     @Nullable
@@ -129,9 +150,23 @@ public class GhostBlock extends Block {
 //    }
 
 
-    // TODO(1.10): ...but block states should do this.
+    @Override
+    public int getLightOpacity(IBlockState state) {
+        return 0;
+    }
+
+    @Override
+    public boolean isTranslucent(IBlockState state) {
+        return true;
+    }
+
     @Override
     public boolean isOpaqueCube(IBlockState state) {
+        return false;
+    }
+
+    @Override
+    public boolean isFullCube(IBlockState state) {
         return false;
     }
 
@@ -142,7 +177,7 @@ public class GhostBlock extends Block {
 
     @Override
     public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player) {
-        return null;
+        return ItemStack.EMPTY;
     }
 
     @Override
@@ -159,7 +194,9 @@ public class GhostBlock extends Block {
     public void breakBlock(World world, BlockPos pos, IBlockState state) {
         if (!world.isRemote) {
             GhostElement element = getElement(world, pos);
-            if (element != null) element.breakBlock();
+            if (element != null) {
+                element.breakBlock();
+            }
         }
         super.breakBlock(world, pos, state);
     }
@@ -167,7 +204,7 @@ public class GhostBlock extends Block {
     @Override
     public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
         if (!world.isRemote) {
-            GhostElement element = getElement(world, getBedSpawnPosition(state, world, pos, player));
+            GhostElement element = getElement(world, pos);
             if (element != null)
                 return element.onBlockActivated(player, Direction.fromFacing(facing), hitX, hitY, hitZ);
         }

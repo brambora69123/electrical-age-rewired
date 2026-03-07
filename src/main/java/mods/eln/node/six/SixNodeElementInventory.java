@@ -20,12 +20,14 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
 
     public SixNodeElementInventory(int size, int stackLimit, SixNodeElementRender sixnodeRender) {
         inv = new ItemStack[size];
+        Arrays.fill(inv, ItemStack.EMPTY);
         this.stackLimit = stackLimit;
         this.sixnodeRender = sixnodeRender;
     }
 
     public SixNodeElementInventory(int size, int stackLimit, SixNodeElement sixNodeElement) {
         inv = new ItemStack[size];
+        Arrays.fill(inv, ItemStack.EMPTY);
         this.stackLimit = stackLimit;
         this.sixNodeElement = sixNodeElement;
     }
@@ -46,7 +48,7 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @NotNull
     @Override
     public ItemStack getStackInSlot(int slot) {
-        if (slot >= getInv().length) return null;
+        if (slot >= getInv().length || getInv()[slot] == null) return ItemStack.EMPTY;
         return getInv()[slot];
     }
 
@@ -55,15 +57,15 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @Override
     public ItemStack decrStackSize(int slot, int amt) {
         ItemStack stack = getStackInSlot(slot);
-        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
+        if (stack.isEmpty()) return ItemStack.EMPTY;
         if (stack.getCount() <= amt) {
-            getInv()[slot] = null;
+            getInv()[slot] = ItemStack.EMPTY;
             return stack;
         }
 
         ItemStack result = stack.splitStack(amt);
-        if (stack.isEmpty() || stack.getCount() <= 0) {
-            getInv()[slot] = null;
+        if (stack.isEmpty()) {
+            getInv()[slot] = ItemStack.EMPTY;
         }
         return result;
     }
@@ -72,16 +74,16 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
     @Override
     public ItemStack removeStackFromSlot(int slot) {
         ItemStack stack = getStackInSlot(slot);
-        if (stack == null || stack.isEmpty()) return ItemStack.EMPTY;
-        getInv()[slot] = null;
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        getInv()[slot] = ItemStack.EMPTY;
         return stack;
     }
 
 
     @Override
     public void setInventorySlotContents(int slot, @NotNull ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            getInv()[slot] = null;
+        if (stack.isEmpty()) {
+            getInv()[slot] = ItemStack.EMPTY;
             return;
         }
 
@@ -163,7 +165,7 @@ public class SixNodeElementInventory implements IInventory, INBTTReady {
 
     @Override
     public void clear() {
-        Arrays.fill(inv, null);
+        Arrays.fill(inv, ItemStack.EMPTY);
     }
 
     @Override

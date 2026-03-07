@@ -73,7 +73,7 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
     public String getTranslationKey(ItemStack par1ItemStack) {
         Descriptor desc = getDescriptor(par1ItemStack);
         if (desc != null && desc.name != null) {
-            return desc.name.replaceAll("\\s+", "_");
+            return "eln:" + desc.name.replaceAll("\\s+", "_");
         } else {
             return null;
         }

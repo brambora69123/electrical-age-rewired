@@ -163,18 +163,19 @@ public class HeatFurnaceElement extends TransparentNodeElement {
         try {
             switch (packetType) {
                 case unserializeGain:
-                    if (inventory.getStackInSlot(HeatFurnaceContainer.regulatorId) == null) {
-                        furnaceProcess.setGain(stream.readFloat());
+                    float g = stream.readFloat();
+                    if (inventory.getStackInSlot(HeatFurnaceContainer.regulatorId).isEmpty()) {
+                        furnaceProcess.setGain(g);
                     }
                     needPublish();
                     break;
                 case unserializeTemperatureTarget:
-                    //if(inventory.getStackInSlot(HeatFurnaceContainer.regulatorId) == null)
-                {
-                    regulator.setTarget(stream.readFloat());
-                }
-                needPublish();
-                break;
+                    float t = stream.readFloat();
+                    if (!inventory.getStackInSlot(HeatFurnaceContainer.regulatorId).isEmpty()) {
+                        regulator.setTarget(t);
+                    }
+                    needPublish();
+                    break;
                 case unserializeToogleControlExternalId:
                     regulator.setTarget(0);
                     setControlExternal(!getControlExternal());
@@ -219,15 +220,19 @@ public class HeatFurnaceElement extends TransparentNodeElement {
     }
 
     void computeInventory() {
+        if (regulator == null) return;
         ItemStack regulatorStack = inventory.getStackInSlot(HeatFurnaceContainer.regulatorId);
 
-        if (regulatorStack != null && !controlExternal) {
-            IRegulatorDescriptor regulator = (IRegulatorDescriptor) Utils.getItemObject(regulatorStack);
-
-            regulator.applyTo(this.regulator, 500.0, 10.0, 0.1, 0.1);
-            //	furnace.regulator.target = 240;
+        if (!regulatorStack.isEmpty() && !controlExternal) {
+            Object obj = Utils.getItemObject(regulatorStack);
+            if (obj instanceof IRegulatorDescriptor) {
+                IRegulatorDescriptor desc = (IRegulatorDescriptor) obj;
+                desc.applyTo(this.regulator, 500.0, 10.0, 0.1, 0.1);
+            } else {
+                this.regulator.setManual();
+            }
         } else {
-            regulator.setManual();
+            this.regulator.setManual();
         }
     }
 

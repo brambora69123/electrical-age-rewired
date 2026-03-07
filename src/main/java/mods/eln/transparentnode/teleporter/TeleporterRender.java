@@ -45,7 +45,7 @@ public class TeleporterRender extends TransparentNodeElementRender {
         Coordinate lightCoordinate = new Coordinate(this.d.lightCoordinate);
         lightCoordinate.applyTransformation(front, c);
 
-        boolean lightEnable = tileEntity.getWorld().getBlockState(lightCoordinate.pos).getBlock() == ModBlock.lightBlock;
+        boolean lightEnable = voltage > 0.8f;
 
         front.glRotateXnRef();
         GL11.glTranslatef(-1, 0, 0);

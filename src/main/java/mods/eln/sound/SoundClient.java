@@ -37,7 +37,7 @@ public class SoundClient {
             p.world.playSound(
                 player,
                 soundPos,
-                new SoundEvent(new ResourceLocation("eln", p.track)),
+                new SoundEvent(new ResourceLocation(p.track)),
                 SoundCategory.BLOCKS,  // TODO(1.10): Move this to the sound command.
                 p.volume,
                 p.pitch);
@@ -51,7 +51,7 @@ public class SoundClient {
                     p.world.playSound(
                         player,
                         soundPos,
-                        new SoundEvent(new ResourceLocation("eln", p.track + "_" + idx + "x")),
+                        new SoundEvent(new ResourceLocation(p.track + "_" + idx + "x")),
                         SoundCategory.BLOCKS,
                         bandVolume,
                         p.pitch);

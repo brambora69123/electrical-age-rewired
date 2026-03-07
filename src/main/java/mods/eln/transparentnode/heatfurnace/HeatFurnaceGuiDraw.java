@@ -6,6 +6,7 @@ import mods.eln.node.transparent.TransparentNodeElementInventory;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 
 import static mods.eln.i18n.I18N.tr;
 
@@ -76,10 +77,15 @@ public class HeatFurnaceGuiDraw extends GuiContainerEln {
         takeFuel.enabled = !render.controleExternal;
 
 
-        vuMeterGain.setEnable(inventory.getStackInSlot(HeatFurnaceContainer.regulatorId) == null && !render.controleExternal);
+        ItemStack regulatorStack = inventory.getStackInSlot(HeatFurnaceContainer.regulatorId);
+        boolean hasRegulator = !regulatorStack.isEmpty();
+
+        vuMeterGain.setEnable(!hasRegulator && !render.controleExternal);
+        vuMeterGain.setVisible(!hasRegulator && !render.controleExternal);
         if (render.gainSyncNew) syncVumeterGain();
 
-        vuMeterHeat.setEnable(inventory.getStackInSlot(HeatFurnaceContainer.regulatorId) != null && !render.controleExternal);
+        vuMeterHeat.setEnable(hasRegulator && !render.controleExternal);
+        vuMeterHeat.setVisible(hasRegulator && !render.controleExternal);
         if (render.temperatureTargetSyncNew) syncVumeterHeat();
 
         vuMeterHeat.temperatureHit = (float) render.temperature;

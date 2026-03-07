@@ -92,12 +92,16 @@ object Config {
 
     /* Lamps */
     var incandescentLampLifeInHours = 16.0
+    val incandescentLampLife get() = incandescentLampLifeInHours * 3600.0
 
     var economicLampLifeInHours = 64.0
+    val economicLampLife get() = economicLampLifeInHours * 3600.0
 
     var carbonLampLifeInHours = 6.0
+    val carbonLampLife get() = carbonLampLifeInHours * 3600.0
 
     var ledLampLifeInHours = 512.0
+    val ledLampLife get() = ledLampLifeInHours * 3600.0
 
     var ledLampInfiniteLife = false
 

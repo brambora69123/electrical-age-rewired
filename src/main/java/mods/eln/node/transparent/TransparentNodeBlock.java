@@ -27,12 +27,31 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Random;
 
+import net.minecraft.block.properties.PropertyInteger;
+
 public class TransparentNodeBlock extends NodeBlock {
+
+    public static final PropertyInteger META = PropertyInteger.create("meta", 0, 15);
 
     public TransparentNodeBlock(Material material,
                                 Class tileEntityClass) {
         super(material, tileEntityClass, 0);
+        setDefaultState(blockState.getBaseState().withProperty(META, 0));
+    }
 
+    @Override
+    protected BlockStateContainer createBlockState() {
+        return new BlockStateContainer(this, META);
+    }
+
+    @Override
+    public IBlockState getStateFromMeta(int meta) {
+        return getDefaultState().withProperty(META, meta);
+    }
+
+    @Override
+    public int getMetaFromState(IBlockState state) {
+        return state.getValue(META);
     }
 
 	/*@Override
@@ -63,11 +82,6 @@ public class TransparentNodeBlock extends NodeBlock {
         return false;
     }
 
-    @Override
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return state.getRenderType();
-    }
-
 
     @Override
     public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer entityPlayer, boolean willHarvest) {
@@ -95,11 +109,6 @@ public class TransparentNodeBlock extends NodeBlock {
 //            return ((TransparentNodeEntity) world.getTileEntity(pos)).getDamageValue(world, pos);
 //        return 0;
 //    }
-
-    @Override
-    public int getLightValue(IBlockState state, IBlockAccess world, BlockPos pos) {
-        return (state.getBlock().getMetaFromState(state) & 3) << 6;
-    }
 
     @Nullable
     @Override

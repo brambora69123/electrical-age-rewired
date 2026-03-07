@@ -303,28 +303,30 @@ public class SixNodeBlock extends NodeBlock {
     }
 
     @Override
-    public void breakBlock(World world, BlockPos pos, Block par5, int par6) {
+    public void breakBlock(World world, BlockPos pos, IBlockState state) {
 
         if (!world.isRemote) {
             SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
-            SixNode sixNode = (SixNode) tileEntity.getNode();
-            if (sixNode == null) return;
+            if (tileEntity != null) {
+                SixNode sixNode = (SixNode) tileEntity.getNode();
+                if (sixNode != null) {
+                    // Disconnect once before removing all sides
+                    sixNode.disconnect();
 
-            // Disconnect once before removing all sides
-            sixNode.disconnect();
-            
-            // Remove all sides without individual disconnect/connect calls
-            for (Direction direction : Direction.values()) {
-                if (sixNode.getSideEnable(direction)) {
-                    sixNode.sideElementList[direction.getInt()] = null;
-                    sixNode.sideElementIdList[direction.getInt()] = 0;
+                    // Remove all sides without individual disconnect/connect calls
+                    for (Direction direction : Direction.values()) {
+                        if (sixNode.getSideEnable(direction)) {
+                            sixNode.sideElementList[direction.getInt()] = null;
+                            sixNode.sideElementIdList[direction.getInt()] = 0;
+                        }
+                    }
+
+                    // Notify neighboring blocks (3x3x3) to update their connections
+                    Utils.notifyNodeNeighbors(world, pos);
                 }
             }
-            
-            // Notify neighboring blocks (3x3x3) to update their connections
-            Utils.notifyNodeNeighbors(world, pos);
         }
-        super.breakBlock(world, pos, par5, par6);
+        super.breakBlock(world, pos, state);
     }
 
     @Override

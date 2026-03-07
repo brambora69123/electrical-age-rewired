@@ -104,7 +104,7 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         if (desc == null) {
             return this.getClass().getName();
         } else {
-            return desc.name.replaceAll("\\s+", "_");
+            return "eln:" + desc.name.replaceAll("\\s+", "_");
         }
     }
 

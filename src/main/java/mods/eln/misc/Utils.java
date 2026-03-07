@@ -947,6 +947,8 @@ public class Utils {
     }
 
     public static boolean areSame(ItemStack stack, ItemStack output) {
+        if (stack == null || stack.isEmpty()) return output == null || output.isEmpty();
+        if (output == null || output.isEmpty()) return false;
         try {
             if (stack.getItem() == output.getItem() && stack.getItemDamage() == output.getItemDamage()) return true;
             int[] stackIds = OreDictionary.getOreIDs(stack);

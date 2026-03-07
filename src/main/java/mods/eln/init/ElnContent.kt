@@ -22,8 +22,6 @@ import mods.eln.node.transparent.TransparentNodeEntityWithFluid
 import mods.eln.node.transparent.TransparentNodeItem
 import mods.eln.server.DelayedTaskManager
 import mods.eln.server.PlayerManager
-import mods.eln.sixnode.lampsocket.LightBlock
-import mods.eln.sixnode.lampsocket.LightBlockEntity
 import mods.eln.sixnode.modbusrtu.ModbusTcpServer
 import net.minecraft.block.Block
 import net.minecraft.item.Item
@@ -66,7 +64,6 @@ object ElnContent {
     val ghostBlock get() = ModBlock.ghostBlock
     val sixNodeBlock get() = ModBlock.sixNodeBlock
     val transparentNodeBlock get() = ModBlock.transparentNodeBlock
-    val lightBlock get() = ModBlock.lightBlock
 
     // =====================================================================
     // Initialize content - call during preInit
@@ -86,14 +83,17 @@ object ElnContent {
                 ModBlock.flubberBlock,
                 ModBlock.ghostBlock,
                 ModBlock.sixNodeBlock,
-                ModBlock.transparentNodeBlock,
-                ModBlock.lightBlock
+                ModBlock.transparentNodeBlock
             )
         )
 
         // Initialize SixNodeItem and TransparentNodeItem
-        Eln.sixNodeItem = SixNodeItem(ModBlock.sixNodeBlock).setCreativeTab(Eln.Tab) as SixNodeItem
-        Eln.transparentNodeItem = TransparentNodeItem(ModBlock.transparentNodeBlock).setCreativeTab(Eln.Tab) as TransparentNodeItem
+        Eln.sixNodeItem = (SixNodeItem(ModBlock.sixNodeBlock).setCreativeTab(Eln.Tab) as SixNodeItem).apply {
+            setRegistryName(ModBlock.sixNodeBlock.registryName)
+        }
+        Eln.transparentNodeItem = (TransparentNodeItem(ModBlock.transparentNodeBlock).setCreativeTab(Eln.Tab) as TransparentNodeItem).apply {
+            setRegistryName(ModBlock.transparentNodeBlock.registryName)
+        }
 
         // Register descriptors (adds sub-items to SixNodeItem/TransparentNodeItem)
         Descriptors.preInit()
@@ -143,13 +143,12 @@ object ElnContent {
         }
 
         // Register custom ItemBlocks for SixNode and TransparentNode
-        Eln.sixNodeItem.registryName = ModBlock.sixNodeBlock.registryName
-        Eln.transparentNodeItem.registryName = ModBlock.transparentNodeBlock.registryName
         event.registry.register(Eln.sixNodeItem)
         event.registry.register(Eln.transparentNodeItem)
 
         // Register shared items (multi-meter, thermometer, etc.)
         event.registry.register(Eln.sharedItem)
+        event.registry.register(Eln.sharedItemStackOne)
 
         // Register standalone items
         for (item in registeredItems) {
@@ -209,7 +208,6 @@ object ElnContent {
         GameRegistry.registerTileEntity(TransparentNodeEntityWithFluid::class.java, Eln.MODID + ":TransparentNodeEntityWF")
 
         // Special tile entities
-        GameRegistry.registerTileEntity(LightBlockEntity::class.java, Eln.MODID + ":LightBlockEntity")
         GameRegistry.registerTileEntity(NodeBlockEntity::class.java, Eln.MODID + ":NodeBlockEntity")
 
         // TODO: Register additional tile entities as they are migrated
@@ -264,14 +262,15 @@ object ElnContent {
     @JvmStatic
     private fun registerOtherContent() {
         // TODO: Register multiblocks
-        // TODO: Register recipes
-        // Recipes.init()
+        
+        // Initialize machine recipes
+        Recipes.init()
 
-        // Initialize managers
-        Eln.playerManager = PlayerManager()
-        Eln.nodeManager = NodeManager("${Eln.MODID}.nodes")
-        Eln.ghostManager = GhostManager("${Eln.MODID}.ghosts")
-        Eln.delayedTaskManager = DelayedTaskManager()
+        // Initialize managers (already done in preInit in current code, but kept here if needed for re-init)
+        // Eln.playerManager = PlayerManager()
+        // Eln.nodeManager = NodeManager("${Eln.MODID}.nodes")
+        // Eln.ghostManager = GhostManager("${Eln.MODID}.ghosts")
+        // Eln.delayedTaskManager = DelayedTaskManager()
 
         // Initialize simulator processes
         Eln.simulator.addSlowProcess(Eln.windProcess)
