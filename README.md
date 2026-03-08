@@ -21,8 +21,8 @@ features and functionality.
 Note: you may need to use [CleanroomMC](https://cleanroommc.com/), and we highly recommend that you do, it includes many improvements to forge, and 
 allows for newer Java versions, like Java 21, and uses LWJGL3.
 
-1. Download the [last mod release](https://minecraft.curseforge.com/projects/electrical-age).
-2. Launch Minecraft with your favorite launcher, or the official minecraft launcher. PrismLauncher highly recommended.
+1. Download the [last mod release](https://github.com/brambora69123/electrical-age-rewired/releases).
+2. Launch Minecraft with your favorite launcher, or the official Minecraft launcher. PrismLauncher highly recommended.
 
 
 tutorial worlds WIP
