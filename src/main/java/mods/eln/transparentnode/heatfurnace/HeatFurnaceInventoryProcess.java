@@ -43,14 +43,16 @@ public class HeatFurnaceInventoryProcess implements IProcess, INBTTReady {
         int combustionChamberNbr = combustionChamberStack == null || combustionChamberStack.isEmpty() ? 0 : combustionChamberStack.getCount();
         furnace.furnaceProcess.nominalPower = furnace.descriptor.nominalPower + furnace.descriptor.combustionChamberPower * combustionChamberNbr;
 
-        if (furnace.getTakeFuel() && SaveConfig.instance != null) {
-            if (!SaveConfig.instance.heatFurnaceFuel) {
+        boolean heatFurnaceFuelEnabled = SaveConfig.instance == null || SaveConfig.instance.heatFurnaceFuel;
+
+        if (furnace.getTakeFuel()) {
+            if (!heatFurnaceFuelEnabled) {
                 combustibleBuffer = furnace.furnaceProcess.nominalCombustibleEnergy;
-            } else if (combustibleStack != null && !combustibleStack.isEmpty()) {
+            } else if (!combustibleStack.isEmpty()) {
                 double itemEnergy = Utils.getItemEnergie(combustibleStack);
+                //Utils.println("Furnace item energy: " + itemEnergy);
                 if (itemEnergy != 0) {
                     if (furnace.furnaceProcess.combustibleEnergy + combustibleBuffer < furnace.furnaceProcess.nominalCombustibleEnergy) {
-                        //	furnace.furnaceProcess.combustibleEnergy += itemEnergy;
                         combustibleBuffer += itemEnergy;
                         furnace.inventory.decrStackSize(HeatFurnaceContainer.combustibleId, 1);
                         if (combustibleStack.getItem().getTranslationKey().toLowerCase().contains("bucket")) {
@@ -69,6 +71,11 @@ public class HeatFurnaceInventoryProcess implements IProcess, INBTTReady {
             furnace.furnaceProcess.combustibleEnergy += delta;
             combustibleBuffer -= delta;
         }
+        
+        // Ensure combustibleEnergy is never negative and capped
+        if (furnace.furnaceProcess.combustibleEnergy < 0) furnace.furnaceProcess.combustibleEnergy = 0;
+        if (furnace.furnaceProcess.combustibleEnergy > furnace.furnaceProcess.nominalCombustibleEnergy) 
+            furnace.furnaceProcess.combustibleEnergy = furnace.furnaceProcess.nominalCombustibleEnergy;
     }
 
     @Override

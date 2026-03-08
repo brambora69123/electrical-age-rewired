@@ -80,25 +80,25 @@ public class HeatFurnaceGuiDraw extends GuiContainerEln {
         ItemStack regulatorStack = inventory.getStackInSlot(HeatFurnaceContainer.regulatorId);
         boolean hasRegulator = !regulatorStack.isEmpty();
 
-        vuMeterGain.setEnable(!hasRegulator && !render.controleExternal);
-        vuMeterGain.setVisible(!hasRegulator && !render.controleExternal);
+        vuMeterGain.setEnable(!render.controleExternal);
+        vuMeterGain.setVisible(true);
         if (render.gainSyncNew) syncVumeterGain();
 
         vuMeterHeat.setEnable(hasRegulator && !render.controleExternal);
-        vuMeterHeat.setVisible(hasRegulator && !render.controleExternal);
+        vuMeterHeat.setVisible(true);
         if (render.temperatureTargetSyncNew) syncVumeterHeat();
 
         vuMeterHeat.temperatureHit = (float) render.temperature;
-        //vuMeterHeat.setVisible(render.controleExternal == false);
 
         vuMeterHeat.setComment(new String[]{});
         vuMeterHeat.setComment(0, tr("Temperature gauge"));
         vuMeterHeat.setComment(1, tr("Actual: %s°C", Utils.plotValue(render.temperature)));
         if (!render.controleExternal)
             vuMeterHeat.setComment(2, Utils.plotCelsius("Set point:", vuMeterHeat.getValue()));
-        vuMeterGain.setComment(0, tr("Control gauge at %s", (int) (vuMeterGain.getValue()) * 100));
 
-        vuMeterGain.setComment(1, tr("Power: %sW", render.power));
+        vuMeterGain.setComment(new String[]{});
+        vuMeterGain.setComment(0, tr("Control gauge at %s%%", (int) (vuMeterGain.getValue() * 100)));
+        vuMeterGain.setComment(1, tr("Power: %s", Utils.plotPower((double)render.power)));
     }
 
     @Override

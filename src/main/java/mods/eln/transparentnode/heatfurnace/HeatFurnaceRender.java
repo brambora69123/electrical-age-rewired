@@ -23,7 +23,7 @@ public class HeatFurnaceRender extends TransparentNodeElementRender {
     double temperature;
     float gainSyncValue = -1234, temperatureTargetSyncValue = -1234;
     boolean gainSyncNew = false, temperatureTargetSyncNew = false;
-    short power;
+    float power;
 
     public boolean controleExternal, takeFuel;
 
@@ -94,7 +94,7 @@ public class HeatFurnaceRender extends TransparentNodeElementRender {
                 temperatureTargetSyncNew = true;
             }
 
-            power = stream.readShort();
+            power = stream.readFloat();
 
             entityItemIn = unserializeItemStackToEntityItem(stream, entityItemIn);
 

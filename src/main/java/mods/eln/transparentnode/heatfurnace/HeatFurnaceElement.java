@@ -134,9 +134,14 @@ public class HeatFurnaceElement extends TransparentNodeElement {
             stream.writeShort((short) (thermalLoad.Tc * NodeBase.networkSerializeTFactor));
             stream.writeFloat((float) furnaceProcess.getGain());
             stream.writeFloat((float) regulator.getTarget());
-            stream.writeShort((int) furnaceProcess.getP());
+            stream.writeFloat((float) furnaceProcess.getP());
 
             serialiseItemStack(stream, inventory.getStackInSlot(HeatFurnaceContainer.combustibleId));
+            
+            /*Utils.println("Furnace Serialized: P=" + furnaceProcess.getP() + 
+                          " T=" + thermalLoad.Tc + 
+                          " Q=" + furnaceProcess.combustibleEnergy + 
+                          " Gain=" + furnaceProcess.getGain());*/
         } catch (IOException e) {
             e.printStackTrace();
         }
