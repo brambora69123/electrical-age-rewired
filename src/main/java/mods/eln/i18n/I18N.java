@@ -1,7 +1,9 @@
 package mods.eln.i18n;
 
+import net.minecraft.client.resources.I18n;
 import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 /**
  * Internationalization and localization helper class.
@@ -44,34 +46,29 @@ public class I18N {
      * anyway) if no translation is present.
      */
     public static String tr(final String text, Object... objects) {
+        // Only client side has translations - server returns formatted original text
+        if (FMLCommonHandler.instance().getEffectiveSide() == Side.CLIENT) {
+            return trClient(text, objects);
+        } else {
+            // Server side: just format the original text
+            return String.format(text, objects);
+        }
+    }
+
+    @SideOnly(Side.CLIENT)
+    private static String trClient(final String text, Object... objects) {
         String key = "eln." + encodeLangKey(text).toLowerCase();
-        
+
         String translation;
-        if (I18n.canTranslate(key)) {
-            translation = I18n.translateToLocal(key);
+        if (I18n.hasKey(key)) {
+            translation = I18n.format(key, objects);
         } else {
-            translation = text;
+            // No translation found, use original text with formatting
+            translation = String.format(text, objects);
         }
 
-        // Replace placeholders.
+        // Replace escaped characters
         translation = translation.replace("\\n", "\n").replace("\\:", ":");
-
-        // Replace placeholders in string by actual string values of the passed objects.
-        // We use String.format style if %s is present, otherwise fallback to old behavior
-        if (translation.contains("%s") || translation.contains("%d")) {
-            try {
-                translation = String.format(translation, objects);
-            } catch (Exception e) {
-                // Fallback for custom %1$ style if format fails
-                for (int i = 0; i < objects.length; ++i) {
-                    translation = translation.replace("%" + (i + 1) + "$", String.valueOf(objects[i]));
-                }
-            }
-        } else {
-            for (int i = 0; i < objects.length; ++i) {
-                translation = translation.replace("%" + (i + 1) + "$", String.valueOf(objects[i]));
-            }
-        }
 
         return translation;
     }

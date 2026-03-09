@@ -9,11 +9,9 @@ import mods.eln.sim.mna.component.VoltageSource;
 import mods.eln.sim.mna.misc.IDestructor;
 import mods.eln.sim.mna.misc.ISubSystemProcessFlush;
 import mods.eln.sim.mna.misc.ISubSystemProcessI;
+import mods.eln.sim.mna.misc.Matrix;
 import mods.eln.sim.mna.state.State;
 import mods.eln.sim.mna.state.VoltageState;
-import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.QRDecomposition;
-import org.apache.commons.math3.linear.RealMatrix;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -33,8 +31,8 @@ public class SubSystem {
     boolean matrixValid = false;
 
     int stateCount;
-    RealMatrix A;
-    //RealMatrix I;
+    Matrix A;
+    //Matrix I;
     boolean singularMatrix;
 
     double[][] AInvdata;
@@ -122,7 +120,7 @@ public class SubSystem {
         Profiler p = new Profiler();
         p.add("Inversse with " + stateCount + " state : ");
 
-        A = MatrixUtils.createRealMatrix(stateCount, stateCount);
+        A = new Matrix(stateCount, stateCount);
         //Adata = ((Array2DRowRealMatrix) A).getDataRef();
         // X = MatrixUtils.createRealMatrix(stateCount, 1); Xdata =
         // ((Array2DRowRealMatrix)X).getDataRef();
@@ -145,7 +143,7 @@ public class SubSystem {
 
         try {
             //FieldLUDecomposition QRDecomposition  LUDecomposition RRQRDecomposition
-            RealMatrix Ainv = new QRDecomposition(A).getSolver().getInverse();
+            Matrix Ainv = A.getInverse();
             AInvdata = Ainv.getData();
             singularMatrix = false;
         } catch (Exception e) {
@@ -250,7 +248,7 @@ public class SubSystem {
         return 0;
     }
 
-    //RealMatrix Xtemp;
+    //Matrix Xtemp;
     public void stepFlush() {
         if (!singularMatrix) {
             for (int idx = 0; idx < stateCount; idx++) {

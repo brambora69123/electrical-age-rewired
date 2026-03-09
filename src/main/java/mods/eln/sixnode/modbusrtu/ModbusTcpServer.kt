@@ -13,39 +13,41 @@ class ModbusTcpServer(port: Int = 1502) {
         private val OutputBufferSize = InputBufferSize
     }
 
-    private val server = ServerSocket()
+    private var server: ServerSocket? = null
     private val connections: MutableList<ConnectionHandler> = ArrayList()
     private val slaves = TreeMap<Int, IModbusSlave>()
 
     init {
         if (Config.modbusEnable) {
             try {
-                server.bind(InetSocketAddress(port))
+                server = ServerSocket()
+                server?.bind(InetSocketAddress(port))
+                Utils.println("Modbus TCP server started on port $port")
             } catch (e: BindException) {
                 Utils.println("Exception while binding Modbus RTU Server. Modbus server disabled!")
-                server.close()
+                server?.close()
+                server = null
                 e.printStackTrace()
             }
             start()
-        } else {
-            server.close()
         }
     }
 
     val available: Boolean
-        get() = server.isBound
+        get() = server?.isBound ?: false
 
     val host: String
         get() {
-            val address = (server.localSocketAddress as? InetSocketAddress)?.address?.hostAddress ?: "-"
+            if (server == null) return "-"
+            val address = (server?.localSocketAddress as? InetSocketAddress)?.address?.hostAddress ?: "-"
             return when (address) {
-                "0.0.0.0" -> InetAddress.getLocalHost().hostAddress
+                "0.0.0.0" -> try { InetAddress.getLocalHost().hostAddress } catch (e: Exception) { "-" }
                 else -> address
             }
         }
 
     val port: Int
-        get() = server.localPort
+        get() = server?.localPort ?: -1
 
     private inner class ConnectionHandler(val socket: Socket) {
         private val inputBuffer = ByteBuffer.allocate(InputBufferSize)
@@ -204,16 +206,25 @@ class ModbusTcpServer(port: Int = 1502) {
         fun destroy() = socket.close()
     }
 
-    fun start() = Thread(Runnable {
-        while (!server.isClosed) {
-            val socket = server.accept()
-            if (socket != null) {
-                connections.add(ConnectionHandler(socket))
+    fun start() {
+        if (server == null) return
+        Thread(Runnable {
+            while (!server?.isClosed!!) {
+                try {
+                    val socket = server?.accept()
+                    if (socket != null) {
+                        connections.add(ConnectionHandler(socket))
+                    }
+                } catch (e: Exception) {
+                    // Server closed or interrupted
+                    break
+                }
             }
-        }
-    }).start()
+        }).start()
+    }
 
     fun add(slave: IModbusSlave): Boolean {
+        if (server == null) return false
         val id = slave.slaveId
         if (!slaves.containsKey(id)) {
             slaves.put(slave.slaveId, slave)
@@ -226,7 +237,14 @@ class ModbusTcpServer(port: Int = 1502) {
     fun remove(slave: IModbusSlave) = slaves.remove(slave.slaveId)
 
     fun destroy() {
-        server.close()
+        try {
+            server?.close()
+        } catch (e: Exception) {
+            // Ignore
+        }
+        server = null
         connections.forEach { it.destroy() }
+        connections.clear()
+        slaves.clear()
     }
 }

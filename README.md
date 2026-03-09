@@ -18,11 +18,22 @@ features and functionality.
 
 **The newest Electrical Age is Minecraft 1.12.2 compatible only. Forge/CleanroomMC is needed.**
 <br>
-Note: you may need to use [CleanroomMC](https://cleanroommc.com/), and we highly recommend that you do, it includes many improvements to forge, and 
+Note: you may need to use [CleanroomMC](https://cleanroommc.com/), and we highly recommend that you do, it includes many improvements to forge, and
 allows for newer Java versions, like Java 21, and uses LWJGL3.
 
+### Dependencies
+
+**Required:**
+- [CoFH Core](https://www.curseforge.com/minecraft/mc-mods/cofh-core) - Required for energy integration
+
+**Optional:**
+- [Hwyla/WAILA](https://www.curseforge.com/minecraft/mc-mods/hwyla) - For tooltip information
+- [ComputerCraft](https://www.curseforge.com/minecraft/mc-mods/computercraft) - For computer integration
+- [OpenComputers](https://www.curseforge.com/minecraft/mc-mods/opencomputers) - For computer integration
+
 1. Download the [last mod release](https://github.com/brambora69123/electrical-age-rewired/releases).
-2. Launch Minecraft with your favorite launcher, or the official Minecraft launcher. PrismLauncher highly recommended.
+2. Install CoFH Core (and other optional mods as desired).
+3. Launch Minecraft with your favorite launcher, or the official Minecraft launcher. PrismLauncher highly recommended.
 
 
 tutorial worlds WIP

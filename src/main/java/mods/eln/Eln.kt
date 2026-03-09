@@ -328,7 +328,7 @@ class Eln {
         const val ACCEPTABLE_SAVE_VERSIONS = "[2.0)"
         const val ACCEPTABLE_MINECRAFT_VERSION = "1.12.2"
         const val NAME = "Electrical Age: Re-Wired"
-        const val DEPENDENCIES = ""
+        const val DEPENDENCIES = "required-after:forge"
         const val URL = "https://github.com/brambora69123/electrical-age-rewired"
         const val UPDATE_URL = "https://github.com/brambora69123/electrical-age-rewired/releases"
         const val SRC_URL = "https://github.com/brambora69123/electrical-age-rewired"
