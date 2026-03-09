@@ -115,8 +115,8 @@ repositories {
 }
 
 dependencies {
-    // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    // Kotlin (embedded to avoid NoClassDefFoundError at runtime)
+    embed("org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
 
     // Core libraries
     implementation 'org.apache.commons:commons-math3:3.6.1'
