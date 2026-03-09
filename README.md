@@ -1,6 +1,6 @@
 # Electrical Age: Re-Wired
 
-[![Build Status](https://travis-ci.org/Electrical-Age/ElectricalAge.svg?branch=ports/1.10)](https://travis-ci.org/Electrical-Age/ElectricalAge)
+[![CI Build](https://github.com/brambora69123/electrical-age-rewired/actions/workflows/ci.yml/badge.svg)](https://github.com/brambora69123/electrical-age-rewired/actions/workflows/ci.yml)
 
 Electrical Age: Re-Wired is a 1.12.2 port of the mod Electrical Age, an attempt to bring it to more modern version of
 Minecraft. But here's a brief description:<br>
