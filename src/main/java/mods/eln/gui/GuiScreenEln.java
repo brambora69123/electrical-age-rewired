@@ -68,7 +68,6 @@ public abstract class GuiScreenEln extends GuiScreen implements GuiTextFieldElnO
 
     @Override
     protected void mouseReleased(int mouseX, int mouseY, int state) {
-        // TODO(1.10): Really not sure about this.
         super.mouseReleased(mouseX, mouseY, state);
         helper.mouseMovedOrUp(mouseX, mouseY, state);
     }

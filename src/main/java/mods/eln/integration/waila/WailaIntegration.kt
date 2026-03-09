@@ -13,6 +13,8 @@ object WailaIntegration {
         val ghostNodeProvider = GhostNodeWailaProvider(transparentNodeProvider, sixNodeProvider)
 
         registrar.registerBodyProvider(transparentNodeProvider, mods.eln.node.transparent.TransparentNodeBlock::class.java)
+        registrar.registerHeadProvider(transparentNodeProvider, mods.eln.node.transparent.TransparentNodeBlock::class.java)
+        registrar.registerStackProvider(transparentNodeProvider, mods.eln.node.transparent.TransparentNodeBlock::class.java)
 
         registrar.registerHeadProvider(ghostNodeProvider, mods.eln.ghost.GhostBlock::class.java)
         registrar.registerBodyProvider(ghostNodeProvider, mods.eln.ghost.GhostBlock::class.java)

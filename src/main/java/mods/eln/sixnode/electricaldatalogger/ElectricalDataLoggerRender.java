@@ -26,17 +26,28 @@ public class ElectricalDataLoggerRender extends SixNodeElementRender {
 
     DataLogs log = new DataLogs(ElectricalDataLoggerElement.logsSizeMax);
     boolean waitFistSync = true;
+    long lastSyncRequest = 0;
 
     public ElectricalDataLoggerRender(SixNodeEntity tileEntity, Direction side, SixNodeDescriptor descriptor) {
         super(tileEntity, side, descriptor);
         this.descriptor = (ElectricalDataLoggerDescriptor) descriptor;
         time = System.currentTimeMillis();
         clientSend(ElectricalDataLoggerElement.newClientId);
+        lastSyncRequest = time;
     }
 
     @Override
     public CableRenderDescriptor getCableRender(LRDU lrdu) {
         return Cable.Companion.getSignal().descriptor.render;
+    }
+
+    @Override
+    public void refresh(float deltaT) {
+        super.refresh(deltaT);
+        if (waitFistSync && System.currentTimeMillis() - lastSyncRequest > 2000) {
+            clientSend(ElectricalDataLoggerElement.newClientId);
+            lastSyncRequest = System.currentTimeMillis();
+        }
     }
 
     @Override

@@ -102,28 +102,11 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
     public String getTranslationKey(ItemStack stack) {
         Descriptor desc = getDescriptor(stack);
         if (desc == null) {
-            return this.getClass().getName();
+            return "tile." + this.getClass().getName().toLowerCase();
         } else {
-            return "eln:" + desc.name.replaceAll("\\s+", "_");
+            return "tile." + desc.name.toLowerCase().replaceAll("\\s+", "_");
         }
     }
-
-    // TODO(1.10): Fix item rendering.
-//    @Override
-//    public IIcon getIconFromDamage(int damage) {
-//        Descriptor desc = getDescriptor(damage);
-//        if (desc == null) return null;
-//        return desc.getIcon();
-//    }
-//
-//    @Override
-//    @SideOnly(value = Side.CLIENT)
-//    public void registerIcons(IIconRegister iconRegister) {
-//        for (GenericItemBlockUsingDamageDescriptor descriptor : subItemList.values()) {
-//            descriptor.updateIcons(iconRegister);
-//        }
-//    }
-
 
     @SideOnly(Side.CLIENT)
     @Override
@@ -136,9 +119,6 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
                     ItemStack stack = new ItemStack(this, 1, id);
                     stack.setTagCompound(descriptor.getDefaultNBT());
                     items.add(stack);
-                    System.out.println("Added creative item: " + id + " with descriptor: " + descriptor.name);
-                } else {
-                    System.out.println("Missing descriptor for id: " + id);
                 }
             }
         }
@@ -151,18 +131,4 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         desc.addInformation(itemStack, entityPlayer, listFromDescriptor, par4);
         UtilsClient.showItemTooltip(listFromDescriptor, list);
     }
-
-//    public boolean onEntityItemUpdate(EntityItem entityItem) {
-//        Descriptor desc = getDescriptor(entityItem.getEntityItem());
-//        if (desc != null) return desc.onEntityItemUpdate(entityItem);
-//        return false;
-//    }
-//
-//    //TODO: Maybe its onItemUse only?
-//    @Override
-//    public EnumActionResult onItemUse(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-//        Descriptor desc = getDescriptor(stack);
-//        if (desc != null) return desc.onItemUse(stack, player);
-//        return EnumActionResult.FAIL;
-//    }
 }

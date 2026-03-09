@@ -13,6 +13,7 @@ import mods.eln.node.six.SixNodeEntity;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -58,7 +59,9 @@ public class ElectricalSensorRender extends SixNodeElementRender {
             lowValue = stream.readFloat();
             highValue = stream.readFloat();
             dirType = stream.readByte();
-            cableRender = ElectricalCableDescriptor.getCableRender(Utils.unserialiseItemStack(stream));
+            ItemStack stack = Utils.unserialiseItemStack(stream);
+            inventory.setInventorySlotContents(ElectricalSensorContainer.cableSlotId, stack);
+            cableRender = ElectricalCableDescriptor.getCableRender(stack);
         } catch (IOException e) {
             e.printStackTrace();
         }

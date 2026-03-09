@@ -39,15 +39,15 @@ class GhostNodeWailaProvider(private val transparentNodeProvider: TransparentNod
         override fun getBlock() = accessor.block
         override fun getNBTInteger(tag: NBTTagCompound?, keyname: String?) = accessor.getNBTInteger(tag, keyname)
         override fun getBlockState(): IBlockState {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            return coord.world().getBlockState(coord.pos)
         }
         override fun getMOP(): RayTraceResult {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            return accessor.mop
         }
     }
 
     override fun getNBTData(player: EntityPlayerMP?, te: TileEntity?, tag: NBTTagCompound?, world: World?, pos: BlockPos?): NBTTagCompound {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return tag ?: NBTTagCompound()
     }
 
     private fun getGhostData(accessor: IWailaDataAccessor): GhostNodeWailaData? {

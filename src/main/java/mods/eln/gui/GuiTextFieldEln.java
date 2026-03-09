@@ -16,8 +16,8 @@ public class GuiTextFieldEln extends GuiTextField implements IGuiObject {
 
     IGuiObjectObserver iGuiObjectObserver;
 
-    public GuiTextFieldEln(FontRenderer par1FontRenderer, int x, int y, int w, int h, GuiHelper helper) {
-        super(0, // TODO(1.10): 0 is almost certainly wrong.
+    public GuiTextFieldEln(int componentId, FontRenderer par1FontRenderer, int x, int y, int w, int h, GuiHelper helper) {
+        super(componentId,
             par1FontRenderer, x, y, w, h);
         setTextColor(-1);
         setDisabledTextColour(-1);
@@ -30,8 +30,8 @@ public class GuiTextFieldEln extends GuiTextField implements IGuiObject {
         this.helper = helper;
     }
 
-    public GuiTextFieldEln(FontRenderer par1FontRenderer, int x, int y, int w, GuiHelper helper) {
-        this(par1FontRenderer, x, y, w, 12, helper);
+    public GuiTextFieldEln(int componentId, FontRenderer par1FontRenderer, int x, int y, int w, GuiHelper helper) {
+        this(componentId, par1FontRenderer, x, y, w, 12, helper);
     }
 
     @Override

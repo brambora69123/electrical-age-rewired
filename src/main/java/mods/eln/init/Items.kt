@@ -63,6 +63,7 @@ object Items {
         registerMiscItem(sharedItem)
         registerRegulatorItem(sharedItem)
         registerProtection(sharedItem)
+        registerBrush(sharedItem)
         
         registerElectricalTool(sharedItemStackOne)
         registerPortableItem(sharedItemStackOne)
@@ -155,6 +156,19 @@ object Items {
         val id = 5
         sharedItem.addElement(0 + (id shl 6), OverVoltageProtectionDescriptor("Overvoltage Protection"))
         sharedItem.addElement(1 + (id shl 6), OverHeatingProtectionDescriptor("Overheating Protection"))
+    }
+
+    private fun registerBrush(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 119
+        val names = arrayOf(
+            "Black Brush", "Red Brush", "Green Brush", "Brown Brush",
+            "Blue Brush", "Purple Brush", "Cyan Brush", "Silver Brush",
+            "Gray Brush", "Pink Brush", "Lime Brush", "Yellow Brush",
+            "Light Blue Brush", "Magenta Brush", "Orange Brush", "White Brush"
+        )
+        for (i in 0..15) {
+            sharedItem.addElement(i + (id shl 6), BrushDescriptor(names[i]))
+        }
     }
 
     private fun registerLampItems(sharedItem: mods.eln.generic.SharedItem) {

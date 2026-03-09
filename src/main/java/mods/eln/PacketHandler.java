@@ -2,9 +2,6 @@ package mods.eln;
 
 import mods.eln.misc.Coordinate;
 import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.network.FMLNetworkEvent.ServerCustomPacketEvent;
-import net.minecraftforge.fml.common.network.internal.FMLProxyPacket;
 import io.netty.channel.ChannelHandler.Sharable;
 import mods.eln.client.ClientKeyHandler;
 import mods.eln.client.ClientProxy;
@@ -27,18 +24,7 @@ import java.io.*;
 public class PacketHandler {
 
     public PacketHandler() {
-        Eln.eventChannel.register(this);
-    }
-
-
-    @SubscribeEvent
-    public void onServerPacket(ServerCustomPacketEvent event) {
-        FMLProxyPacket packet = event.getPacket();
-        DataInputStream stream = new DataInputStream(new ByteArrayInputStream(packet.payload().array()));
-        NetworkManager manager = event.getManager();
-        EntityPlayer player = ((NetHandlerPlayServer) event.getHandler()).player; // EntityPlayerMP
-
-        packetRx(stream, manager, player);
+        // Eln.eventChannel.register(this);
     }
 
 
@@ -136,19 +122,20 @@ public class PacketHandler {
                     INodeEntity node = (INodeEntity) entity;
                     if (node.getNodeUuid().equals(stream.readUTF())) {
                         node.serverPacketUnserialize(stream);
-                        if (0 != stream.available()) {
+                        /*if (0 != stream.available()) {
                             Utils.println("0 != stream.available()");
-                        }
+                        }*/
                     } else {
-                        Utils.println("Wrong node UUID warning");
+                        // Utils.println("Wrong node UUID warning");
                         int dataSkipLength = stream.readByte();
                         for (int idx = 0; idx < dataSkipLength; idx++) {
                             stream.readByte();
                         }
                     }
                 }
-            } else
-                Utils.println("No node found for " + x + " " + y + " " + z);
+            } else {
+                // Utils.println("No node found for " + x + " " + y + " " + z);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -170,18 +157,19 @@ public class PacketHandler {
                     if (node.getNodeUuid().equals(stream.readUTF())) {
                         node.serverPublishUnserialize(stream);
                         if (0 != stream.available()) {
-                            Utils.println("0 != stream.available()");
+                            // Utils.println("0 != stream.available()");
 
                         }
                     } else {
-                        Utils.println("Wrong node UUID warning");
+                        // Utils.println("Wrong node UUID warning");
                         int dataSkipLength = stream.readByte();
                         for (int idx = 0; idx < dataSkipLength; idx++) {
                             stream.readByte();
                         }
                     }
-                } else
-                    Utils.println("No node found for " + x + " " + y + " " + z);
+                } else {
+                    // Utils.println("No node found for " + x + " " + y + " " + z);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();

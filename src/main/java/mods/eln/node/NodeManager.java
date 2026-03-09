@@ -8,12 +8,26 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.storage.WorldSavedData;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NodeManager extends WorldSavedData {
     public static NodeManager instance = null;
 
     private HashMap<Coordinate, NodeBase> nodesMap;
     private ArrayList<NodeBase> nodes;
+    private Set<NodeBase> nodesToPublish = Collections.newSetFromMap(new ConcurrentHashMap<NodeBase, Boolean>());
+
+    public Set<NodeBase> getNodesToPublish() {
+        return nodesToPublish;
+    }
+
+    public void addNodeToPublish(NodeBase node) {
+        nodesToPublish.add(node);
+    }
+
+    public void clearNodesToPublish() {
+        nodesToPublish.clear();
+    }
 
     public HashMap<Coordinate, NodeBase> getNodeArray() {
         return nodesMap;
@@ -45,9 +59,7 @@ public class NodeManager extends WorldSavedData {
 
     public void addNode(NodeBase node) {
         if (node.coordinate == null) {
-            Utils.println("Null coordinate addnode");
-            while (true)
-                ;
+            throw new RuntimeException("Null coordinate addnode");
         }
         NodeBase old = nodesMap.put(node.coordinate, node);
         if (old != null) {
@@ -56,7 +68,6 @@ public class NodeManager extends WorldSavedData {
 
         nodes.add(node);
         setDirty(true); // Mark for saving
-        Utils.println("NodeManager has " + nodesMap.size() + " node(s)");
     }
 
     public void removeNode(NodeBase node) {
@@ -64,14 +75,12 @@ public class NodeManager extends WorldSavedData {
         nodesMap.remove(node.coordinate);
         nodes.remove(node);
         setDirty(true); // Mark for saving
-        Utils.println("NodeManager has " + nodesMap.size() + " node(s)");
     }
 
     public void removeCoordinate(Coordinate c) {
         // nodeArray.remove(node);
         NodeBase n = nodesMap.remove(c);
         if (n != null) nodes.remove(n);
-        Utils.println("NodeManager has " + nodesMap.size() + "node");
     }
 
     @Override

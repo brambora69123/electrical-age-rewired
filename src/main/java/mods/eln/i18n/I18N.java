@@ -1,9 +1,7 @@
 package mods.eln.i18n;
 
 import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraft.util.text.TextComponentTranslation;
-
-import javax.xml.soap.Text;
+import net.minecraft.util.text.translation.I18n;
 
 /**
  * Internationalization and localization helper class.
@@ -22,10 +20,7 @@ public class I18N {
             if (replaceWhitspaces) {
                 key = key.replace(' ', '_');
             }
-            return key.replace("=", "\\=")
-                .replace(":", "\\:")
-                .replace("\n", "\\n")
-                .replace("/", "_");
+            return key.replace("/", "_");
         } else {
             return null;
         }
@@ -49,15 +44,33 @@ public class I18N {
      * anyway) if no translation is present.
      */
     public static String tr(final String text, Object... objects) {
-        // Try to find the translation for the string using forge API.
-        String translation = new TextComponentTranslation(encodeLangKey(text)).getFormattedText();
+        String key = "eln." + encodeLangKey(text).toLowerCase();
+        
+        String translation;
+        if (I18n.canTranslate(key)) {
+            translation = I18n.translateToLocal(key);
+        } else {
+            translation = text;
+        }
 
-        // Replace placeholders .
+        // Replace placeholders.
         translation = translation.replace("\\n", "\n").replace("\\:", ":");
 
         // Replace placeholders in string by actual string values of the passed objects.
-        for (int i = 0; i < objects.length; ++i) {
-            translation = translation.replace("%" + (i + 1) + "$", String.valueOf(objects[i]));
+        // We use String.format style if %s is present, otherwise fallback to old behavior
+        if (translation.contains("%s") || translation.contains("%d")) {
+            try {
+                translation = String.format(translation, objects);
+            } catch (Exception e) {
+                // Fallback for custom %1$ style if format fails
+                for (int i = 0; i < objects.length; ++i) {
+                    translation = translation.replace("%" + (i + 1) + "$", String.valueOf(objects[i]));
+                }
+            }
+        } else {
+            for (int i = 0; i < objects.length; ++i) {
+                translation = translation.replace("%" + (i + 1) + "$", String.valueOf(objects[i]));
+            }
         }
 
         return translation;

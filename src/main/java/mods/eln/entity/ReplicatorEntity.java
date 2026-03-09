@@ -46,11 +46,7 @@ public class ReplicatorEntity extends EntityMob {
         int p = 0;
 
         this.tasks.addTask(p++, new EntityAISwimming(this));
-        // TODO(1.10): Is there a replacement for this? Is it even needed anymore?
-        // TODO: Also, consider leaping towards targets.
-//        this.tasks.addTask(p++, new EntityAIAttackOnCollide(this, EntityPlayer.class, 1.0D, false));
-//        this.tasks.addTask(p++, new EntityAIAttackOnCollide(this, EntityVillager.class, 1.0D, true));
-//        this.tasks.addTask(p++, new EntityAIAttackOnCollide(this, ReplicatorEntity.class, 1.0D, true));
+        this.tasks.addTask(p++, new EntityAIAttackMelee(this, 1.0D, false));
         this.tasks.addTask(p++, replicatorIa);
         this.tasks.addTask(p++, new EntityAIMoveTowardsRestriction(this, 1.0D));
         this.tasks.addTask(p++, new EntityAIMoveThroughVillage(this, 1.0D, false));
@@ -111,12 +107,6 @@ public class ReplicatorEntity extends EntityMob {
         // this.getAttributeMap().func_111150_b(field_110186_bp).setAttribute(this.rand.nextDouble() * ForgeDummyContainer.zombieSummonBaseChance);
     }
 
-    // TODO(1.10): Necessary?
-//    @Override
-//    public boolean isAIDisabled() {
-//        return false;
-//    }
-
     protected SoundEvent getAmbientSound()
     {
         return SoundEvents.ENTITY_SILVERFISH_AMBIENT;
@@ -139,7 +129,12 @@ public class ReplicatorEntity extends EntityMob {
 
     @Override
     protected void dropFewItems(boolean par1, int par2) {
-        this.entityDropItem(dropList.get(new Random().nextInt(dropList.size())).copy(), 0.5f);
+        if (!dropList.isEmpty()) {
+            this.entityDropItem(dropList.get(this.rand.nextInt(dropList.size())).copy(), 0.5f);
+        } else {
+            // Default drops if list is empty to prevent crash
+            this.entityDropItem(new ItemStack(Items.IRON_INGOT), 0.5f);
+        }
 
         if (isSpawnedFromWeather) {
             if (Math.random() < 0.33) {

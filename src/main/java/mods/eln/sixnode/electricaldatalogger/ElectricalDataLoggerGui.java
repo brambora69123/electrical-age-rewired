@@ -1,10 +1,7 @@
 package mods.eln.sixnode.electricaldatalogger;
 
-import mods.eln.gui.GuiContainerEln;
-import mods.eln.gui.GuiHelperContainer;
-import mods.eln.gui.GuiTextFieldEln;
+import mods.eln.gui.*;
 import mods.eln.gui.GuiTextFieldEln.GuiTextFieldElnObserver;
-import mods.eln.gui.IGuiObject;
 import mods.eln.misc.Color;
 import mods.eln.misc.UtilsClient;
 import net.minecraft.client.gui.GuiButton;
@@ -19,7 +16,7 @@ import static mods.eln.i18n.I18N.tr;
 
 public class ElectricalDataLoggerGui extends GuiContainerEln implements GuiTextFieldElnObserver {
 
-    GuiButton resetBt, voltageType, energyType, currentType, powerType, celsiusType, percentType, config, printBt, pause;
+    GuiButtonEln resetBt, voltageType, energyType, currentType, powerType, celsiusType, percentType, config, printBt, pause;
     GuiTextFieldEln samplingPeriod, maxValue, minValue, yCursorValue;
     ElectricalDataLoggerRender render;
 
@@ -33,38 +30,42 @@ public class ElectricalDataLoggerGui extends GuiContainerEln implements GuiTextF
     }
 
     void displayEntry() {
-        config.displayString = tr("Configuration");
-        config.visible = true;
-        pause.visible = true;
-        resetBt.visible = true;
-        voltageType.visible = false;
-        energyType.visible = false;
-        percentType.visible = false;
-        currentType.visible = false;
-        powerType.visible = false;
-        celsiusType.visible = false;
-        samplingPeriod.setVisible(false);
-        maxValue.setVisible(false);
-        minValue.setVisible(false);
-        printBt.visible = true;
+        if (config != null) {
+            config.displayString = tr("Configuration");
+            config.visible = true;
+        }
+        if (pause != null) pause.visible = true;
+        if (resetBt != null) resetBt.visible = true;
+        if (voltageType != null) voltageType.visible = false;
+        if (energyType != null) energyType.visible = false;
+        if (percentType != null) percentType.visible = false;
+        if (currentType != null) currentType.visible = false;
+        if (powerType != null) powerType.visible = false;
+        if (celsiusType != null) celsiusType.visible = false;
+        if (samplingPeriod != null) samplingPeriod.setVisible(false);
+        if (maxValue != null) maxValue.setVisible(false);
+        if (minValue != null) minValue.setVisible(false);
+        if (printBt != null) printBt.visible = true;
         state = State.display;
     }
 
     void configEntry() {
-        pause.visible = false;
-        config.visible = true;
-        config.displayString = tr("Back to display");
-        resetBt.visible = false;
-        printBt.visible = true;
-        voltageType.visible = true;
-        energyType.visible = true;
-        percentType.visible = true;
-        currentType.visible = true;
-        powerType.visible = true;
-        celsiusType.visible = true;
-        samplingPeriod.setVisible(true);
-        maxValue.setVisible(true);
-        minValue.setVisible(true);
+        if (pause != null) pause.visible = false;
+        if (config != null) {
+            config.visible = true;
+            config.displayString = tr("Back to display");
+        }
+        if (resetBt != null) resetBt.visible = false;
+        if (printBt != null) printBt.visible = true;
+        if (voltageType != null) voltageType.visible = true;
+        if (energyType != null) energyType.visible = true;
+        if (percentType != null) percentType.visible = true;
+        if (currentType != null) currentType.visible = true;
+        if (powerType != null) powerType.visible = true;
+        if (celsiusType != null) celsiusType.visible = true;
+        if (samplingPeriod != null) samplingPeriod.setVisible(true);
+        if (maxValue != null) maxValue.setVisible(true);
+        if (minValue != null) minValue.setVisible(true);
         state = State.config;
     }
 
@@ -73,31 +74,35 @@ public class ElectricalDataLoggerGui extends GuiContainerEln implements GuiTextF
         super.initGui();
 
         config = newGuiButton(176 / 2 - 50, 8 - 2, 100, "");
+        config.setComment(0, tr("Toggle between display and configuration"));
 
         //@devs: Do not translate the following elements. Please.
         voltageType = newGuiButton(176 / 2 - 75 - 2, 8 + 20 + 2 - 2, 75, tr("Voltage [V]"));
         currentType = newGuiButton(176 / 2 + 2, 8 + 20 + 2 - 2, 75, tr("Current [A]"));
         powerType = newGuiButton(176 / 2 - 75 - 2, 8 + 40 + 4 - 2, 75, tr("Power [W]"));
         celsiusType = newGuiButton(176 / 2 + 2, 8 + 40 + 4 - 2, 75, tr("Temp. [*C]"));
-        percentType = newGuiButton(176 / 2 - 75 - 2, 8 + 60 + 6 - 2, 75, tr("Percent [-]%"));
+        percentType = newGuiButton(176 / 2 - 75 - 2, 8 + 60 + 6 - 2, 75, tr("Percent [-] percent"));
         energyType = newGuiButton(176 / 2 + 2, 8 + 60 + 6 - 2, 75, tr("Energy [J]"));
 
         resetBt = newGuiButton(176 / 2 - 50, 8 + 20 + 2 - 2, 48, tr("Reset"));
+        resetBt.setComment(0, tr("Clear all recorded data"));
         pause = newGuiButton(176 / 2 + 2, 8 + 20 + 2 - 2, 48, "");
+        pause.setComment(0, tr("Pause/Resume data recording"));
 
         printBt = newGuiButton(176 / 2 - 48 / 2, 123, 48, tr("Print"));
+        printBt.setComment(0, tr("Print current graph to paper"));
 
-        samplingPeriod = newGuiTextField(30, 101, 50);
+        samplingPeriod = newGuiTextField(10, 105, 50);
         samplingPeriod.setText(render.log.samplingPeriod);
-        samplingPeriod.setComment(new String[]{tr("Sampling period")});
+        samplingPeriod.setComment(new String[]{tr("Sampling period (seconds)")});
 
-        maxValue = newGuiTextField(176 - 50 - 30, 101 - 7, 50);
+        maxValue = newGuiTextField(176 - 50 - 10, 95, 50);
         maxValue.setText(render.log.maxValue);
-        maxValue.setComment(new String[]{tr("Y-axis max")});
+        maxValue.setComment(new String[]{tr("Y-axis scale maximum")});
 
-        minValue = newGuiTextField(176 - 50 - 30, 101 + 8, 50);
+        minValue = newGuiTextField(176 - 50 - 10, 115, 50);
         minValue.setText(render.log.minValue);
-        minValue.setComment(new String[]{tr("Y-axis min")});
+        minValue.setComment(new String[]{tr("Y-axis scale minimum")});
 
         displayEntry();
     }
@@ -153,42 +158,45 @@ public class ElectricalDataLoggerGui extends GuiContainerEln implements GuiTextF
     @Override
     protected void preDraw(float f, int x, int y) {
         super.preDraw(f, x, y);
-        powerType.enabled = true;
-        currentType.enabled = true;
-        voltageType.enabled = true;
-        celsiusType.enabled = true;
-        percentType.enabled = true;
-        energyType.enabled = true;
+        if (powerType != null) powerType.enabled = true;
+        if (currentType != null) currentType.enabled = true;
+        if (voltageType != null) voltageType.enabled = true;
+        if (celsiusType != null) celsiusType.enabled = true;
+        if (percentType != null) percentType.enabled = true;
+        if (energyType != null) energyType.enabled = true;
 
         switch (render.log.unitType) {
             case DataLogs.currentType:
-                currentType.enabled = false;
+                if (currentType != null) currentType.enabled = false;
                 break;
             case DataLogs.voltageType:
-                voltageType.enabled = false;
+                if (voltageType != null) voltageType.enabled = false;
                 break;
             case DataLogs.powerType:
-                powerType.enabled = false;
+                if (powerType != null) powerType.enabled = false;
                 break;
             case DataLogs.celsiusType:
-                celsiusType.enabled = false;
+                if (celsiusType != null) celsiusType.enabled = false;
                 break;
             case DataLogs.percentType:
-                percentType.enabled = false;
+                if (percentType != null) percentType.enabled = false;
                 break;
             case DataLogs.energyType:
-                energyType.enabled = false;
+                if (energyType != null) energyType.enabled = false;
                 break;
         }
 
-        if (render.pause)
-            pause.displayString = Color.COLOR_DARK_YELLOW + "Paused";
-        else
-            pause.displayString = Color.COLOR_BRIGHT_GREEN + "Running";
+        if (render.pause) {
+            if (pause != null) pause.displayString = Color.COLOR_DARK_YELLOW + "Paused";
+        } else {
+            if (pause != null) pause.displayString = Color.COLOR_BRIGHT_GREEN + "Running";
+        }
 
-        boolean a = inventorySlots.getSlot(ElectricalDataLoggerContainer.paperSlotId).getStack() != null;
-        boolean b = inventorySlots.getSlot(ElectricalDataLoggerContainer.printSlotId).getStack() == null;
-        printBt.enabled = a && b;
+        if (printBt != null) {
+            boolean a = !inventorySlots.getSlot(ElectricalDataLoggerContainer.paperSlotId).getStack().isEmpty();
+            boolean b = inventorySlots.getSlot(ElectricalDataLoggerContainer.printSlotId).getStack().isEmpty();
+            printBt.enabled = a && b;
+        }
     }
 
     @Override

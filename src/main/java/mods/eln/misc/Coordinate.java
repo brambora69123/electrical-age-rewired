@@ -83,10 +83,7 @@ public class Coordinate implements INBTTReady {
 
     public World world() {
         if (w == null) {
-            // TODO(1.12): This is not cached. Oversight or deliberate?
-            return FMLCommonHandler.instance()
-                .getMinecraftServerInstance()
-                .getWorld(getDimension());
+            w = DimensionManager.getWorld(getDimension());
         }
         return w;
     }

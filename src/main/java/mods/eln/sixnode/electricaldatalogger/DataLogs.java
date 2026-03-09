@@ -25,14 +25,12 @@ public class DataLogs implements INBTTReady {
     }
 
     void write(byte data) {
+        if (sizeMax <= 0) return;
         int idx;
-        if (size != sizeMax) {
+        if (size < sizeMax) {
             size++;
         }
-        if (size != sizeMax)
-            idx = size;
-        else
-            idx = size - 1;
+        idx = size - 1;
 
         while (idx > 0) {
             log[idx] = log[idx - 1];
@@ -101,6 +99,7 @@ public class DataLogs implements INBTTReady {
 
     static void draw(byte[] value, int size, float samplingPeriod, float maxValue, float minValue, byte unitType, float margeX, float margeY, String textHeader) {
         if (value == null) return;
+        if (textHeader == null) textHeader = "";
         if (size < 2) return;
         //long startT = System.nanoTime();
         GL11.glLineWidth(1f);

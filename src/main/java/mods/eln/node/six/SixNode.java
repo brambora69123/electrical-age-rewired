@@ -79,11 +79,8 @@ public class SixNode extends Node {
     }
 
     public boolean createSubBlock(ItemStack itemStack, Direction direction, EntityPlayer player) {
-        Utils.println("SixNode.createSubBlock: direction=" + direction + " itemStack=" + itemStack);
-
         SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(itemStack);
         if (sideElementList[direction.getInt()] != null) {
-            Utils.println("SixNode.createSubBlock: side already occupied!");
             return false;
         }
         try {
@@ -100,27 +97,19 @@ public class SixNode extends Node {
 
             connect();
 
-            Utils.println("SixNode.createSubBlock: SUCCESS " + sideElementIdList[direction.getInt()] + " " + direction);
-
             setNeedPublish(true);
             return true;
         } catch (InstantiationException e) {
-            Utils.println("SixNode.createSubBlock: InstantiationException");
             e.printStackTrace();
         } catch (IllegalAccessException e) {
-            Utils.println("SixNode.createSubBlock: IllegalAccessException");
             e.printStackTrace();
         } catch (IllegalArgumentException e) {
-            Utils.println("SixNode.createSubBlock: IllegalArgumentException");
             e.printStackTrace();
         } catch (InvocationTargetException e) {
-            Utils.println("SixNode.createSubBlock: InvocationTargetException");
             e.printStackTrace();
         } catch (NoSuchMethodException e) {
-            Utils.println("SixNode.createSubBlock: NoSuchMethodException");
             e.printStackTrace();
         } catch (SecurityException e) {
-            Utils.println("SixNode.createSubBlock: SecurityException");
             e.printStackTrace();
         }
         return false;
@@ -144,16 +133,11 @@ public class SixNode extends Node {
 
 
     public boolean playerAskToBreakSubBlock(EntityPlayerMP entityPlayer, Direction direction) {
-        Utils.println("SixNode.playerAskToBreakSubBlock: direction=" + direction);
-        Utils.println("SixNode.playerAskToBreakSubBlock: sideElementList[" + direction.getInt() + "]=" + sideElementList[direction.getInt()]);
-
         if (sideElementList[direction.getInt()] == null) {
-            Utils.println("SixNode.playerAskToBreakSubBlock: side is null, calling deleteSubBlock");
             return deleteSubBlock(entityPlayer, direction);
         }
 
         boolean canBreak = sideElementList[direction.getInt()].playerAskToBreak();
-        Utils.println("SixNode.playerAskToBreakSubBlock: playerAskToBreak returned " + canBreak);
         
         if (canBreak) {
             return deleteSubBlock(entityPlayer, direction);
@@ -164,14 +148,10 @@ public class SixNode extends Node {
     }
 
     public boolean deleteSubBlock(EntityPlayerMP entityPlayer, Direction direction) {
-        Utils.println("SixNode.deleteSubBlock: direction=" + direction);
-
         if (sideElementList[direction.getInt()] == null) {
-            Utils.println("SixNode.deleteSubBlock: side is already null");
             return false;
         }
 
-        Utils.println("SixNode.deleteSubBlock: deleting " + direction);
 
         disconnect();
         SixNodeElement e = sideElementList[direction.getInt()];
@@ -479,9 +459,8 @@ public class SixNode extends Node {
         Direction elementSide = side.applyLRDU(lrdu);
         SixNodeElement element = sideElementList[elementSide.getInt()];
         if (element == null) {
-            Utils.println("sixnode newConnectionAt error");
-            while (true)
-                ;
+            Utils.println("sixnode newConnectionAt error: element is null");
+            return;
         }
         lrduElementMask.set(elementSide, elementSide.getLRDUGoingTo(side), true);
 
@@ -491,9 +470,8 @@ public class SixNode extends Node {
         Direction elementSide = side.applyLRDU(lrdu);
         SixNodeElement element = sideElementList[elementSide.getInt()];
         if (element == null) {
-            Utils.println("sixnode newConnectionAt error");
-            while (true)
-                ;
+            Utils.println("sixnode externalDisconnect error: element is null");
+            return;
         }
         lrduElementMask.set(elementSide, elementSide.getLRDUGoingTo(side), false);
     }
@@ -528,9 +506,6 @@ public class SixNode extends Node {
 			}*/
 
             if (accepted) {
-                Utils.println("ACACAC");
-
-
                 setNeedPublish(true);
                 if (Utils.isCreative((EntityPlayerMP) entityPlayer) == false)
                     entityPlayer.inventory.decrStackSize(entityPlayer.inventory.currentItem, 1);
@@ -600,8 +575,6 @@ public class SixNode extends Node {
             side = Direction.fromInt(stream.readByte());
             if (side != null & sideElementIdList[side.getInt()] == stream.readShort()) {
                 sideElementList[side.getInt()].networkUnserialize(stream, player);
-            } else {
-                Utils.println("sixnode unserialize miss");
             }
         } catch (IOException e) {
 

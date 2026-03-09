@@ -234,7 +234,7 @@ public class ElectricalSensorElement extends SixNodeElement {
     @Override
     public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
         if (onBlockActivatedRotate(entityPlayer)) return true;
-        return inventory.take(entityPlayer.getHeldItemMainhand(), this, false, true);
+        return inventory.take(entityPlayer.getHeldItemMainhand(), this, true, true);
     }
 
     @Override

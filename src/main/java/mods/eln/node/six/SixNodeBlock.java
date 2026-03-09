@@ -93,7 +93,6 @@ public class SixNodeBlock extends NodeBlock {
         TileEntity tileEntity = world.getTileEntity(pos);
         if (tileEntity != null && tileEntity instanceof SixNodeEntity)
             return (SixNodeEntity) tileEntity;
-        Utils.println("ASSERTSixNodeEntity getEntity() null");
         return null;
 
     }
@@ -487,16 +486,12 @@ public class SixNodeBlock extends NodeBlock {
             TileEntity tileEntity = world.getTileEntity(pos);
             if (tileEntity != null && tileEntity instanceof SixNodeEntity)
                 return ((SixNodeEntity) tileEntity).sixNodeCacheBlock != Blocks.AIR;
-            else
-                Utils.println("ASSERT B public boolean nodeHasCache(World world, int x, int y, int z) ");
 
         } else {
             SixNodeEntity tileEntity = (SixNodeEntity) world.getTileEntity(pos);
             SixNode sixNode = (SixNode) tileEntity.getNode();
             if (sixNode != null)
                 return sixNode.sixNodeCacheBlock != Blocks.AIR;
-            else
-                Utils.println("ASSERT A public boolean nodeHasCache(World world, int x, int y, int z) ");
         }
         return false;
     }

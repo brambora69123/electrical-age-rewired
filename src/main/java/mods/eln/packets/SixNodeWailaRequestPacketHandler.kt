@@ -12,12 +12,12 @@ class SixNodeWailaRequestPacketHandler : IMessageHandler<SixNodeWailaRequestPack
         val side = message.side
         val node = NodeManager.instance.getNodeFromCoordinate(coord) as? SixNode
         var stringMap: Map<String, String> = emptyMap()
-        var itemStack: ItemStack? = null
+        var itemStack = ItemStack.EMPTY
         if (node != null) {
             val element = node.getElement(side)
             if (element != null) {
                 stringMap = element.waila?.filter { it.value != null } ?: emptyMap()
-                itemStack = element.sixNodeElementDescriptor.newItemStack()
+                itemStack = element.sixNodeElementDescriptor.newItemStack() ?: ItemStack.EMPTY
             }
         }
         return SixNodeWailaResponsePacket(coord, side, itemStack, stringMap)

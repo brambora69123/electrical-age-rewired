@@ -150,8 +150,8 @@ class TachometerGui(val render: TachometerRender) : GuiScreenEln() {
     override fun initGui() {
         super.initGui()
         validate.enabled = true
-        lowValue.setComment(I18N.tr("Rads/s corresponding\nto 0% output").split("\n".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray())
-        highValue.setComment(I18N.tr("Rads/s corresponding\nto 100% output").split("\n".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray())
+        lowValue.setComment(I18N.tr("Rads/s corresponding\nto 0 percent output").split("\n".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray())
+        highValue.setComment(I18N.tr("Rads/s corresponding\nto 100 percent output").split("\n".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray())
         lowValue.setText(render.minRads)
         highValue.setText(render.maxRads)
     }

@@ -8,9 +8,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import mods.eln.Eln;
 import mods.eln.misc.Coordinate;
 import mods.eln.packets.GhostNodeWailaRequestPacket;
+import mods.eln.packets.GhostNodeWailaResponsePacket;
 import mods.eln.packets.SixNodeWailaRequestPacket;
 import mods.eln.packets.TransparentNodeRequestPacket;
+import net.minecraft.item.ItemStack;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -19,20 +22,20 @@ import java.util.concurrent.TimeUnit;
  */
 public class WailaCache {
 
-    public static LoadingCache<Coordinate, Map<String, String>> nodes = CacheBuilder.newBuilder()
+    public static LoadingCache<Coordinate, TransparentNodeWailaData> nodes = CacheBuilder.newBuilder()
         .maximumSize(20)
         .refreshAfterWrite(2, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<Coordinate, Map<String, String>>() {
-                public Map<String, String> load(Coordinate key) throws Exception {
+            new CacheLoader<Coordinate, TransparentNodeWailaData>() {
+                public TransparentNodeWailaData load(Coordinate key) throws Exception {
                     Eln.elnNetwork.sendToServer(new TransparentNodeRequestPacket(key));
-                    return null;
+                    return new TransparentNodeWailaData(ItemStack.EMPTY, new HashMap<String, String>());
                 }
 
                 @Override
-                public ListenableFuture<Map<String, String>> reload(Coordinate key,
-                                                                    Map<String, String> oldValue) throws Exception {
-                    load(key);
+                public ListenableFuture<TransparentNodeWailaData> reload(Coordinate key,
+                                                                    TransparentNodeWailaData oldValue) throws Exception {
+                    Eln.elnNetwork.sendToServer(new TransparentNodeRequestPacket(key));
                     return Futures.immediateFuture(oldValue);
                 }
             }
@@ -45,13 +48,13 @@ public class WailaCache {
             new CacheLoader<SixNodeCoordinate, SixNodeWailaData>() {
                 public SixNodeWailaData load(SixNodeCoordinate key) throws Exception {
                     Eln.elnNetwork.sendToServer(new SixNodeWailaRequestPacket(key.getCoord(), key.getSide()));
-                    return null;
+                    return new SixNodeWailaData(ItemStack.EMPTY, new HashMap<String, String>());
                 }
 
                 @Override
                 public ListenableFuture<SixNodeWailaData> reload(SixNodeCoordinate key,
                                                                  SixNodeWailaData oldValue) throws Exception {
-                    load(key);
+                    Eln.elnNetwork.sendToServer(new SixNodeWailaRequestPacket(key.getCoord(), key.getSide()));
                     return Futures.immediateFuture(oldValue);
                 }
             }
@@ -64,13 +67,13 @@ public class WailaCache {
             new CacheLoader<Coordinate, GhostNodeWailaData>() {
                 public GhostNodeWailaData load(Coordinate key) throws Exception {
                     Eln.elnNetwork.sendToServer(new GhostNodeWailaRequestPacket(key));
-                    return null;
+                    return new GhostNodeWailaData(key, ItemStack.EMPTY, GhostNodeWailaResponsePacket.UNKNOWN_TYPE, mods.eln.misc.Direction.XN);
                 }
 
                 @Override
                 public ListenableFuture<GhostNodeWailaData> reload(Coordinate key,
                                                                    GhostNodeWailaData oldValue) throws Exception {
-                    load(key);
+                    Eln.elnNetwork.sendToServer(new GhostNodeWailaRequestPacket(key));
                     return Futures.immediateFuture(oldValue);
                 }
             }

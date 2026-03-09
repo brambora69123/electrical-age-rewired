@@ -39,7 +39,6 @@ public class ClientProxy extends CommonProxy {
 
     public static UuidManager uuidManager;
     public static SoundClientEventListener soundClientEventListener;
-    public static ClientPacketHandler clientPacketHandler;
     public static FrameTime frameTime;
 
     @SubscribeEvent
@@ -132,7 +131,6 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void init(FMLInitializationEvent event) {
-        clientPacketHandler = new ClientPacketHandler();
         ClientRegistry.bindTileEntitySpecialRenderer(SixNodeEntity.class, new SixNodeRender());
         ClientRegistry.bindTileEntitySpecialRenderer(TransparentNodeEntity.class, new TransparentNodeRender());
     }

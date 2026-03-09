@@ -45,14 +45,17 @@ public class TreeResinCollectorTileEntity extends TileEntity implements ITickabl
 
             int yStart, yEnd;
 
-            while (world.getBlockState(new BlockPos(posWood[0], posWood[1] - 1, posWood[2])) == Blocks.LOG) {
+            net.minecraft.world.chunk.Chunk chunk = world.getChunkProvider().getLoadedChunk(posWood[0] >> 4, posWood[2] >> 4);
+            if (chunk == null || chunk.isEmpty()) return;
+
+            while (chunk.getBlockState(new BlockPos(posWood[0], posWood[1] - 1, posWood[2])).getBlock() == Blocks.LOG) {
                 posWood[1]--;
             }
             yStart = posWood[1];
 
             posWood[1] = pos.getY();
             timeCounter -= timeTarget;
-            while (world.getBlockState(new BlockPos(posWood[0], posWood[1] + 1, posWood[2])).getBlock() == Blocks.LOG) {
+            while (chunk.getBlockState(new BlockPos(posWood[0], posWood[1] + 1, posWood[2])).getBlock() == Blocks.LOG) {
                 posWood[1]++;
             }
             yEnd = posWood[1];

@@ -194,8 +194,7 @@ class Eln {
         val manager = command as ServerCommandManager
         manager.registerCommand(ConsoleListener())
 
-        // TODO: Load world-specific NBT data for ghost manager and node manager
-        // This would use WorldSavedData for persistence
+        simulator.start()
 
         logger.info("Electrical Age server started")
     }
@@ -258,9 +257,9 @@ class Eln {
         elnNetwork.registerMessage(GhostNodeWailaResponsePacketHandler::class.java, GhostNodeWailaResponsePacket::class.java, 4, Side.CLIENT)
         elnNetwork.registerMessage(SixNodeWailaRequestPacketHandler::class.java, SixNodeWailaRequestPacket::class.java, 5, Side.SERVER)
         elnNetwork.registerMessage(SixNodeWailaResponsePacketHandler::class.java, SixNodeWailaResponsePacket::class.java, 6, Side.CLIENT)
+        elnNetwork.registerMessage(GenericPacketHandler::class.java, GenericPacket::class.java, 7, Side.CLIENT)
+        elnNetwork.registerMessage(GenericPacketHandler::class.java, GenericPacket::class.java, 8, Side.SERVER)
 
-        // Event-driven channel for GUI and other events
-        eventChannel = NetworkRegistry.INSTANCE.newEventDrivenChannel(eventChannelID)
         packetHandler = PacketHandler()
     }
 
@@ -400,9 +399,6 @@ class Eln {
         @JvmStatic
         lateinit var packetHandler: PacketHandler
 
-        @JvmStatic
-        lateinit var eventChannel: FMLEventChannel
-
         // =====================================================================
         // Items and Blocks
         // =====================================================================
@@ -420,8 +416,6 @@ class Eln {
 
         @JvmStatic
         lateinit var miningPipeDescriptor: MiningPipeDescriptor
-
-        const val eventChannelID = "eln-event"
 
         // Packet type constants
         const val packetPlayerKey: Byte = 14

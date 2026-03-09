@@ -236,7 +236,7 @@ public class ThermalSensorElement extends SixNodeElement {
         if (Items.allMeterElement.checkSameItemStack(currentItemStack)) {
             return false;
         }
-        return inventory.take(currentItemStack, this, false, true);
+        return inventory.take(currentItemStack, this, true, true);
     }
 
     @Override

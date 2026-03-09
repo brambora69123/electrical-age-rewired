@@ -40,7 +40,14 @@ public class ElectricalDataLoggerProcess implements IProcess {
 */
         if (e.timeToNextSample <= 0.0) {
             e.timeToNextSample += e.logs.samplingPeriod;
-            byte value = (byte) (e.sampleStack / e.sampleStackNbr);
+            if (e.timeToNextSample < 0.05) e.timeToNextSample = 0.05; // Cap sampling period
+
+            byte value;
+            if (e.sampleStackNbr > 0) {
+                value = (byte) (e.sampleStack / e.sampleStackNbr);
+            } else {
+                value = (byte) (e.inputGate.getNormalized() * 255.5 - 128);
+            }
             e.sampleStackReset();
             e.logs.write(value);
 

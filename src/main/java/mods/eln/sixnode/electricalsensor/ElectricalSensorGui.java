@@ -12,7 +12,7 @@ import static mods.eln.i18n.I18N.tr;
 
 public class ElectricalSensorGui extends GuiContainerEln {
 
-    GuiButton validate, voltageType, currentType, powerType, dirType;
+    GuiButtonEln validate, voltageType, currentType, powerType, dirType;
     GuiTextFieldEln lowValue, highValue;
     ElectricalSensorRender render;
 
@@ -27,30 +27,40 @@ public class ElectricalSensorGui extends GuiContainerEln {
 
         if (!render.descriptor.voltageOnly) {
             voltageType = newGuiButton(8, 8, 50, tr("Voltage"));
-            currentType = newGuiButton(8, 8 + 24, 50, tr("Current"));
-            powerType = newGuiButton(8, 8 + 48, 50, tr("Power"));
-            dirType = newGuiButton(8 + 50 + 4, 8 + 48, 50, "");
+            voltageType.setComment(0, tr("Measure voltage (V)"));
+            currentType = newGuiButton(8, 8 + 22, 50, tr("Current"));
+            currentType.setComment(0, tr("Measure current (A)"));
+            powerType = newGuiButton(8, 8 + 44, 50, tr("Power"));
+            powerType.setComment(0, tr("Measure power (W)"));
+            
+            dirType = newGuiButton(8 + 50 + 4, 8, 50, "");
+            dirType.setComment(0, tr("Change measurement direction"));
 
-            int x = 0, y = -12;
-            validate = newGuiButton(x + 8 + 50 + 4 + 50 + 4, y + (166 - 84) / 2 - 9, 50, tr("Validate"));
-
-            lowValue = newGuiTextField(x + 8 + 50 + 4, y + (166 - 84) / 2 + 3, 50);
-            lowValue.setText(render.lowValue);
-            lowValue.setComment(tr("Measured value\ncorresponding\nto 0% output").split("\n"));
-
-            highValue = newGuiTextField(x + 8 + 50 + 4, y + (166 - 84) / 2 - 13, 50);
+            int x = 8 + 50 + 4;
+            int y = 32;
+            highValue = newGuiTextField(x, y, 50);
             highValue.setText(render.highValue);
-            highValue.setComment(tr("Measured value\ncorresponding\nto 100% output").split("\n"));
+            highValue.setComment(tr("Value for 100 percent output\n(High setpoint)").split("\n"));
+
+            lowValue = newGuiTextField(x, y + 22, 50);
+            lowValue.setText(render.lowValue);
+            lowValue.setComment(tr("Value for 0 percent output\n(Low setpoint)").split("\n"));
+
+            validate = newGuiButton(x + 50 + 4, y + 10, 50, tr("Apply"));
+            validate.setComment(0, tr("Save setpoints"));
         } else {
-            validate = newGuiButton(8 + 50 + 4, 10, 50, tr("Validate"));
-
-            lowValue = newGuiTextField(8, 6 + 16, 50);
-            lowValue.setText(render.lowValue);
-            lowValue.setComment(tr("Measured voltage\ncorresponding\nto 0% output").split("\n"));
-
-            highValue = newGuiTextField(8, 6, 50);
+            int x = 10;
+            int y = 10;
+            highValue = newGuiTextField(x, y, 50);
             highValue.setText(render.highValue);
-            highValue.setComment(tr("Measured voltage\ncorresponding\nto 100% output").split("\n"));
+            highValue.setComment(tr("Voltage for 100 percent output\n(High setpoint)").split("\n"));
+
+            lowValue = newGuiTextField(x, y + 20, 50);
+            lowValue.setText(render.lowValue);
+            lowValue.setComment(tr("Voltage for 0 percent output\n(Low setpoint)").split("\n"));
+
+            validate = newGuiButton(x + 50 + 10, y + 10, 50, tr("Apply"));
+            validate.setComment(0, tr("Save setpoints"));
         }
     }
 
@@ -68,11 +78,11 @@ public class ElectricalSensorGui extends GuiContainerEln {
             } catch (ParseException e) {
             }
         } else if (currentType != null && object == currentType) {
-            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.currantType);
+            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, (byte) ElectricalSensorElement.currantType);
         } else if (voltageType != null && object == voltageType) {
-            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.voltageType);
+            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, (byte) ElectricalSensorElement.voltageType);
         } else if (powerType != null && object == powerType) {
-            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, ElectricalSensorElement.powerType);
+            render.clientSetByte(ElectricalSensorElement.setTypeOfSensorId, (byte) ElectricalSensorElement.powerType);
         } else if (dirType != null && object == dirType) {
             render.dirType = (byte) ((render.dirType + 1) % 3);
             render.clientSetByte(ElectricalSensorElement.setDirType, render.dirType);
@@ -98,19 +108,9 @@ public class ElectricalSensorGui extends GuiContainerEln {
             }
 
             if (currentType != null && voltageType != null && powerType != null) {
-                if (render.typeOfSensor == ElectricalSensorElement.currantType) {
-                    powerType.enabled = true;
-                    currentType.enabled = false;
-                    voltageType.enabled = true;
-                } else if (render.typeOfSensor == ElectricalSensorElement.voltageType) {
-                    powerType.enabled = true;
-                    currentType.enabled = true;
-                    voltageType.enabled = false;
-                } else if (render.typeOfSensor == ElectricalSensorElement.powerType) {
-                    powerType.enabled = false;
-                    currentType.enabled = true;
-                    voltageType.enabled = true;
-                }
+                voltageType.enabled = render.typeOfSensor != ElectricalSensorElement.voltageType;
+                currentType.enabled = render.typeOfSensor != ElectricalSensorElement.currantType;
+                powerType.enabled = render.typeOfSensor != ElectricalSensorElement.powerType;
             }
         }
     }
@@ -120,6 +120,6 @@ public class ElectricalSensorGui extends GuiContainerEln {
         if (!render.descriptor.voltageOnly)
             return new HelperStdContainer(this);
         else
-            return new GuiHelperContainer(this, 176, 166 - 45, 8, 84 - 45);
+            return new GuiHelperContainer(this, 176, 166 - 30, 8, 84 - 30);
     }
 }

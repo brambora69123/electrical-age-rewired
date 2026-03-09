@@ -96,6 +96,7 @@ public class WindTurbineDescriptor extends TransparentNodeDescriptor {
                 UtilsClient.enableCulling();
                 UtilsClient.disableBlend();
                 UtilsClient.enableLight();
+                UtilsClient.glDefaultColor();
             }
         }
     }

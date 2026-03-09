@@ -82,11 +82,11 @@ public abstract class SixNodeElement implements GhostObserver, IPlayer, INodeEle
     }
 
     public void sendPacketToAllClient(ByteArrayOutputStream bos) {
-        sixNode.sendPacketToAllClient(bos);
+        Utils.sendPacketToAllClient(bos, 64, sixNode.coordinate);
     }
 
     public void sendPacketToAllClient(ByteArrayOutputStream bos, double range) {
-        sixNode.sendPacketToAllClient(bos, range);
+        Utils.sendPacketToAllClient(bos, range, sixNode.coordinate);
     }
 
     public void sendPacketToClient(ByteArrayOutputStream bos, EntityPlayerMP player) {

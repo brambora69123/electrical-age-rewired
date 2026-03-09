@@ -23,12 +23,22 @@ abstract class LoopedSound(val sample: String, val coord: Coordinate,
     override fun getRepeatDelay() = 0
     override fun update() {}
 
+    private var sound: Sound? = null
+    private var soundEventAccessor: SoundEventAccessor? = null
+
     override fun getSound(): Sound {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return sound!!
     }
 
-    // TODO(1.10): This might be useful, maybe?
-    override fun createAccessor(handler: SoundHandler?): SoundEventAccessor? = null
+    override fun createAccessor(handler: SoundHandler): SoundEventAccessor? {
+        this.soundEventAccessor = handler.getAccessor(this.soundLocation)
+        if (this.soundEventAccessor == null) {
+            this.sound = SoundHandler.MISSING_SOUND
+        } else {
+            this.sound = this.soundEventAccessor!!.cloneEntry()
+        }
+        return this.soundEventAccessor
+    }
 
     override fun getCategory() = SoundCategory.BLOCKS
 }

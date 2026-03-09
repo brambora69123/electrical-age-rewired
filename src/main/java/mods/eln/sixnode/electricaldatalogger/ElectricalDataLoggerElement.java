@@ -85,8 +85,6 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
-        byte value = nbt.getByte("front");
-        front = LRDU.fromInt((value >> 0) & 0x3);
 
         logs.readFromNBT(nbt, "logs");
         pause = nbt.getBoolean("pause");
@@ -98,7 +96,6 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        nbt.setByte("front", (byte) (front.toInt() << 0));
         nbt.setDouble("timeToNextSample", timeToNextSample);
         nbt.setBoolean("pause", pause);
 

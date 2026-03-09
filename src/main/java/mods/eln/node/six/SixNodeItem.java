@@ -26,7 +26,6 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
     public SixNodeItem(Block b) {
         super(b);
         setHasSubtypes(true);
-        setTranslationKey("SixNodeItem");
     }
 
     @Override
@@ -40,8 +39,6 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
         Block block = world.getBlockState(pos).getBlock();
         int side = facing.getIndex();
         
-        Utils.println("SixNodeItem.onItemUse: pos=" + pos + " facing=" + facing + " hit=" + hitX + "," + hitY + "," + hitZ + " block=" + block);
-
         // IMPORTANT: Don't adjust position if clicking on another SixNodeBlock!
         // This allows placing cables on multiple faces of the same block
         if (block != this.block && 
@@ -63,18 +60,13 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
                 pos = pos.add(1,0,0);
         }
         
-        Utils.println("SixNodeItem.onItemUse: adjusted pos=" + pos + " side=" + side);
-
         if (stack.isEmpty()) {
-            Utils.println("SixNodeItem.onItemUse: stack is empty");
             return EnumActionResult.FAIL;
         }
         if (!player.canPlayerEdit(pos, facing, stack)) {
-            Utils.println("SixNodeItem.onItemUse: player cannot edit");
             return EnumActionResult.FAIL;
         }
         if ((pos.getY() == 255) && (this.block.getMaterial(world.getBlockState(pos)).isSolid())) {
-            Utils.println("SixNodeItem.onItemUse: y=255 and solid");
             return EnumActionResult.FAIL;
         }
 
@@ -82,8 +74,6 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
         int i1 = getMetadata(stack.getItemDamage());
         IBlockState state = this.block.getStateFromMeta(i1);
         
-        Utils.println("SixNodeItem.onItemUse: calling placeBlockAt");
-
         // Use the actual facing, not the hit vector
         if (placeBlockAt(stack, player, world, pos, facing, hitX, hitY, hitZ, state)) {
             SoundType soundtype = this.block.getSoundType(state, world, pos, player);
@@ -91,12 +81,9 @@ public class SixNodeItem extends GenericItemBlockUsingDamage<SixNodeDescriptor> 
                 soundtype.getPlaceSound(), SoundCategory.BLOCKS,
                 (soundtype.getVolume() + 1.0F) / 2.0F, soundtype.getPitch() * 0.8F);
             stack.shrink(1);
-            Utils.println("SixNodeItem.onItemUse: placement successful");
             return EnumActionResult.SUCCESS;
         }
         
-        Utils.println("SixNodeItem.onItemUse: placeBlockAt returned false");
-
         return EnumActionResult.FAIL;
     }
 

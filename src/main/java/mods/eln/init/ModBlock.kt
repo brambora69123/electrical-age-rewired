@@ -12,9 +12,13 @@ import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.block.state.IBlockState
 import net.minecraft.block.state.BlockStateContainer
 import net.minecraft.entity.Entity
+import net.minecraft.item.ItemBlock
+import net.minecraft.item.ItemStack
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import java.lang.Math.abs
+import java.util.Locale
+import java.util.Locale.getDefault
 
 /**
  * Legacy compatibility object - provides static field access for Java code.
@@ -79,9 +83,13 @@ class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
     init {
         setHardness(3.0f)
         setResistance(5.0f)
-        setTranslationKey("oreEln")
+        setTranslationKey("ore")
         setRegistryName("ore")
         setCreativeTab(Eln.Tab)
+    }
+    
+    override fun getTranslationKey(): String {
+        return "eln:ore"
     }
     
     companion object {
@@ -110,6 +118,22 @@ class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
     
     override fun damageDropped(state: IBlockState): Int {
         return getMetaFromState(state)
+    }
+}
+
+class ElnItemBlockOre(block: Block) : ItemBlock(block) {
+    init {
+        setHasSubtypes(true)
+    }
+
+    override fun getTranslationKey(): String {
+        return "eln.ore"
+    }
+
+    override fun getTranslationKey(stack: ItemStack): String {
+        val meta = stack.metadata
+        val variant = if (meta == 0) ElnOreBlock.VariantType.COPPER_ORE else ElnOreBlock.VariantType.LEAD_ORE
+        return "eln.ore.${variant.modelName.lowercase(getDefault())}"
     }
 }
 

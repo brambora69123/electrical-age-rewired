@@ -16,11 +16,15 @@ class BrushDescriptor(name: String): GenericItemUsingDamageDescriptor(name) {
 
     private val icon = ResourceLocation("eln", "textures/items/" + name.lowercase().replace(" ", "") + ".png")
 
+    init {
+        this.name = name
+    }
+
     override fun getName(stack: ItemStack): String {
         val creative = Minecraft.getMinecraft().player.capabilities.isCreativeMode
         val color = getColor(stack)
         val life = getLife(stack)
-        return if (!creative && color == 15 && life == 0) "Empty " + super.getName(stack) else super.getName(stack)
+        return if (!creative && color == 15 && life == 0) "Empty " + (name ?: "Brush") else (name ?: "Brush")
     }
 
     override fun setParent(item: Item, damage: Int) {
@@ -30,10 +34,15 @@ class BrushDescriptor(name: String): GenericItemUsingDamageDescriptor(name) {
 
     fun getColor(stack: ItemStack) = stack.itemDamage and 0xF
 
-    private fun getLife(stack: ItemStack?): Int = stack?.tagCompound?.getInteger("life") ?: 32
+    private fun getLife(stack: ItemStack?): Int {
+        val nbt = stack?.tagCompound ?: return 32
+        return if (nbt.hasKey("life")) nbt.getInteger("life") else 32
+    }
 
     fun setLife(stack: ItemStack, life: Int) {
-        stack.setTagInfo("life", NBTTagInt(life))
+        val nbt = stack.tagCompound ?: NBTTagCompound()
+        nbt.setInteger("life", life)
+        stack.tagCompound = nbt
     }
 
     override fun getDefaultNBT(): NBTTagCompound? {
@@ -47,18 +56,21 @@ class BrushDescriptor(name: String): GenericItemUsingDamageDescriptor(name) {
 
         if (itemStack != null) {
             val creative = Minecraft.getMinecraft().player.capabilities.isCreativeMode
-            list.add(tr("Can paint %s blocks", if (creative) "infinite" else itemStack.tagCompound!!.getInteger("life")))
+            list.add(tr("Can paint %s blocks", if (creative) "infinite" else getLife(itemStack)))
         }
     }
 
     fun use(stack: ItemStack, entityPlayer: EntityPlayer): Boolean {
         val creative = entityPlayer.capabilities.isCreativeMode
-        var life = stack.tagCompound!!.getInteger("life")
-        return if (creative || life != 0) {
-            if (!creative) {
-                --life
-                stack.tagCompound!!.setInteger("life", life)
-            }
+        if (creative) return true
+        
+        val nbt = stack.tagCompound ?: getDefaultNBT()!!
+        var life = if (nbt.hasKey("life")) nbt.getInteger("life") else 32
+        
+        return if (life != 0) {
+            life--
+            nbt.setInteger("life", life)
+            stack.tagCompound = nbt
             true
         } else {
             Utils.sendMessage(entityPlayer, tr("Brush is dry"))

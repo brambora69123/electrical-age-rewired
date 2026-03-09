@@ -1,5 +1,6 @@
 package mods.eln.node.transparent;
 
+import mods.eln.misc.UtilsClient;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import org.lwjgl.opengl.GL11;
 
@@ -10,7 +11,9 @@ public class TransparentNodeRender extends TileEntitySpecialRenderer<Transparent
         
         GL11.glPushMatrix();
         GL11.glTranslatef((float) x + .5F, (float) y + .5F, (float) z + .5F);
+        UtilsClient.glDefaultColor();
         tileEntity.elementRender.draw();
+        UtilsClient.glDefaultColor();
         GL11.glPopMatrix();
     }
 }

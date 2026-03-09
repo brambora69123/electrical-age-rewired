@@ -142,6 +142,7 @@ open class ShaftRender(entity: TransparentNodeEntity, desc: TransparentNodeDescr
                     CableRender.drawCable(cableRender, mask, connectionType)
                 }
             }
+            UtilsClient.glDefaultColor()
         }
     }
 

@@ -7,6 +7,7 @@ import mods.eln.node.transparent.TransparentNode;
 import mods.eln.sim.IProcess;
 import mods.eln.transparentnode.electricalantennarx.ElectricalAntennaRxElement;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -41,9 +42,11 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
             do {
                 coord.move(element.front);
                 distance++;
-                Block block;
-                block = coord.world().getBlockState(coord.pos).getBlock();
-                if ((coord.world().isAirBlock(coord.pos) && block != Blocks.FIRE)) {
+                net.minecraft.world.chunk.Chunk chunk = coord.world().getChunkProvider().getLoadedChunk(coord.pos.getX() >> 4, coord.pos.getZ() >> 4);
+                if (chunk == null || chunk.isEmpty()) break;
+                IBlockState state = chunk.getBlockState(coord.pos);
+                Block block = state.getBlock();
+                if (!(block == Blocks.AIR || block == Blocks.FIRE)) {
                     if (block == ModBlock.transparentNodeBlock
                         && (node = (TransparentNode) NodeManager.instance.getNodeFromCoordinate(coord)) != null
                         && (node.element instanceof ElectricalAntennaRxElement)) {

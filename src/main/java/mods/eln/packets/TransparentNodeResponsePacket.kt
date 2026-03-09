@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf
 import mods.eln.misc.Coordinate
 import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
+import net.minecraft.item.ItemStack
 import java.util.*
 
 /**
@@ -13,14 +14,16 @@ open class TransparentNodeResponsePacket : IMessage {
 
     lateinit var map: Map<String, String>
     lateinit var coord: Coordinate
+    lateinit var stack: ItemStack
 
     constructor() {
 
     }
 
-    constructor(m: Map<String, String>, c: Coordinate) {
+    constructor(m: Map<String, String>, c: Coordinate, s: ItemStack) {
         map = m
         coord = c
+        stack = s
     }
 
     override fun fromBytes(buf: ByteBuf?) {
@@ -38,6 +41,8 @@ open class TransparentNodeResponsePacket : IMessage {
         val z = ByteBufUtils.readVarInt(buf, 5)
         val w = ByteBufUtils.readVarInt(buf, 5)
         coord = Coordinate(x, y, z, w)
+        stack = ByteBufUtils.readItemStack(buf)
+        
         val i1 = keys.iterator()
         val i2 = values.iterator()
         var localmap = HashMap<String, String>()
@@ -59,5 +64,6 @@ open class TransparentNodeResponsePacket : IMessage {
         ByteBufUtils.writeVarInt(buf, coord.pos.y, 5)
         ByteBufUtils.writeVarInt(buf, coord.pos.z, 5)
         ByteBufUtils.writeVarInt(buf, coord.dimension, 5)
+        ByteBufUtils.writeItemStack(buf, stack)
     }
 }

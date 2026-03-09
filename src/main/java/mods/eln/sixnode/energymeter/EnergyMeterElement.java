@@ -6,6 +6,7 @@ import mods.eln.init.Cable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
+import mods.eln.node.AutoAcceptInventoryProxy;
 import mods.eln.node.NodeBase;
 import mods.eln.node.six.SixNode;
 import mods.eln.node.six.SixNodeDescriptor;
@@ -45,7 +46,8 @@ public class EnergyMeterElement extends SixNodeElement {
     public NbtElectricalLoad bLoad = new NbtElectricalLoad("bLoad");
     public ResistorSwitch shunt = new ResistorSwitch("shunt", aLoad, bLoad);
 
-    SixNodeElementInventory inventory = new SixNodeElementInventory(1, 64, this);
+    private AutoAcceptInventoryProxy inventory = (new AutoAcceptInventoryProxy(new SixNodeElementInventory(1, 64, this)))
+        .acceptIfEmpty(0, ElectricalCableDescriptor.class);
 
     int energyUnit = 1, timeUnit = 0;
 
@@ -93,7 +95,7 @@ public class EnergyMeterElement extends SixNodeElement {
     }
 
     public SixNodeElementInventory getInventory() {
-        return inventory;
+        return (SixNodeElementInventory) inventory.getInventory();
     }
 
     @Override
@@ -110,7 +112,7 @@ public class EnergyMeterElement extends SixNodeElement {
 
     @Override
     public int getConnectionMask(LRDU lrdu) {
-        if (inventory.getStackInSlot(EnergyMeterContainer.cableSlotId) == null) return 0;
+        if (getInventory().getStackInSlot(EnergyMeterContainer.cableSlotId).isEmpty()) return 0;
         if (front == lrdu) return NodeBase.maskElectricalAll;
         if (front.inverse() == lrdu) return NodeBase.maskElectricalAll;
 
@@ -156,7 +158,7 @@ public class EnergyMeterElement extends SixNodeElement {
             stream.writeDouble(timeCounter);
 
             // stream.writeDouble(energyStack);
-            Utils.serialiseItemStack(stream, inventory.getStackInSlot(EnergyMeterContainer.cableSlotId));
+            Utils.serialiseItemStack(stream, getInventory().getStackInSlot(EnergyMeterContainer.cableSlotId));
 
             stream.writeByte(energyUnit);
             stream.writeByte(timeUnit);
@@ -185,9 +187,9 @@ public class EnergyMeterElement extends SixNodeElement {
     }
 
     public void computeElectricalLoad() {
-        ItemStack cable = inventory.getStackInSlot(EnergyMeterContainer.cableSlotId);
+        ItemStack cable = getInventory().getStackInSlot(EnergyMeterContainer.cableSlotId);
 
-        cableDescriptor = null; // TODO(1.12): (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
         if (cableDescriptor == null) {
             aLoad.highImpedance();
             bLoad.highImpedance();
@@ -203,6 +205,12 @@ public class EnergyMeterElement extends SixNodeElement {
             voltageWatchDogB.setUNominalMirror(cableDescriptor.electricalNominalVoltage);
             // currentWatchDog.setIAbsMax(cableDescriptor.electricalMaximalCurrent);
         }
+    }
+
+    @Override
+    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+        if (onBlockActivatedRotate(entityPlayer)) return true;
+        return inventory.take(entityPlayer.getHeldItemMainhand(), this, true, true);
     }
 
     @Override
@@ -253,7 +261,7 @@ public class EnergyMeterElement extends SixNodeElement {
 
     @Override
     public Container newContainer(Direction side, EntityPlayer player) {
-        return new EnergyMeterContainer(player, inventory);
+        return new EnergyMeterContainer(player, getInventory());
     }
 
     @Override

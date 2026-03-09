@@ -40,9 +40,15 @@ public class GuiHelper {
         this.ySize = ySize;
     }
 
+    private int nextComponentId = 0;
+
+    public int getNextComponentId() {
+        return nextComponentId++;
+    }
+
     GuiTextFieldEln newGuiTextField(int x, int y, int width) {
         GuiTextFieldEln o;
-        o = new GuiTextFieldEln(Minecraft.getMinecraft().fontRenderer,
+        o = new GuiTextFieldEln(getNextComponentId(), Minecraft.getMinecraft().fontRenderer,
             screen.width / 2 - xSize / 2 + x, screen.height / 2 - ySize / 2 + y, width, 12, this);
         objectList.add(o);
         return o;

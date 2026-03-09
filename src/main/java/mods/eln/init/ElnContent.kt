@@ -19,13 +19,15 @@ import mods.eln.node.transparent.TransparentNode
 import mods.eln.node.transparent.TransparentNodeBlock
 import mods.eln.node.transparent.TransparentNodeEntity
 import mods.eln.node.transparent.TransparentNodeEntityWithFluid
+import mods.eln.entity.ReplicatorEntity
+import mods.eln.sixnode.TreeResinCollector.TreeResinCollectorTileEntity
+import mods.eln.simplenode.computerprobe.ComputerProbeEntity
+import mods.eln.simplenode.energyconverter.EnergyConverterElnToOtherEntity
 import mods.eln.node.transparent.TransparentNodeItem
-import mods.eln.server.DelayedTaskManager
-import mods.eln.server.PlayerManager
-import mods.eln.sixnode.modbusrtu.ModbusTcpServer
 import net.minecraft.block.Block
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
+import net.minecraft.util.ResourceLocation
 import net.minecraftforge.event.RegistryEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -136,7 +138,13 @@ object ElnContent {
             if (block === ModBlock.sixNodeBlock || block === ModBlock.transparentNodeBlock) {
                 continue // These are registered separately below
             }
-            val itemBlock = net.minecraft.item.ItemBlock(block)
+            
+            val itemBlock = if (block === ModBlock.oreBlock) {
+                ElnItemBlockOre(block)
+            } else {
+                net.minecraft.item.ItemBlock(block)
+            }
+            
             itemBlock.registryName = block.registryName
             event.registry.register(itemBlock)
             Eln.logger.debug("Registered block item: ${itemBlock.registryName}")
@@ -209,10 +217,9 @@ object ElnContent {
 
         // Special tile entities
         GameRegistry.registerTileEntity(NodeBlockEntity::class.java, Eln.MODID + ":NodeBlockEntity")
-
-        // TODO: Register additional tile entities as they are migrated
-        // registerTile(TileEntityCokeOven::class.java)
-        // registerTile(TileEntityBlastFurnace::class.java)
+        GameRegistry.registerTileEntity(TreeResinCollectorTileEntity::class.java, Eln.MODID + ":TreeResinCollectorTileEntity")
+        GameRegistry.registerTileEntity(ComputerProbeEntity::class.java, Eln.MODID + ":ComputerProbeEntity")
+        GameRegistry.registerTileEntity(EnergyConverterElnToOtherEntity::class.java, Eln.MODID + ":EnergyConverterElnToOtherEntity")
 
         Eln.logger.info("Registered Electrical Age tile entities")
     }
@@ -224,18 +231,15 @@ object ElnContent {
     private fun registerEntities() {
         var entityId = 0
 
-        // TODO: Register mod entities as they are migrated
-        // Example:
-        // EntityRegistry.registerModEntity(
-        //     ResourceLocation(Eln.MODID, "entity_name"),
-        //     EntityClass::class.java,
-        //     "entity_name",
-        //     entityId++,
-        //     Eln.instance!!, // Mod instance reference
-        //     64, // tracking range
-        //     1, // update frequency
-        //     true // should track velocity
-        // )
+        EntityRegistry.registerModEntity(
+            ResourceLocation(Eln.MODID, "replicator"),
+            ReplicatorEntity::class.java,
+            "replicator",
+            entityId++,
+            Eln.instance!!,
+            64, 1, true,
+            0x000000, 0x00FF00
+        )
 
         Eln.logger.info("Registered $entityId Electrical Age entities")
     }

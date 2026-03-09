@@ -65,6 +65,7 @@ public class TurbineRender extends TransparentNodeElementRender {
             maskTemp.set(1 << lrdu.toInt());
             CableRender.drawCable(descriptor.eRender, maskTemp, connectionType);
         }
+        UtilsClient.glDefaultColor();
     }
 
     @Override

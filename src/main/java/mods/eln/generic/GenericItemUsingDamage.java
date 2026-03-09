@@ -35,17 +35,13 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
 
     public void addWithoutRegistry(int damage, Descriptor descriptor) {
         subItemList.put(damage, descriptor);
-        setTranslationKey(descriptor.name);
         descriptor.setParent(this, damage);
     }
 
     public void addElement(int damage, Descriptor descriptor) {
         subItemList.put(damage, descriptor);
-        setTranslationKey(descriptor.name);
         orderList.add(damage);
         descriptor.setParent(this, damage);
-        // TODO(1.12): Registration is fucked.
-//        GameRegistry.register(descriptor.parentItem);
     }
 
     public Descriptor getDescriptor(int damage) {
@@ -73,28 +69,11 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
     public String getTranslationKey(ItemStack par1ItemStack) {
         Descriptor desc = getDescriptor(par1ItemStack);
         if (desc != null && desc.name != null) {
-            return "eln:" + desc.name.replaceAll("\\s+", "_");
+            return "item." + desc.name.toLowerCase().replaceAll("\\s+", "_");
         } else {
-            return null;
+            return "item.unknown_item";
         }
     }
-
-    // TODO(1.10): Fix item rendering.
-//    public IIcon getIconFromDamage(int damage) {
-//        GenericItemUsingDamageDescriptor desc = getDescriptor(damage);
-//        if (desc != null) {
-//            return getDescriptor(damage).getIcon();
-//        }
-//        return null;
-//    }
-//
-//    @Override
-//    @SideOnly(value = Side.CLIENT)
-//    public void registerIcons(IIconRegister iconRegister) {
-//        for (GenericItemUsingDamageDescriptor descriptor : subItemList.values()) {
-//            descriptor.updateIcons(iconRegister);
-//        }
-//    }
 
     @SideOnly(Side.CLIENT)
     @Override

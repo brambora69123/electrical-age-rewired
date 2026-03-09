@@ -275,12 +275,14 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                 miningRay = Math.min(miningRay, scannerRadius - 2);
                 for (jobCoord.pos.setPos(jobCoord.pos.getX(), jobCoord.pos.getY(), miner.node.coordinate.pos.getZ() - scannerRadius); jobCoord.pos.getZ() <= miner.node.coordinate.pos.getZ() + scannerRadius; jobCoord.pos.setPos(jobCoord.pos.getX(), jobCoord.pos.getY(), jobCoord.pos.getZ() + 1)) {
                     for (jobCoord.pos.setPos(miner.node.coordinate.pos.getX() - scannerRadius, jobCoord.pos.getY(), jobCoord.pos.getZ()) ; jobCoord.pos.getX() <= miner.node.coordinate.pos.getX() + scannerRadius; jobCoord.pos.setPos(jobCoord.pos.getX() + 1, jobCoord.pos.getY(), jobCoord.pos.getZ())) {
+                        net.minecraft.world.chunk.Chunk chunk = jobCoord.world().getChunkProvider().getLoadedChunk(jobCoord.pos.getX() >> 4, jobCoord.pos.getZ() >> 4);
+                        if (chunk == null || chunk.isEmpty()) continue;
                         double dx = jobCoord.pos.getX() - miner.node.coordinate.pos.getX();
                         double dy = 0;
                         double dz = jobCoord.pos.getZ() - miner.node.coordinate.pos.getZ();
                         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                        Block block = jobCoord.world().getBlockState(jobCoord.pos).getBlock();
-                        if (checkIsOre(jobCoord) || (distance > 0.1 && distance < miningRay && isMinable(block))) {
+                        Block block = chunk.getBlockState(jobCoord.pos).getBlock();
+                        if (checkIsOre(jobCoord, chunk) || (distance > 0.1 && distance < miningRay && isMinable(block))) {
                             jobFind = true;
                             setJob(jobType.ore);
                             break;
@@ -297,20 +299,27 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                 } else {
                     jobCoord.pos.setPos(miner.node.coordinate.pos.getX(), jobCoord.pos.getY() - 1, miner.node.coordinate.pos.getZ());
 
-                    Block block = jobCoord.world().getBlockState(jobCoord.pos).getBlock();
-                    if (jobCoord.world().isAirBlock(jobCoord.pos)
-                        && block != Blocks.FLOWING_WATER && block != Blocks.WATER
-                        && block != Blocks.FLOWING_LAVA && block != Blocks.LAVA) {
-                        if (block != Blocks.OBSIDIAN && block != Blocks.BEDROCK) {
-                            jobFind = true;
-                            setJob(jobType.ore);
+                    net.minecraft.world.chunk.Chunk chunk = jobCoord.world().getChunkProvider().getLoadedChunk(jobCoord.pos.getX() >> 4, jobCoord.pos.getZ() >> 4);
+                    if (chunk == null || chunk.isEmpty()) {
+                        setJob(jobType.none);
+                        jobFind = true;
+                    } else {
+                        IBlockState state = chunk.getBlockState(jobCoord.pos);
+                        Block block = state.getBlock();
+                        if (block == Blocks.AIR
+                            && block != Blocks.FLOWING_WATER && block != Blocks.WATER
+                            && block != Blocks.FLOWING_LAVA && block != Blocks.LAVA) {
+                            if (block != Blocks.OBSIDIAN && block != Blocks.BEDROCK) {
+                                jobFind = true;
+                                setJob(jobType.ore);
+                            } else {
+                                jobFind = true;
+                                setJob(jobType.done);
+                            }
                         } else {
                             jobFind = true;
-                            setJob(jobType.done);
+                            setJob(jobType.pipeAdd);
                         }
-                    } else {
-                        jobFind = true;
-                        setJob(jobType.pipeAdd);
                     }
                 }
             }
@@ -343,8 +352,8 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         this.job = job;
     }
 
-    private boolean checkIsOre(Coordinate coordinate) {
-        IBlockState state = coordinate.world().getBlockState(coordinate.pos);
+    private boolean checkIsOre(Coordinate coordinate, net.minecraft.world.chunk.Chunk chunk) {
+        IBlockState state = chunk.getBlockState(coordinate.pos);
         Block block = state.getBlock();
         if (block instanceof BlockOre) return true;
         if (block instanceof ElnOreBlock) return true;
@@ -352,7 +361,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
 
 
         return OreColorMapping.INSTANCE.getMap()[Block.getIdFromBlock(block) +
-            block.getMetaFromState(state) << 12] != 0;
+            (block.getMetaFromState(state) << 12)] != 0;
     }
 
     public void onBreakElement() {

@@ -151,8 +151,6 @@ public class ServerEventListener {
     static void readFromEaWorldNBT(NBTTagCompound nbt) {
         try {
             NodeManager.instance.loadFromNbt(nbt.getCompoundTag("nodes"));
-            // Schedule sync of all loaded nodes to clients
-            needsNodeSync = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -161,22 +159,6 @@ public class ServerEventListener {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private static boolean needsNodeSync = false;
-
-    @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
-        if (!needsNodeSync) return;
-        
-        needsNodeSync = false;
-        System.out.println("Syncing " + NodeManager.instance.getNodes().size() + " nodes to clients...");
-        for (mods.eln.node.NodeBase node : NodeManager.instance.getNodes()) {
-            node.setNeedPublish(true);
-            node.publishToAllPlayer();
-        }
-        System.out.println("Node sync complete");
     }
 
     static void writeToEaWorldNBT(NBTTagCompound nbt, int dim) {

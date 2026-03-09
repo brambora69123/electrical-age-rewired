@@ -80,15 +80,18 @@ public class TreeResinCollectorElement extends SixNodeElement {
         int leafCount = 0;
         int yStart, yEnd;
 
-        while (TreeResinCollectorDescriptor.isWood(world.getBlockState(new BlockPos(posWood[0], posWood[1] - 1, posWood[2])).getBlock())) {
+        net.minecraft.world.chunk.Chunk chunk = world.getChunkProvider().getLoadedChunk(posWood[0] >> 4, posWood[2] >> 4);
+        if (chunk == null || chunk.isEmpty()) return 0;
+
+        while (TreeResinCollectorDescriptor.isWood(chunk.getBlockState(new BlockPos(posWood[0], posWood[1] - 1, posWood[2])).getBlock())) {
             posWood[1]--;
         }
         yStart = posWood[1];
 
         posWood[1] = coord.pos.getY();
         // timeCounter-= timeTarget;
-        while (TreeResinCollectorDescriptor.isWood(world.getBlockState(new BlockPos(posWood[0], posWood[1] + 1, posWood[2])).getBlock())) {
-            if (TreeResinCollectorDescriptor.isLeaf(world.getBlockState(new BlockPos(posCollector[0], posWood[1] + 1, posCollector[2])).getBlock()))
+        while (TreeResinCollectorDescriptor.isWood(chunk.getBlockState(new BlockPos(posWood[0], posWood[1] + 1, posWood[2])).getBlock())) {
+            if (TreeResinCollectorDescriptor.isLeaf(chunk.getBlockState(new BlockPos(posCollector[0], posWood[1] + 1, posCollector[2])).getBlock()))
                 leafCount++;
             posWood[1]++;
         }

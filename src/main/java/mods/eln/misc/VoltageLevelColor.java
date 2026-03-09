@@ -21,14 +21,6 @@ public enum VoltageLevelColor {
         this.voltageLevel = voltageLevel;
     }
 
-    // TODO(1.10): Items rendering.
-//    public void drawIconBackground(IItemRenderer.ItemRenderType type) {
-//        if (!Eln.noVoltageBackground && voltageLevel != null &&
-//            type == IItemRenderer.ItemRenderType.INVENTORY || type == IItemRenderer.ItemRenderType.FIRST_PERSON_MAP) {
-//            UtilsClient.drawIcon(type, new ResourceLocation("eln", "textures/voltages/" + voltageLevel + ".png"));
-//        }
-//    }
-
     private String voltageLevel;
 
     public static VoltageLevelColor fromVoltage(double voltage) {

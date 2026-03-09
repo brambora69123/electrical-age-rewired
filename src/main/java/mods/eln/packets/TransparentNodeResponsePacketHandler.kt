@@ -1,5 +1,6 @@
 package mods.eln.packets
 
+import mods.eln.integration.waila.TransparentNodeWailaData
 import mods.eln.integration.waila.WailaCache
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler
@@ -12,7 +13,8 @@ class TransparentNodeResponsePacketHandler : IMessageHandler<TransparentNodeResp
     override fun onMessage(message: TransparentNodeResponsePacket?, ctx: MessageContext?): IMessage? {
         val map = message!!.map
         val coord = message.coord
-        WailaCache.nodes.put(coord, map)
+        val stack = message.stack
+        WailaCache.nodes.put(coord, TransparentNodeWailaData(stack, map))
         return null
     }
 }

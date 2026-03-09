@@ -14,7 +14,7 @@ import static mods.eln.i18n.I18N.tr;
 
 public class ThermalSensorGui extends GuiContainerEln {
 
-    GuiButton validate, temperatureType, powerType;
+    GuiButtonEln validate, temperatureType, powerType;
     GuiTextFieldEln lowValue, highValue;
     ThermalSensorRender render;
 
@@ -29,29 +29,35 @@ public class ThermalSensorGui extends GuiContainerEln {
 
         if (!render.descriptor.temperatureOnly) {
             powerType = newGuiButton(8, 8, 70, tr("Power"));
+            powerType.setComment(0, tr("Measure power flow (W)"));
             temperatureType = newGuiButton(176 - 8 - 70, 8, 70, tr("Temperature"));
+            temperatureType.setComment(0, tr("Measure temperature (°C)"));
 
-            int x = -15, y = 13;
-            validate = newGuiButton(x + 8 + 50 + 4 + 50 + 4 - 26, y + (166 - 84) / 2 - 8, 50, tr("Validate"));
-
-            lowValue = newGuiTextField(x + 8 + 50 + 4 - 26, y + (166 - 84) / 2 + 3, 50);
-            lowValue.setText(render.lowValue);
-            lowValue.setComment(tr("Measured value\ncorresponding\nto 0% output").split("/n"));
-
-            highValue = newGuiTextField(x + 8 + 50 + 4 - 26, y + (166 - 84) / 2 - 12, 50);
+            int x = 10;
+            int y = 35;
+            highValue = newGuiTextField(x, y, 50);
             highValue.setText(render.highValue);
-            highValue.setComment(tr("Measured value\ncorresponding\nto 100% output").split("\n"));
+            highValue.setComment(tr("Value for 100 percent output\n(High setpoint)").split("\n"));
+
+            lowValue = newGuiTextField(x, y + 22, 50);
+            lowValue.setText(render.lowValue);
+            lowValue.setComment(tr("Value for 0 percent output\n(Low setpoint)").split("\n"));
+
+            validate = newGuiButton(x + 50 + 10, y + 10, 50, tr("Apply"));
+            validate.setComment(0, tr("Save setpoints"));
         } else {
-            int x = 0, y = 0;
-            validate = newGuiButton(x + 8 + 50 + 4 + 50 + 4 - 26, y + (166 - 84) / 2 - 8, 50, tr("Validate"));
-
-            lowValue = newGuiTextField(x + 8 + 50 + 4 - 26, y + (166 - 84) / 2 + 3, 50);
-            lowValue.setText(render.lowValue);
-            lowValue.setComment(tr("Measured temperature\ncorresponding\nto 0% output").split("/n"));
-
-            highValue = newGuiTextField(x + 8 + 50 + 4 - 26, y + (166 - 84) / 2 - 12, 50);
+            int x = 10;
+            int y = 10;
+            highValue = newGuiTextField(x, y, 50);
             highValue.setText(render.highValue);
-            highValue.setComment(tr("Measured temperature\ncorresponding\nto 100% output").split("/n"));
+            highValue.setComment(tr("Temperature for 100 percent output\n(High setpoint)").split("\n"));
+
+            lowValue = newGuiTextField(x, y + 20, 50);
+            lowValue.setText(render.lowValue);
+            lowValue.setComment(tr("Temperature for 0 percent output\n(Low setpoint)").split("\n"));
+
+            validate = newGuiButton(x + 50 + 10, y + 10, 50, tr("Apply"));
+            validate.setComment(0, tr("Save setpoints"));
         }
     }
 
@@ -59,17 +65,18 @@ public class ThermalSensorGui extends GuiContainerEln {
     public void guiObjectEvent(IGuiObject object) {
         super.guiObjectEvent(object);
         if (object == validate) {
-            float lowVoltage, highVoltage;
+            float lowValueFloat, highValueFloat;
 
             try {
-                lowVoltage = NumberFormat.getInstance().parse(lowValue.getText()).floatValue();
-                highVoltage = NumberFormat.getInstance().parse(highValue.getText()).floatValue();
-                render.clientSetFloat(ElectricalSensorElement.setValueId, lowVoltage - (float) PhysicalConstant.Tamb, highVoltage - (float) PhysicalConstant.Tamb);
+                if (lowValue == null || highValue == null) return;
+                lowValueFloat = NumberFormat.getInstance().parse(lowValue.getText()).floatValue();
+                highValueFloat = NumberFormat.getInstance().parse(highValue.getText()).floatValue();
+                render.clientSetFloat(ElectricalSensorElement.setValueId, lowValueFloat, highValueFloat);
             } catch (ParseException e) {
             }
-        } else if (object == temperatureType) {
+        } else if (temperatureType != null && object == temperatureType) {
             render.clientSetByte(ThermalSensorElement.setTypeOfSensorId, ThermalSensorElement.temperatureType);
-        } else if (object == powerType) {
+        } else if (powerType != null && object == powerType) {
             render.clientSetByte(ThermalSensorElement.setTypeOfSensorId, ThermalSensorElement.powerType);
         }
     }
@@ -78,18 +85,18 @@ public class ThermalSensorGui extends GuiContainerEln {
     protected void preDraw(float f, int x, int y) {
         super.preDraw(f, x, y);
         if (!render.descriptor.temperatureOnly) {
-            if (render.typeOfSensor == ThermalSensorElement.temperatureType) {
-                powerType.enabled = true;
-                temperatureType.enabled = false;
-            } else if (render.typeOfSensor == ThermalSensorElement.powerType) {
-                powerType.enabled = false;
-                temperatureType.enabled = true;
+            if (temperatureType != null && powerType != null) {
+                powerType.enabled = render.typeOfSensor != ThermalSensorElement.powerType;
+                temperatureType.enabled = render.typeOfSensor != ThermalSensorElement.temperatureType;
             }
         }
     }
 
     @Override
     protected GuiHelperContainer newHelper() {
-        return new HelperStdContainer(this);
+        if (!render.descriptor.temperatureOnly)
+            return new HelperStdContainer(this);
+        else
+            return new GuiHelperContainer(this, 176, 166 - 30, 8, 84 - 30);
     }
 }

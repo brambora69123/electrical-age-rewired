@@ -74,8 +74,12 @@ public class SolarPanelSlowProcess implements IProcess {
             yD = 1.0;
             xD /= yD;
         }
-        while (y <= 256.0) {
-            double opacity = world.getBlockLightOpacity(new BlockPos((int) x, (int) y, (int) z));
+        int iterationLimit = 256;
+        while (y <= 256.0 && iterationLimit-- > 0) {
+            BlockPos pos = new BlockPos((int) x, (int) y, (int) z);
+            net.minecraft.world.chunk.Chunk chunk = world.getChunkProvider().getLoadedChunk(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null || chunk.isEmpty()) break;
+            double opacity = chunk.getBlockLightOpacity(pos);
             light *= (255 - opacity) / 255;
             if (light == 0.0) {
                 break;

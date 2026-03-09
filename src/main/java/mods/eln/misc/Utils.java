@@ -40,9 +40,12 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint;
+import mods.eln.packets.GenericPacket;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.oredict.OreDictionary;
 import org.lwjgl.opengl.GL11;
@@ -406,8 +409,38 @@ public class Utils {
     }
 
     public static void sendPacketToClient(ByteArrayOutputStream bos, EntityPlayerMP player) {
-        ElnServerPacket packet = new ElnServerPacket(bos.toByteArray());
-        player.connection.sendPacket(packet);
+        Eln.elnNetwork.sendTo(new GenericPacket(bos.toByteArray()), player);
+    }
+
+    public static void sendPacketToServer(ByteArrayOutputStream bos) {
+        Eln.elnNetwork.sendToServer(new GenericPacket(bos.toByteArray()));
+    }
+
+    public static void sendPacketToAllClient(ByteArrayOutputStream bos, double range, Coordinate coord) {
+        Eln.elnNetwork.sendToAllAround(
+            new GenericPacket(bos.toByteArray()),
+            new TargetPoint(
+                coord.getDimension(),
+                coord.pos.getX() + 0.5,
+                coord.pos.getY() + 0.5,
+                coord.pos.getZ() + 0.5,
+                range
+            )
+        );
+    }
+
+    public static IBlockState getLoadedBlockState(World world, BlockPos pos) {
+        if (world == null) return null;
+        net.minecraft.world.chunk.Chunk chunk = world.getChunkProvider().getLoadedChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null || chunk.isEmpty()) return null;
+        return chunk.getBlockState(pos);
+    }
+
+    public static int getLoadedBlockLightOpacity(World world, BlockPos pos) {
+        if (world == null) return 0;
+        net.minecraft.world.chunk.Chunk chunk = world.getChunkProvider().getLoadedChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null || chunk.isEmpty()) return 0;
+        return chunk.getBlockLightOpacity(pos);
     }
 
     public static void setGlColorFromDye(int damage) {
@@ -742,7 +775,7 @@ public class Utils {
         id = stream.readShort();
         damage = stream.readShort();
         if (id == -1 || id == 0)
-            return null;
+            return ItemStack.EMPTY;
         return Utils.newItemStack(id, 1, damage);
     }
 
@@ -1265,7 +1298,7 @@ public class Utils {
     }
 
     public static void sendMessage(EntityPlayer entityPlayer, String string) {
-        entityPlayer.sendStatusMessage(new TextComponentString(string), true);  // TODO(1.12): Or false?
+        entityPlayer.sendStatusMessage(new TextComponentString(string), true);
     }
 
     public static ItemStack newItemStack(int i, int size, int damage) {

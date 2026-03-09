@@ -18,32 +18,29 @@ class NodePublishProcess : IProcess {
     var counter = 0
 
     override fun process(time: Double) {
-        val server = FMLCommonHandler.instance().minecraftServerInstance
+        val server = FMLCommonHandler.instance().minecraftServerInstance ?: return
 
-        if (server != null) {
-            for (node in NodeManager.instance.nodeList) {
+        val nodesToPublish = NodeManager.instance.nodesToPublish
+        if (nodesToPublish.isNotEmpty()) {
+            val toPublish = nodesToPublish.toList() // Copy to avoid concurrent modification
+            NodeManager.instance.clearNodesToPublish()
+            for (node in toPublish) {
                 if (node.needPublish) {
                     node.publishToAllPlayer()
                 }
             }
+        }
 
-            for (player in server.playerList.players) {
-                var openContainerNode: NodeBase? = null
-                var container: INodeContainer? = null
-                if (player.openContainer is INodeContainer) {
-                    container = player.openContainer as INodeContainer
-                    openContainerNode = container.node
-                }
-
-                for (node in NodeManager.instance.nodeList) {
-                    if (node === openContainerNode) {
-                        if (counter % (1 + container!!.refreshRateDivider) == 0)
-                            node.publishToPlayer(player)
-                    }
+        for (player in server.playerList.players) {
+            if (player.openContainer is INodeContainer) {
+                val container = player.openContainer as INodeContainer
+                val openContainerNode = container.node
+                if (openContainerNode != null && counter % (1 + container.refreshRateDivider) == 0) {
+                    openContainerNode.publishToPlayer(player)
                 }
             }
-
-            counter++
         }
+
+        counter++
     }
 }

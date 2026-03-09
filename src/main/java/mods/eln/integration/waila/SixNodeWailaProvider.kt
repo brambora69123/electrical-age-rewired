@@ -46,7 +46,7 @@ class SixNodeWailaProvider : IWailaDataProvider {
                               config: IWailaConfigHandler?): MutableList<String> = currenttip
 
     override fun getNBTData(player: EntityPlayerMP?, te: TileEntity?, tag: NBTTagCompound?, world: World?, pos: BlockPos?): NBTTagCompound {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return tag ?: NBTTagCompound()
     }
 
     override fun getWailaHead(itemStack: ItemStack?, currenttip: MutableList<String>, accessor: IWailaDataAccessor,

@@ -292,17 +292,27 @@ public abstract class NodeBlockEntity extends TileEntity implements ITileEntityS
         super.handleUpdateTag(tag);
         if (tag.hasKey("eln")) {
             byte[] bytes = tag.getByteArray("eln");
-            DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
-            Eln.packetHandler.packetRx(dataInputStream, null, Minecraft.getMinecraft().player);
+            if (world.isRemote) {
+                Minecraft.getMinecraft().addScheduledTask(() -> {
+                    DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
+                    Eln.packetHandler.packetRx(dataInputStream, null, Minecraft.getMinecraft().player);
+                });
+            } else {
+                DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
+                Eln.packetHandler.packetRx(dataInputStream, null, null);
+            }
         }
     }
 
     @Override
     public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
-        assert(world.isRemote);
-        byte[] bytes = pkt.getNbtCompound().getByteArray("eln");
-        DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
-        Eln.packetHandler.packetRx(dataInputStream, net, Minecraft.getMinecraft().player);
+        if (world.isRemote) {
+            byte[] bytes = pkt.getNbtCompound().getByteArray("eln");
+            Minecraft.getMinecraft().addScheduledTask(() -> {
+                DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(bytes));
+                Eln.packetHandler.packetRx(dataInputStream, net, Minecraft.getMinecraft().player);
+            });
+        }
     }
 
     public void preparePacketForServer(DataOutputStream stream) {

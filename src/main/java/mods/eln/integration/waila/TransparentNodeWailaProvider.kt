@@ -5,6 +5,7 @@ import mcp.mobius.waila.api.IWailaConfigHandler
 import mcp.mobius.waila.api.IWailaDataAccessor
 import mcp.mobius.waila.api.IWailaDataProvider
 import mods.eln.misc.Coordinate
+import mods.eln.node.transparent.TransparentNodeEntity
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
@@ -21,7 +22,8 @@ class TransparentNodeWailaProvider : IWailaDataProvider {
         val coord = Coordinate(accessor.position.x, accessor.position.y, accessor.position.z,
             accessor.world)
         try {
-            WailaCache.nodes.get(coord)?.forEach { currenttip.add("${it.key}: ${TextFormatting.WHITE}${it.value}") }
+            val data = WailaCache.nodes.get(coord)
+            data?.data?.forEach { currenttip.add("${it.key}: ${TextFormatting.WHITE}${it.value}") }
         } catch(e: CacheLoader.InvalidCacheLoadException) {
             //This is probably just it complaining about the cache returning null. Should be safe to ignore.
         }
@@ -30,11 +32,17 @@ class TransparentNodeWailaProvider : IWailaDataProvider {
     }
 
     override fun getNBTData(player: EntityPlayerMP?, te: TileEntity?, tag: NBTTagCompound?, world: World?, pos: BlockPos?): NBTTagCompound {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return tag ?: NBTTagCompound()
     }
 
-    override fun getWailaStack(accessor: IWailaDataAccessor?, config: IWailaConfigHandler?): ItemStack {
-        return ItemStack.EMPTY
+    override fun getWailaStack(accessor: IWailaDataAccessor, config: IWailaConfigHandler?): ItemStack {
+        val coord = Coordinate(accessor.position.x, accessor.position.y, accessor.position.z,
+            accessor.world)
+        return try {
+            WailaCache.nodes.get(coord)?.itemStack ?: ItemStack.EMPTY
+        } catch (e: CacheLoader.InvalidCacheLoadException) {
+            ItemStack.EMPTY
+        }
     }
 
     override fun getWailaTail(itemStack: ItemStack?, currenttip: MutableList<String>, accessor: IWailaDataAccessor?, config: IWailaConfigHandler?): MutableList<String> {

@@ -1,8 +1,0 @@
-eln:# ElectricalAge language file (France - French)
-eln:
-eln:# Mod info
-eln:mod.name=Electrical Age
-eln:mod.desc=Ajoutez l'électricite dans votre base !
-eln:
-eln:# Machines
-eln:50v_macerator.name=Macérateur 50V

@@ -14,6 +14,7 @@ class GhostNodeWailaResponsePacket(var coord: Coordinate = Coordinate(0, 0, 0, 0
                                    var realSide: Direction = Direction.XN) : IMessage {
 
     companion object {
+        @JvmField
         val UNKNOWN_TYPE: Byte = 0
         val TRANSPARENT_BLOCK_TYPE: Byte = 1
         val SIXNODE_TYPE: Byte = 2

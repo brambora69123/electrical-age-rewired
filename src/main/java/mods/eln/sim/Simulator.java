@@ -93,6 +93,10 @@ public class Simulator /* ,IPacketHandler */ {
         run = false;
     }
 
+    public void start() {
+        run = true;
+    }
+
     public void reinit() {
         nodeCount = 0;
 
@@ -111,7 +115,7 @@ public class Simulator /* ,IPacketHandler */ {
         thermalSlowLoadList.clear();
         destructableSet.clear();
 
-        run = true;
+        run = false;
     }
 
     public void stop() {
@@ -467,7 +471,7 @@ public class Simulator /* ,IPacketHandler */ {
             thermalSlowNsStack /= 20;
             slowNsStack /= 20;
 
-            Utils.println("ticks " + new DecimalFormat("#").format((int) avgTickTime) + " us" + "  E " + electricalNsStack / 1000 + "  TF " + thermalFastNsStack / 1000 + "  TS " + thermalSlowNsStack / 1000 + "  S " + slowNsStack / 1000
+            /*Utils.println("ticks " + new DecimalFormat("#").format((int) avgTickTime) + " us" + "  E " + electricalNsStack / 1000 + "  TF " + thermalFastNsStack / 1000 + "  TS " + thermalSlowNsStack / 1000 + "  S " + slowNsStack / 1000
 
                 + "    " + mna.getSubSystemCount() + " SS"
                 + "    " + electricalProcessList.size() + " EP"
@@ -478,7 +482,7 @@ public class Simulator /* ,IPacketHandler */ {
                 + "    " + thermalSlowConnectionList.size() + " TSC"
                 + "    " + thermalSlowProcessList.size() + " TSP"
                 + "    " + slowProcessList.size() + " SP"
-            );
+            );*/
 
             avgTickTime = 0;
 

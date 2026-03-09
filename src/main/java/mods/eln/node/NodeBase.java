@@ -436,6 +436,9 @@ public abstract class NodeBase {
 
     public void setNeedPublish(boolean needPublish) {
         this.needPublish = needPublish;
+        if (needPublish && NodeManager.instance != null) {
+            NodeManager.instance.addNodeToPublish(this);
+        }
     }
 
     public boolean getNeedPublish() {
@@ -480,26 +483,11 @@ public abstract class NodeBase {
 
 
     public void sendPacketToAllClient(ByteArrayOutputStream bos) {
-        sendPacketToAllClient(bos, 100000);
+        sendPacketToAllClient(bos, 64);
     }
 
     public void sendPacketToAllClient(ByteArrayOutputStream bos, double range) {
-        //Profiler p = new Profiler();
-
-        MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
-        if (server == null || bos == null) return;
-
-        for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
-            WorldServer worldServer = server.getWorld(player.dimension);
-            if (worldServer == null) continue;
-
-            if (player.dimension != this.coordinate.getDimension()) continue;
-            if (!worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16)) continue;
-            if (coordinate.distanceTo(player) > range) continue;
-
-            Utils.sendPacketToClient(bos, player);
-        }
-
+        Utils.sendPacketToAllClient(bos, range, coordinate);
     }
 
     public ByteArrayOutputStream getPublishPacket() {
@@ -531,25 +519,15 @@ public abstract class NodeBase {
     }
 
     public void publishToAllPlayer() {
-        MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
-        if (server == null) return;
-
         ByteArrayOutputStream packet = getPublishPacket();
         if (packet != null) {
-            for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
-                WorldServer worldServer = server.getWorld(player.dimension);
-                if (worldServer == null) continue;
-                if (player.dimension != this.coordinate.getDimension()) continue;
-                if (!worldServer.getPlayerChunkMap().isPlayerWatchingChunk(player, coordinate.pos.getX() / 16, coordinate.pos.getZ() / 16)) continue;
-
-                Utils.sendPacketToClient(packet, player);
-            }
+            Utils.sendPacketToAllClient(packet, 64, coordinate);
         }
-        World world = coordinate.world();
+        /*World world = coordinate.world();
         if (world != null) {
             IBlockState state = world.getBlockState(coordinate.pos);
-            world.notifyBlockUpdate(coordinate.pos, state, state, 3);
-        }
+            world.notifyBlockUpdate(coordinate.pos, state, state, 2); // 2 instead of 3 to avoid neighbor notification if not needed
+        }*/
         if (needNotify) {
             needNotify = false;
             notifyNeighbor();
@@ -558,11 +536,11 @@ public abstract class NodeBase {
     }
 
     public void publishToPlayer(EntityPlayerMP player) {
-        World world = coordinate.world();
+        /*World world = coordinate.world();
         if (world != null) {
             IBlockState state = world.getBlockState(coordinate.pos);
             world.notifyBlockUpdate(coordinate.pos, state, state, 3);
-        }
+        }*/
         ByteArrayOutputStream packet = getPublishPacket();
         if (packet != null) {
             Utils.sendPacketToClient(packet, player);

@@ -15,6 +15,7 @@ import mods.eln.GuiHandler;
 import mods.eln.misc.Obj3D.Obj3DPart;
 import mods.eln.node.six.SixNodeEntity;
 import mods.eln.node.transparent.TransparentNodeEntity;
+import mods.eln.packets.GenericPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
@@ -217,17 +218,7 @@ public class UtilsClient {
 
     public static void disableBlend() {
         GL11.glDisable(GL11.GL_BLEND);
-
-        // GL11.glDepthMask(true);
-        // GL11.glEnable(GL11.GL_ALPHA_TEST);
-        // GL11.glDisable(GL11.GL_BLEND);
-        // GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        // Utils.println(GL11.glGetInteger(GL11.GL_BLEND_SRC) + " " + GL11.glGetInteger(GL11.GL_BLEND_DST) + " " + GL11.glIsEnabled(GL11.GL_BLEND));
-        // GL11.glBlendFunc(GL11.GL_SRC_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR);
-        // GL11.glBlendFunc(1, 1);
-        // GL11.glDisable(3042);
-
-        // OpenGlHelper.glBlendFunc(1, 1, 1, 1);
+        GL11.glAlphaFunc(GL11.GL_GREATER, 0.1f);
     }
 
     // TODO(1.10): Fix icon rendering.
@@ -552,16 +543,8 @@ public class UtilsClient {
         GL11.glEnable(GL11.GL_DEPTH_TEST);
     }
 
-    public static void sendPacketToServer(PacketBuffer bos) {
-        CPacketCustomPayload packet = new CPacketCustomPayload(Eln.eventChannelID, bos);
-        Eln.eventChannel.sendToServer(new FMLProxyPacket(packet));
-    }
-
-    @Deprecated
     public static void sendPacketToServer(ByteArrayOutputStream bos) {
-        ByteBuf buf = Unpooled.buffer()
-            .writeBytes(bos.toByteArray());
-        sendPacketToServer(new PacketBuffer(buf));
+        Eln.elnNetwork.sendToServer(new GenericPacket(bos.toByteArray()));
     }
 
     public static int getUuid() {

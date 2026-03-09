@@ -127,7 +127,8 @@ public class RootSystem {
 
             State sPtr = sRoot;
             Resistor rPtr = (Resistor) sPtr.getConnectedComponentsNotAbstracted().get(0);
-            while (true) {
+            int limiter = 10000;
+            while (limiter-- > 0) {
                 for (Component c : sPtr.getConnectedComponentsNotAbstracted()) {
                     if (c != rPtr) {
                         rPtr = (Resistor) c;
@@ -150,7 +151,8 @@ public class RootSystem {
 
             lineResistors.add(rPtr);
             //rPtr.lineReversDir = rPtr.aPin == sPtr;
-            while (true) {
+            limiter = 10000;
+            while (limiter-- > 0) {
                 lineStates.add(sPtr);
                 stateScope.remove(sPtr);
                 for (Component c : sPtr.getConnectedComponentsNotAbstracted()) {

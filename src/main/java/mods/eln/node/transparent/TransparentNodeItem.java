@@ -24,7 +24,6 @@ public class TransparentNodeItem extends GenericItemBlockUsingDamage<Transparent
     public TransparentNodeItem(Block b) {
         super(b);
         setHasSubtypes(true);
-        setTranslationKey("TransparentNodeItem");
     }
 
 

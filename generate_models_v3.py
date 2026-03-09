@@ -20,13 +20,13 @@ mapping = {
     "highvoltageswitch": ("high", "eln:blocks/switch"),
     "veryhighvoltageswitch": ("veryhigh", "eln:blocks/switch"),
     "signalswitch": ("signal", "eln:blocks/switch"),
-    "wirelessswitch": ("signal", "eln:blocks/switch"),
+    "wirelessswitch": ("signal", "eln:blocks/wirelessswitch"),
     "switch": ("signal", "eln:blocks/switch"),
     
     # Buttons
     "button": ("signal", "eln:blocks/button"),
     "signalbutton": ("signal", "eln:blocks/button"),
-    "wirelessbutton": ("signal", "eln:blocks/button"),
+    "wirelessbutton": ("signal", "eln:blocks/wirelessbutton"),
     
     # Sources
     "electricalsource": ("neutral", "eln:blocks/electricalsource"),
@@ -56,14 +56,15 @@ mapping = {
     # Meters & Sensors
     "lampsupply": ("neutral", "eln:blocks/lampsupply"),
     "electricalbreaker": ("neutral", "eln:blocks/electricalbreaker"),
-    "energymeter": ("low", "eln:blocks/energymeter"),
-    "advancedenergymeter": ("low", "eln:blocks/advancedenergymeter"),
+    "energymeter": ("neutral", "eln:blocks/energymeter"),
+    "advancedenergymeter": ("neutral", "eln:blocks/advancedenergymeter"),
     "datalogger": ("signal", "eln:blocks/datalogger"),
     "moderndatalogger": ("signal", "eln:blocks/moderndatalogger"),
     "industrialdatalogger": ("signal", "eln:blocks/industrialdatalogger"),
     "electricalvumeter": ("signal", "eln:blocks/analogvumeter"),
     "vumeter": ("signal", "eln:blocks/analogvumeter"),
-    "batterycharger": ("low", "eln:blocks/batterycharger"),
+    "50vbatterycharger": ("low", "eln:blocks/50vbatterycharger"),
+    "200vbatterycharger": ("low", "eln:blocks/200vbatterycharger"),
     "powersocketlv": ("low", "eln:blocks/50vpowersocket"),
     "powersocketmv": ("medium", "eln:blocks/200vpowersocket"),
     "50vemergencylamp": ("low", "eln:blocks/emergencylamp"),
@@ -74,7 +75,7 @@ mapping = {
     "electricalwindsensor": ("signal", "eln:blocks/electricalanemometersensor"),
     "electricallightsensor": ("signal", "eln:blocks/electricallightsensor"),
     "electricalfiredetector": ("signal", "eln:blocks/electricalfiredetector"),
-    "electricalalarm": ("low", "eln:blocks/electricalalarm"),
+    "electricalalarm": ("signal", "eln:blocks/electricalalarm"),
     "electricalsensor": ("signal", "eln:blocks/voltageprobe"),
     "thermalsensor": ("signal", "eln:blocks/temperatureprobe"),
     
@@ -96,8 +97,8 @@ for a in analog:
     mapping[a] = ("signal", f"eln:blocks/{a}")
 
 # Passive
-mapping["10adiode"] = ("low", "eln:blocks/10adiode")
-mapping["25adiode"] = ("low", "eln:blocks/25adiode")
+mapping["10adiode"] = ("neutral", "eln:blocks/10adiode")
+mapping["25adiode"] = ("neutral", "eln:blocks/25adiode")
 mapping["signaldiode"] = ("signal", "eln:blocks/signaldiode")
 mapping["resistor"] = ("neutral", "eln:blocks/powerresistor")
 mapping["powercapacitor"] = ("neutral", "eln:blocks/powercapacitor")

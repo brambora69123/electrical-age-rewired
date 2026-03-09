@@ -27,6 +27,7 @@ public class SixNodeRender extends TileEntitySpecialRenderer<SixNodeEntity> {
             }
             idx++;
         }
+        UtilsClient.glDefaultColor();
         GL11.glPopMatrix();
         Minecraft.getMinecraft().profiler.endSection();
     }
