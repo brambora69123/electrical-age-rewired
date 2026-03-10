@@ -14,7 +14,8 @@ options.txt
 /out
 /classes
 
-/src/main/generated
+/src/main/generated/
+.kotlin/
 
 # IntelliJ
 .idea

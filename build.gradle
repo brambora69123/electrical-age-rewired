@@ -21,8 +21,28 @@ plugins {
 
 apply from: 'gradle/scripts/helpers.gradle'
 
+def getGitVersion() {
+    try {
+        def proc = "git describe --tags --always --dirty".execute()
+        proc.waitFor()
+        def gitVer = proc.in.text.trim()
+        if (gitVer.isEmpty()) return propertyString('mod_version')
+        return gitVer
+    } catch (Exception ignored) {
+        return propertyString('mod_version')
+    }
+}
+
+def fullVersion = getGitVersion()
+def versionMatcher = (fullVersion =~ /(\d+)\.(\d+)\.(\d+)/)
+def (vMajor, vMinor, vRevision) = ["0", "0", "0"]
+if (versionMatcher.find()) {
+    vMajor = versionMatcher.group(1)
+    vMinor = versionMatcher.group(2)
+    vRevision = versionMatcher.group(3)
+}
+
 // Early Assertions
-assertProperty 'mod_version'
 assertProperty 'root_package'
 assertProperty 'mod_id'
 assertProperty 'mod_name'
@@ -44,7 +64,7 @@ setDefaultProperty 'extra_jvm_args', false, ''
 setDefaultProperty 'extra_tweak_classes', false, ''
 setDefaultProperty 'change_minecraft_sources', false, false
 
-version = propertyString('mod_version')
+version = fullVersion
 group = propertyString('root_package')
 
 base {
@@ -176,12 +196,11 @@ if (propertyBool('use_access_transformer')) {
 tasks.register('processVersionSource', Copy) {
     from 'src/main/resources/Version.java'
     into 'src/main/generated/mods/eln/misc'
-    def vParts = propertyString('mod_version').split('\\.')
     expand (
-        'MAJORVERSION': vParts[0],
-        'MINORVERSION': vParts.length > 1 ? vParts[1] : "0",
-        'REVISION': vParts.length > 2 ? vParts[2] : "0",
-        'VERSION_STRING': propertyString('mod_version')
+        'MAJORVERSION': vMajor,
+        'MINORVERSION': vMinor,
+        'REVISION': vRevision,
+        'VERSION_STRING': fullVersion
     )
 }
 
@@ -189,7 +208,7 @@ tasks.register('processVersionSource', Copy) {
 processResources {
     inputs.property 'mod_id', propertyString('mod_id')
     inputs.property 'mod_name', propertyString('mod_name')
-    inputs.property 'mod_version', propertyString('mod_version')
+    inputs.property 'mod_version', fullVersion
     inputs.property 'mod_description', propertyString('mod_description')
     inputs.property 'mod_authors', "${propertyStringList('mod_authors', ',').join(', ')}"
     inputs.property 'mod_credits', propertyString('mod_credits')
@@ -210,7 +229,7 @@ processResources {
         fcd.expand(
             'mod_id': propertyString('mod_id'),
             'mod_name': propertyString('mod_name'),
-            'mod_version': propertyString('mod_version'),
+            'mod_version': fullVersion,
             'mod_description': propertyString('mod_description'),
             // Call .toString() on this join as well to be safe
             'mod_authors': "${propertyStringList('mod_authors', ',').join(', ')}".toString(),
@@ -221,15 +240,16 @@ processResources {
             'mixin_refmap': propertyString('mixin_refmap'),
             'mixin_package': propertyString('mixin_package'),
 
-            'version': propertyString('mod_version'),
+            'version': fullVersion,
             'mcversion': '1.12.2',
 
-            'VERSION@': propertyString('mod_version'),
-            'MAJORVERSION@': propertyString('mod_version').split('\\.')[0],
-            'MINORVERSION@': propertyString('mod_version').split('\\.')[1],
-            'REVISION@': propertyString('mod_version').split('\\.')[2]
+            'VERSION@': fullVersion,
+            'MAJORVERSION@': vMajor,
+            'MINORVERSION@': vMinor,
+            'REVISION@': vRevision
         )
     }
+
 
     if (propertyBool('use_access_transformer')) {
         rename '(.+_at.cfg)', 'META-INF/$1'
