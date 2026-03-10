@@ -324,7 +324,7 @@ class Eln {
         lateinit var instance: Eln
 
         const val MODID = "eln"
-        const val VERSION = "2.0"
+        const val VERSION = mods.eln.misc.Version.VERSION_STRING
         const val ACCEPTABLE_SAVE_VERSIONS = "[2.0)"
         const val ACCEPTABLE_MINECRAFT_VERSION = "1.12.2"
         const val NAME = "Electrical Age: Re-Wired"

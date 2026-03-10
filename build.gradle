@@ -172,6 +172,19 @@ if (propertyBool('use_access_transformer')) {
     }
 }
 
+// Version source generation task
+tasks.register('processVersionSource', Copy) {
+    from 'src/main/resources/Version.java'
+    into 'src/main/generated/mods/eln/misc'
+    def vParts = propertyString('mod_version').split('\\.')
+    expand (
+        'MAJORVERSION': vParts[0],
+        'MINORVERSION': vParts.length > 1 ? vParts[1] : "0",
+        'REVISION': vParts.length > 2 ? vParts[2] : "0",
+        'VERSION_STRING': propertyString('mod_version')
+    )
+}
+
 // Resource processing with version replacement
 processResources {
     inputs.property 'mod_id', propertyString('mod_id')
@@ -192,8 +205,6 @@ processResources {
     filterList.addAll(propertyStringList('mixin_configs').collect { config ->
         "mixins.${config}.json".toString()
     })
-
-    filterList << 'Version.java'
 
     filesMatching(filterList) { fcd ->
         fcd.expand(
@@ -229,14 +240,15 @@ processResources {
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java']
+            srcDirs = ['src/main/java', 'src/main/generated']
             exclude '**/Eln_old.java'
         }
         kotlin {
-            srcDirs = ['src/main/java']
+            srcDirs = ['src/main/java', 'src/main/generated']
         }
         resources {
             srcDirs = ['src/main/resources']
+            exclude 'Version.java'
             exclude '**/*.psd'
             exclude '**/*.bbmodel' // Blockbench sources
             exclude '**/*.blend'
@@ -245,6 +257,14 @@ sourceSets {
             exclude '**/export_*.png' // Exclude raw exports
         }
     }
+}
+
+tasks.named('compileJava') {
+    dependsOn 'processVersionSource'
+}
+
+tasks.named('compileKotlin') {
+    dependsOn 'processVersionSource'
 }
 
 // JAR configuration with manifest and asset filtering
@@ -305,6 +325,7 @@ jar {
 // Exclude CoFH API from sources jar
 if (tasks.findByName('sourcesJar')) {
     tasks.named('sourcesJar') {
+        dependsOn 'processVersionSource'
         exclude 'cofh/**'
     }
 }
@@ -350,6 +371,7 @@ tasks.register('updateMasterLanguageFile', JavaExec) {
 idea {
     module {
         inheritOutputDirs = true
+        generatedSourceDirs += file('src/main/generated')
     }
     project {
         settings {

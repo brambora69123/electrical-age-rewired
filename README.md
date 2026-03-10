@@ -16,10 +16,10 @@ features and functionality.
 
 ## How to get started
 
-**The newest Electrical Age is Minecraft 1.12.2 compatible only. Forge/CleanroomMC is needed.**
+**The newest Electrical Age is Minecraft 1.12.2 compatible only. Forge/CleanroomMC is needed. (works on both)**
 <br>
-Note: you may need to use [CleanroomMC](https://cleanroommc.com/), and we highly recommend that you do, it includes many improvements to forge, and
-allows for newer Java versions, like Java 21, and uses LWJGL3.
+Note: we recommend that you use [CleanroomMC](https://cleanroommc.com/) instead of Forge, it includes many improvements to forge, and
+allows for newer Java versions, like Java 21-25, and uses LWJGL3 (improved input handling, performance, etc.).
 
 ### Dependencies
 
