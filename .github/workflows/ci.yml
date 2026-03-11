@@ -3,8 +3,34 @@ name: CI Build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE*'
+      - 'CREDITS*'
+      - '.tx/**'
+      - 'script/**'
+      - 'tools/**'
+      - 'fix_lang*.py'
+      - 'generate_models*.py'
+      - 'Tasks.org'
+      - 'shell.nix'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE*'
+      - 'CREDITS*'
+      - '.tx/**'
+      - 'script/**'
+      - 'tools/**'
+      - 'fix_lang*.py'
+      - 'generate_models*.py'
+      - 'Tasks.org'
+      - 'shell.nix'
 
 # Cancel in-progress runs for the same branch/PR when new commits are pushed
 concurrency:
