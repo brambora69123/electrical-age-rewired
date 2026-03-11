@@ -26,10 +26,11 @@ def getGitVersion() {
         def proc = "git describe --tags --always --dirty".execute()
         proc.waitFor()
         def gitVer = proc.in.text.trim()
-        if (gitVer.isEmpty()) return propertyString('mod_version')
+        if (gitVer.isEmpty()) return "0.0.0-unknown"
+        if (gitVer.startsWith("v")) gitVer = gitVer.substring(1)
         return gitVer
     } catch (Exception ignored) {
-        return propertyString('mod_version')
+        return "0.0.0-unknown"
     }
 }
 

@@ -52,7 +52,7 @@ if (propertyBool('publish_to_curseforge')) {
                 changelogType = 'markdown'
             }
             mainArtifact tasks.reobfJar, {
-                displayName = "${propertyString('mod_name')} ${propertyString('mod_version')}"
+                displayName = "${propertyString('mod_name')} ${project.version}"
                 if (propertyBool('use_mixins')) {
                     relations {
                         requiredDependency 'mixin-booter'
@@ -80,7 +80,7 @@ if (propertyBool('publish_to_modrinth')) {
     modrinth {
         token = System.getenv('MODRINTH_TOKEN') ? "" : System.getenv('MODRINTH_TOKEN')
         projectId = propertyString('modrinth_project_id')
-        versionNumber = propertyString('mod_version')
+        versionNumber = project.version
         versionType = propertyString('release_type')
         uploadFile = tasks.reobfJar
         gameVersions = ['1.12.2']
