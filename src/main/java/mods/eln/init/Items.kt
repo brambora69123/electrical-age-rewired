@@ -38,36 +38,141 @@ object Items {
         val sharedItem = Eln.sharedItem
         val sharedItemStackOne = Eln.sharedItemStackOne
 
-        // MultiMeter (subId=0)
+        // MultiMeter (id=14, subId=0)
         multiMeterElement = GenericItemUsingDamageDescriptor("MultiMeter")
-        sharedItem.addElement(0, multiMeterElement)
+        sharedItem.addElement(0 + (14 shl 6), multiMeterElement)
 
-        // Thermometer (subId=1)
+        // Thermometer (id=14, subId=1)
         thermometerElement = GenericItemUsingDamageDescriptor("Thermometer")
-        sharedItem.addElement(1, thermometerElement)
+        sharedItem.addElement(1 + (14 shl 6), thermometerElement)
 
-        // AllMeter (subId=2)
+        // AllMeter (id=14, subId=2)
         allMeterElement = GenericItemUsingDamageDescriptor("AllMeter")
-        sharedItem.addElement(2, allMeterElement)
+        sharedItem.addElement(2 + (14 shl 6), allMeterElement)
 
-        // Wireless Analyser (subId=8)
+        // Wireless Analyser (id=122, subId=8)
         val wirelessAnalyser = WirelessSignalAnalyserItemDescriptor("Wireless Analyser")
-        sharedItem.addElement(8, wirelessAnalyser)
+        sharedItem.addElement(8 + (122 shl 6), wirelessAnalyser)
 
+        registerHeatingCorp(sharedItem)
+        registerRegulatorItem(sharedItem)
         registerLampItems(sharedItem)
+        registerProtection(sharedItem)
+        registerCombustionChamber(sharedItem)
+        registerFerromagneticCore(sharedItem)
+        registerIngot(sharedItem)
+        registerDust(sharedItem)
+        registerElectricalMotor(sharedItem)
+        registerSolarTracker(sharedItem)
         registerTreeResinAndRubber(sharedItem)
-        registerElectricalDrill(sharedItem)
-        registerOreScanner(sharedItem)
-        registerMiningPipe(sharedItem)
         registerRawCable(sharedItem)
         registerMiscItem(sharedItem)
-        registerRegulatorItem(sharedItem)
-        registerProtection(sharedItem)
         registerBrush(sharedItem)
+        registerElectricalDrill(sharedItem) // id 15
+        registerOreScanner(sharedItem) // id 16
+        registerMiningPipe(sharedItem) // id 17
         
         registerElectricalTool(sharedItemStackOne)
         registerPortableItem(sharedItemStackOne)
         registerFuelBurnerItem(sharedItemStackOne)
+    }
+
+    private fun registerHeatingCorp(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 1
+        val lv = Cable.LVU
+        val mv = Cable.MVU
+        
+        // Copper Heating Corps
+        sharedItem.addElement(0 + (id shl 6), HeatingCorpElement("Small 50V Copper Heating Corp", lv, 150.0, 190.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(1 + (id shl 6), HeatingCorpElement("50V Copper Heating Corp", lv, 250.0, 320.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(2 + (id shl 6), HeatingCorpElement("Small 200V Copper Heating Corp", mv, 400.0, 500.0, Descriptors.mediumVoltageCableDescriptor))
+        sharedItem.addElement(3 + (id shl 6), HeatingCorpElement("200V Copper Heating Corp", mv, 600.0, 750.0, Descriptors.mediumVoltageCableDescriptor))
+        
+        // Iron Heating Corps
+        sharedItem.addElement(4 + (id shl 6), HeatingCorpElement("Small 50V Iron Heating Corp", lv, 100.0, 130.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(5 + (id shl 6), HeatingCorpElement("50V Iron Heating Corp", lv, 180.0, 230.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(6 + (id shl 6), HeatingCorpElement("Small 200V Iron Heating Corp", mv, 250.0, 320.0, Descriptors.mediumVoltageCableDescriptor))
+        sharedItem.addElement(7 + (id shl 6), HeatingCorpElement("200V Iron Heating Corp", mv, 400.0, 500.0, Descriptors.mediumVoltageCableDescriptor))
+
+        // Tungsten Heating Corps
+        sharedItem.addElement(8 + (id shl 6), HeatingCorpElement("Small 50V Tungsten Heating Corp", lv, 300.0, 380.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(9 + (id shl 6), HeatingCorpElement("50V Tungsten Heating Corp", lv, 500.0, 640.0, Descriptors.lowVoltageCableDescriptor))
+        sharedItem.addElement(10 + (id shl 6), HeatingCorpElement("Small 200V Tungsten Heating Corp", mv, 800.0, 1000.0, Descriptors.mediumVoltageCableDescriptor))
+        sharedItem.addElement(11 + (id shl 6), HeatingCorpElement("200V Tungsten Heating Corp", mv, 1200.0, 1500.0, Descriptors.mediumVoltageCableDescriptor))
+    }
+
+    private fun registerElectricalMotor(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 10
+        sharedItem.addElement(0 + (id shl 6), GenericItemUsingDamageDescriptorWithComment("Electrical Motor", arrayOf()))
+        sharedItem.addElement(1 + (id shl 6), GenericItemUsingDamageDescriptorWithComment("Advanced Electrical Motor", arrayOf()))
+    }
+
+    private fun registerFerromagneticCore(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 7
+        val obj = Eln.obj.getObj("FerromagneticCore")
+        sharedItem.addElement(0 + (id shl 6), FerromagneticCoreDescriptor("Small Ferromagnetic Core", obj, 0.5))
+        sharedItem.addElement(1 + (id shl 6), FerromagneticCoreDescriptor("Medium Ferromagnetic Core", obj, 1.0))
+        sharedItem.addElement(2 + (id shl 6), FerromagneticCoreDescriptor("Big Ferromagnetic Core", obj, 2.0))
+    }
+
+    private fun registerCombustionChamber(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 6
+        sharedItem.addElement(0 + (id shl 6), CombustionChamber("Small Combustion Chamber"))
+        sharedItem.addElement(1 + (id shl 6), CombustionChamber("Medium Combustion Chamber"))
+        sharedItem.addElement(2 + (id shl 6), CombustionChamber("Big Combustion Chamber"))
+    }
+
+    private fun registerSolarTracker(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 11
+        sharedItem.addElement(0 + (id shl 6), SolarTrackerDescriptor("Solar Tracker"))
+    }
+
+    private fun registerIngot(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 8
+        
+        val copperIngot = GenericItemUsingDamageDescriptorWithComment("Copper Ingot", arrayOf())
+        sharedItem.addElement(1 + (id shl 6), copperIngot)
+        OreDictionary.registerOre("ingotCopper", copperIngot.newItemStack())
+
+        val leadIngot = GenericItemUsingDamageDescriptorWithComment("Lead Ingot", arrayOf())
+        sharedItem.addElement(4 + (id shl 6), leadIngot)
+        OreDictionary.registerOre("ingotLead", leadIngot.newItemStack())
+
+        val tungstenIngot = GenericItemUsingDamageDescriptorWithComment("Tungsten Ingot", arrayOf())
+        sharedItem.addElement(5 + (id shl 6), tungstenIngot)
+        OreDictionary.registerOre("ingotTungsten", tungstenIngot.newItemStack())
+
+        val ferriteIngot = GenericItemUsingDamageDescriptorWithComment("Ferrite Ingot", arrayOf("Useless", "Really useless"))
+        sharedItem.addElement(6 + (id shl 6), ferriteIngot)
+        OreDictionary.registerOre("ingotFerrite", ferriteIngot.newItemStack())
+    }
+
+    private fun registerDust(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 9
+        
+        val copperDust = GenericItemUsingDamageDescriptorWithComment("Copper Dust", arrayOf())
+        sharedItem.addElement(1 + (id shl 6), copperDust)
+        OreDictionary.registerOre("dustCopper", copperDust.newItemStack())
+
+        val ironDust = GenericItemUsingDamageDescriptorWithComment("Iron Dust", arrayOf())
+        sharedItem.addElement(2 + (id shl 6), ironDust)
+        OreDictionary.registerOre("dustIron", ironDust.newItemStack())
+
+        val leadDust = GenericItemUsingDamageDescriptorWithComment("Lead Dust", arrayOf())
+        sharedItem.addElement(5 + (id shl 6), leadDust)
+        OreDictionary.registerOre("dustLead", leadDust.newItemStack())
+
+        val tungstenDust = GenericItemUsingDamageDescriptorWithComment("Tungsten Dust", arrayOf())
+        sharedItem.addElement(6 + (id shl 6), tungstenDust)
+        OreDictionary.registerOre("dustTungsten", tungstenDust.newItemStack())
+
+        val goldDust = GenericItemUsingDamageDescriptorWithComment("Gold Dust", arrayOf())
+        sharedItem.addElement(7 + (id shl 6), goldDust)
+        OreDictionary.registerOre("dustGold", goldDust.newItemStack())
+
+        val coalDust = GenericItemUsingDamageDescriptorWithComment("Coal Dust", arrayOf())
+        sharedItem.addElement(8 + (id shl 6), coalDust)
+        OreDictionary.registerOre("dustCoal", coalDust.newItemStack())
     }
 
     private fun registerTreeResinAndRubber(sharedItem: mods.eln.generic.SharedItem) {

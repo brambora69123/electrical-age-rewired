@@ -50,7 +50,7 @@ object ModBlock {
      */
     @JvmStatic
     internal fun init() {
-        oreBlock = ElnOreBlock("copper_ore", "lead_ore")
+        oreBlock = ElnOreBlock("copper_ore", "lead_ore", "tungsten_ore", "cinnabar_ore")
         rubberBlock = RubberBlock("rubber", 0.75f)
         flubberBlock = RubberBlock("flubber", 2f)
         ghostBlock = GhostBlock().apply {
@@ -98,7 +98,9 @@ class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
     
     enum class VariantType(val modelName: String, val model: String) : net.minecraft.util.IStringSerializable {
         COPPER_ORE("copper_ore", "copper_ore"),
-        LEAD_ORE("lead_ore", "lead_ore");
+        LEAD_ORE("lead_ore", "lead_ore"),
+        TUNGSTEN_ORE("tungsten_ore", "tungsten_ore"),
+        CINNABAR_ORE("cinnabar_ore", "cinnabar_ore");
         
         override fun getName(): String = modelName
     }
@@ -108,12 +110,24 @@ class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
     }
     
     override fun getStateFromMeta(meta: Int): IBlockState {
-        val variant = if (meta == 0) VariantType.COPPER_ORE else VariantType.LEAD_ORE
+        val variant = when (meta) {
+            0 -> VariantType.COPPER_ORE
+            1 -> VariantType.LEAD_ORE
+            2 -> VariantType.TUNGSTEN_ORE
+            3 -> VariantType.CINNABAR_ORE
+            else -> VariantType.COPPER_ORE
+        }
         return defaultState.withProperty(VARIANT, variant)
     }
     
     override fun getMetaFromState(state: IBlockState): Int {
-        return if (state.getValue(VARIANT) == VariantType.COPPER_ORE) 0 else 1
+        return when (state.getValue(VARIANT)) {
+            VariantType.COPPER_ORE -> 0
+            VariantType.LEAD_ORE -> 1
+            VariantType.TUNGSTEN_ORE -> 2
+            VariantType.CINNABAR_ORE -> 3
+            else -> 0
+        }
     }
     
     override fun damageDropped(state: IBlockState): Int {
@@ -132,7 +146,13 @@ class ElnItemBlockOre(block: Block) : ItemBlock(block) {
 
     override fun getTranslationKey(stack: ItemStack): String {
         val meta = stack.metadata
-        val variant = if (meta == 0) ElnOreBlock.VariantType.COPPER_ORE else ElnOreBlock.VariantType.LEAD_ORE
+        val variant = when (meta) {
+            0 -> ElnOreBlock.VariantType.COPPER_ORE
+            1 -> ElnOreBlock.VariantType.LEAD_ORE
+            2 -> ElnOreBlock.VariantType.TUNGSTEN_ORE
+            3 -> ElnOreBlock.VariantType.CINNABAR_ORE
+            else -> ElnOreBlock.VariantType.COPPER_ORE
+        }
         return "eln.ore.${variant.modelName.lowercase(getDefault())}"
     }
 }

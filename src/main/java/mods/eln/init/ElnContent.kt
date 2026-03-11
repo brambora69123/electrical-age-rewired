@@ -97,13 +97,162 @@ object ElnContent {
             setRegistryName(ModBlock.transparentNodeBlock.registryName)
         }
 
+        // Initialize shared items (multi-meter, thermometer, etc.)
+        // These MUST be initialized before Descriptors.preInit() if they are used there
+        Eln.sharedItem = mods.eln.generic.SharedItem("shared_item")
+        Eln.sharedItemStackOne = mods.eln.generic.SharedItem("shared_item_stack_one").apply {
+            setMaxStackSize(1)
+        }
+
         // Register descriptors (adds sub-items to SixNodeItem/TransparentNodeItem)
         Descriptors.preInit()
+
+        // Register standalone items (tools, armor)
+        registerStandaloneItems()
+
+        // Initialize shared items sub-components
+        Items.init()
 
         // Initialize mining pipe descriptor
         Eln.miningPipeDescriptor = MiningPipeDescriptor("Mining Pipe")
 
         Eln.logger.info("Electrical Age pre-initialization complete")
+    }
+
+    private fun registerStandaloneItems() {
+        val tab = Eln.Tab
+        
+        // Copper Tools
+        val swordCopper = net.minecraft.item.ItemSword(Item.ToolMaterial.IRON).apply {
+            setTranslationKey("eln.copper_sword")
+            setRegistryName(Eln.MODID, "copper_sword")
+            creativeTab = tab
+        }
+        Eln.swordCopper = swordCopper
+        val hoeCopper = net.minecraft.item.ItemHoe(Item.ToolMaterial.IRON).apply {
+            setTranslationKey("eln.copper_hoe")
+            setRegistryName(Eln.MODID, "copper_hoe")
+            creativeTab = tab
+        }
+        Eln.hoeCopper = hoeCopper
+        val shovelCopper = net.minecraft.item.ItemSpade(Item.ToolMaterial.IRON).apply {
+            setTranslationKey("eln.copper_shovel")
+            setRegistryName(Eln.MODID, "copper_shovel")
+            creativeTab = tab
+        }
+        Eln.shovelCopper = shovelCopper
+        val pickaxeCopper = mods.eln.item.ItemPickaxeEln(Item.ToolMaterial.IRON).apply {
+            setTranslationKey("eln.copper_pickaxe")
+            setRegistryName(Eln.MODID, "copper_pickaxe")
+            creativeTab = tab
+        }
+        Eln.pickaxeCopper = pickaxeCopper
+        val axeCopper = mods.eln.item.ItemAxeEln(Item.ToolMaterial.IRON).apply {
+            setTranslationKey("eln.copper_axe")
+            setRegistryName(Eln.MODID, "copper_axe")
+            creativeTab = tab
+        }
+        Eln.axeCopper = axeCopper
+        
+        registeredItems.addAll(listOf(swordCopper, hoeCopper, shovelCopper, pickaxeCopper, axeCopper))
+
+        // Copper Armor
+        val copperArmorMaterial = net.minecraftforge.common.util.EnumHelper.addArmorMaterial(
+            "Copper",
+            "${Eln.MODID}:copper",
+            10,
+            intArrayOf(2, 5, 4, 1),
+            9,
+            net.minecraft.init.SoundEvents.ITEM_ARMOR_EQUIP_IRON,
+            0f
+        )!!
+        
+        val helmetCopper = mods.eln.generic.genericArmorItem(
+            copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.HEAD
+        ).apply {
+            setTranslationKey("eln.copper_helmet")
+            setRegistryName(Eln.MODID, "copper_helmet")
+            creativeTab = tab
+        }
+        Eln.helmetCopper = helmetCopper
+        val plateCopper = mods.eln.generic.genericArmorItem(
+            copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.CHEST
+        ).apply {
+            setTranslationKey("eln.copper_chestplate")
+            setRegistryName(Eln.MODID, "copper_chestplate")
+            creativeTab = tab
+        }
+        Eln.plateCopper = plateCopper
+        val legsCopper = mods.eln.generic.genericArmorItem(
+            copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.LEGS
+        ).apply {
+            setTranslationKey("eln.copper_leggings")
+            setRegistryName(Eln.MODID, "copper_leggings")
+            creativeTab = tab
+        }
+        Eln.legsCopper = legsCopper
+        val bootsCopper = mods.eln.generic.genericArmorItem(
+            copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.FEET
+        ).apply {
+            setTranslationKey("eln.copper_boots")
+            setRegistryName(Eln.MODID, "copper_boots")
+            creativeTab = tab
+        }
+        Eln.bootsCopper = bootsCopper
+        
+        registeredItems.addAll(listOf(helmetCopper, plateCopper, legsCopper, bootsCopper))
+
+        // E-Coal Armor
+        val eCoalMaterial = net.minecraftforge.common.util.EnumHelper.addArmorMaterial(
+            "ECoal",
+            "${Eln.MODID}:ecoal",
+            10,
+            intArrayOf(2, 6, 5, 2),
+            9,
+            net.minecraft.init.SoundEvents.ITEM_ARMOR_EQUIP_LEATHER,
+            10f
+        )!!
+        
+        val energyPerDamage = 500.0
+        
+        val helmetECoal = mods.eln.item.electricalitem.ElectricalArmor(
+            eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.HEAD,
+            3 * energyPerDamage, 250.0, 2.0 / 20.0, 2.0 * energyPerDamage, energyPerDamage
+        ).apply {
+            setTranslationKey("eln.ecoal_helmet")
+            setRegistryName(Eln.MODID, "ecoal_helmet")
+            creativeTab = tab
+        }
+        Eln.helmetECoal = helmetECoal
+        val plateECoal = mods.eln.item.electricalitem.ElectricalArmor(
+            eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.CHEST,
+            8 * energyPerDamage, 250.0, 6.0 / 20.0, 6.0 * energyPerDamage, energyPerDamage
+        ).apply {
+            setTranslationKey("eln.ecoal_chestplate")
+            setRegistryName(Eln.MODID, "ecoal_chestplate")
+            creativeTab = tab
+        }
+        Eln.plateECoal = plateECoal
+        val legsECoal = mods.eln.item.electricalitem.ElectricalArmor(
+            eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.LEGS,
+            7 * energyPerDamage, 250.0, 5.0 / 20.0, 5.0 * energyPerDamage, energyPerDamage
+        ).apply {
+            setTranslationKey("eln.ecoal_leggings")
+            setRegistryName(Eln.MODID, "ecoal_leggings")
+            creativeTab = tab
+        }
+        Eln.legsECoal = legsECoal
+        val bootsECoal = mods.eln.item.electricalitem.ElectricalArmor(
+            eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.FEET,
+            3 * energyPerDamage, 250.0, 2.0 / 20.0, 2.0 * energyPerDamage, energyPerDamage
+        ).apply {
+            setTranslationKey("eln.ecoal_boots")
+            setRegistryName(Eln.MODID, "ecoal_boots")
+            creativeTab = tab
+        }
+        Eln.bootsECoal = bootsECoal
+        
+        registeredItems.addAll(listOf(helmetECoal, plateECoal, legsECoal, bootsECoal))
     }
 
     /**
@@ -251,11 +400,16 @@ object ElnContent {
     private fun initOreDictionary() {
         // Register ores for ore dictionary
         if (Config.generateCopper) {
-            OreDictionary.registerOre("oreCopper", ItemStack(oreBlock, 1, 0))
+            OreDictionary.registerOre("oreCopper", ItemStack(ModBlock.oreBlock, 1, 0))
         }
         if (Config.generateLead) {
-            OreDictionary.registerOre("oreLead", ItemStack(oreBlock, 1, 1))
+            OreDictionary.registerOre("oreLead", ItemStack(ModBlock.oreBlock, 1, 1))
         }
+        if (Config.generateTungsten) {
+            OreDictionary.registerOre("oreTungsten", ItemStack(ModBlock.oreBlock, 1, 2))
+        }
+        // Cinnabar
+        OreDictionary.registerOre("oreCinnabar", ItemStack(ModBlock.oreBlock, 1, 3))
 
         Eln.logger.info("Registered Electrical Age ore dictionary entries")
     }

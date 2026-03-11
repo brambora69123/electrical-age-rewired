@@ -117,8 +117,8 @@ public class SubSystem {
     public void generateMatrix() {
         stateCount = states.size();
 
-        Profiler p = new Profiler();
-        p.add("Inversse with " + stateCount + " state : ");
+        // Profiler p = new Profiler();
+        // p.add("Inversse with " + stateCount + " state : ");
 
         A = new Matrix(stateCount, stateCount);
         //Adata = ((Array2DRowRealMatrix) A).getDataRef();
@@ -160,8 +160,8 @@ public class SubSystem {
 
         matrixValid = true;
 
-        p.stop();
-        Utils.println(p);
+        // p.stop();
+        // Utils.println(p);
     }
 
     public void addToA(State a, State b, double v) {

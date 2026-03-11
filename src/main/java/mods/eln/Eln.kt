@@ -417,6 +417,36 @@ class Eln {
         @JvmStatic
         lateinit var miningPipeDescriptor: MiningPipeDescriptor
 
+        // Standalone Items
+        @JvmField
+        var swordCopper: Item? = null
+        @JvmField
+        var hoeCopper: Item? = null
+        @JvmField
+        var shovelCopper: Item? = null
+        @JvmField
+        var pickaxeCopper: Item? = null
+        @JvmField
+        var axeCopper: Item? = null
+
+        @JvmField
+        var helmetCopper: ItemArmor? = null
+        @JvmField
+        var plateCopper: ItemArmor? = null
+        @JvmField
+        var legsCopper: ItemArmor? = null
+        @JvmField
+        var bootsCopper: ItemArmor? = null
+
+        @JvmField
+        var helmetECoal: ItemArmor? = null
+        @JvmField
+        var plateECoal: ItemArmor? = null
+        @JvmField
+        var legsECoal: ItemArmor? = null
+        @JvmField
+        var bootsECoal: ItemArmor? = null
+
         // Packet type constants
         const val packetPlayerKey: Byte = 14
         const val packetNodeSingleSerialized: Byte = 15

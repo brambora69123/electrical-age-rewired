@@ -195,7 +195,7 @@ if (propertyBool('use_access_transformer')) {
 // Version source generation task
 tasks.register('processVersionSource', Copy) {
     from 'src/main/resources/Version.java'
-    into 'src/main/generated/mods/eln/misc'
+    into 'build/generated/source/version/main/mods/eln/misc'
     expand (
         'MAJORVERSION': vMajor,
         'MINORVERSION': vMinor,
@@ -260,11 +260,13 @@ processResources {
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java', 'src/main/generated']
+            srcDirs = ['src/main/java']
+            srcDir 'build/generated/source/version/main'
             exclude '**/Eln_old.java'
         }
         kotlin {
-            srcDirs = ['src/main/java', 'src/main/generated']
+            srcDirs = ['src/main/java']
+            srcDir 'build/generated/source/version/main'
         }
         resources {
             srcDirs = ['src/main/resources']
@@ -391,7 +393,7 @@ tasks.register('updateMasterLanguageFile', JavaExec) {
 idea {
     module {
         inheritOutputDirs = true
-        generatedSourceDirs += file('src/main/generated')
+        generatedSourceDirs += file('build/generated/source/version/main')
     }
     project {
         settings {

@@ -190,6 +190,7 @@ object Descriptors {
         registerFuelGenerator(transparentNodeItem, 67)
         registerGridDevices(transparentNodeItem, 123)
         registerElectricalAntenna(transparentNodeItem, 7)
+        registerMechanical(transparentNodeItem, 8)
 
         Eln.logger.info("SixNodeItem orderList size: ${sixNodeItem.orderList.size}")
         Eln.logger.info("Registered Electrical Age descriptors")
@@ -814,6 +815,11 @@ object Descriptors {
             "Advanced Energy Meter", advancedEnergyMeterObj, 7, 8
         )
         sixNodeItem.addDescriptor(5 + (id shl 6), advancedEnergyMeterDescriptor)
+
+        // Electrical Fuse Holder (subId=6)
+        val fuseHolderObj = Eln.obj.getObj("ElectricalFuse")
+        val fuseHolderDescriptor = mods.eln.sixnode.ElectricalFuseHolderDescriptor("Electrical Fuse Holder", fuseHolderObj)
+        sixNodeItem.addDescriptor(6 + (id shl 6), fuseHolderDescriptor)
     }
 
     @JvmStatic
@@ -1507,17 +1513,52 @@ object Descriptors {
 
     @JvmStatic
     private fun registerGridDevices(transparentNodeItem: TransparentNodeItem, id: Int) {
+        val poleObj = Eln.obj.getObj("utilitypole")
+        val transformerObj = Eln.obj.getObj("transformator")
+        val downlinkObj = Eln.obj.getObj("downlink")
+
+        // Utility Pole
         val utilityPole = ElectricalPoleDescriptor(
-            "Utility Pole", Eln.obj.getObj("utilitypole"),
+            "Utility Pole", poleObj,
             "eln:textures/wire.png", highVoltageCableDescriptor, false
         )
-        val g = GhostGroup().apply {
+        val poleGhost = GhostGroup().apply {
             addElement(0, 1, 0)
             addElement(0, 2, 0)
             addElement(0, 3, 0)
         }
-        utilityPole.setGhostGroup(g)
+        utilityPole.setGhostGroup(poleGhost)
         transparentNodeItem.addDescriptor(0 + (id shl 6), utilityPole)
+
+        // Utility Pole w/ DC-DC
+        val utilityPoleDCDC = ElectricalPoleDescriptor(
+            "Utility Pole w/DC-DC Converter", poleObj,
+            "eln:textures/wire.png", highVoltageCableDescriptor, true
+        )
+        utilityPoleDCDC.setGhostGroup(poleGhost)
+        transparentNodeItem.addDescriptor(1 + (id shl 6), utilityPoleDCDC)
+
+        // Downlink (subId=2)
+        if (downlinkObj != null) {
+            val downlink = mods.eln.gridnode.downlink.DownlinkDescriptor("Downlink", downlinkObj, "eln:textures/wire.png", Descriptors.highVoltageCableDescriptor)
+            transparentNodeItem.addDescriptor(2 + (id shl 6), downlink)
+        }
+
+        // Grid Transformer (subId=3)
+        if (transformerObj != null) {
+            val gridTransformer = mods.eln.gridnode.transformer.GridTransformerDescriptor("Grid Transformer", transformerObj, "eln:textures/wire.png", Descriptors.highVoltageCableDescriptor)
+            val g = GhostGroup().apply {
+                addElement(1, 0, 0)
+                addElement(0, 0, -1)
+                addElement(1, 0, -1)
+                addElement(1, 1, 0)
+                addElement(0, 1, 0)
+                addElement(1, 1, -1)
+                addElement(0, 1, -1)
+            }
+            gridTransformer.setGhostGroup(g)
+            transparentNodeItem.addDescriptor(3 + (id shl 6), gridTransformer)
+        }
     }
 
     @JvmStatic
@@ -1537,5 +1578,51 @@ object Descriptors {
             Cable.LVU, P, Cable.LVU * 1.3, P * 1.3, lowVoltageCableDescriptor
         )
         transparentNodeItem.addDescriptor(1 + (id shl 6), rxDescriptor)
+    }
+
+    @JvmStatic
+    private fun registerMechanical(transparentNodeItem: TransparentNodeItem, id: Int) {
+        val stdGeneratorObj = Eln.obj.getObj("generator")
+        val turbineObj = Eln.obj.getObj("turbineb")
+        val gasTurbineObj = Eln.obj.getObj("GasTurbine")
+        val flywheelObj = Eln.obj.getObj("Flywheel")
+        val jointObj = Eln.obj.getObj("StraightJoint")
+        val jointHubObj = Eln.obj.getObj("JointHub")
+        val tachometerObj = Eln.obj.getObj("Tachometer")
+
+        // Generators
+        val generator50V = mods.eln.mechanical.GeneratorDescriptor(
+            "50V Generator", stdGeneratorObj, lowVoltageCableDescriptor,
+            800f, Cable.LVU.toFloat(), 0.5f, 500f,
+            Eln.sixNodeThermalLoadInitializer
+        )
+        transparentNodeItem.addDescriptor(0 + (id shl 6), generator50V)
+
+        val generator200V = mods.eln.mechanical.GeneratorDescriptor(
+            "200V Generator", stdGeneratorObj, mediumVoltageCableDescriptor,
+            1200f, Cable.MVU.toFloat(), 1.0f, 2500f,
+            Eln.sixNodeThermalLoadInitializer
+        )
+        transparentNodeItem.addDescriptor(1 + (id shl 6), generator200V)
+
+        // Turbines
+        val steamTurbine = mods.eln.mechanical.SteamTurbineDescriptor("Steam Turbine", turbineObj)
+        transparentNodeItem.addDescriptor(8 + (id shl 6), steamTurbine)
+
+        val gasTurbine = mods.eln.mechanical.GasTurbineDescriptor("Gas Turbine", gasTurbineObj)
+        transparentNodeItem.addDescriptor(9 + (id shl 6), gasTurbine)
+
+        // Shafts & Joints
+        val flywheel = mods.eln.mechanical.FlywheelDescriptor("Flywheel", flywheelObj)
+        transparentNodeItem.addDescriptor(16 + (id shl 6), flywheel)
+
+        val simpleShaft = mods.eln.mechanical.StraightJointDescriptor("Simple Shaft", jointObj)
+        transparentNodeItem.addDescriptor(17 + (id shl 6), simpleShaft)
+
+        val jointHub = mods.eln.mechanical.JointHubDescriptor("Joint Hub", jointHubObj)
+        transparentNodeItem.addDescriptor(18 + (id shl 6), jointHub)
+
+        val tachometer = mods.eln.mechanical.TachometerDescriptor("Tachometer", tachometerObj)
+        transparentNodeItem.addDescriptor(19 + (id shl 6), tachometer)
     }
 }

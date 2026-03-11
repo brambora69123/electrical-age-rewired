@@ -2,6 +2,6 @@
     "parent": "item/generated",
     "textures": {
         "layer0": "eln:voltages/signal",
-        "layer1": "eln:blocks/switch"
+        "layer1": "eln:blocks/signalswitch"
     }
 }

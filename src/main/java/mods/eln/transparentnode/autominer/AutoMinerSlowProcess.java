@@ -206,15 +206,19 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
     }
 
     private IInventory getDropInventory() {
-        IInventory chestEntity = null;
-        for (int x = 2; x >= 1; x--) {
-            Coordinate c = new Coordinate(x, -1, 0, miner.world());
-            c.applyTransformation(miner.front, miner.coordinate());
-            if (c.getTileEntity() instanceof IInventory) {
-                chestEntity = (IInventory) c.getTileEntity();
+        // Check for chest in multiple locations around the miner
+        // Original checked x=1, 2 at y=-1. Let's check a bit more thoroughly.
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
+                if (x == 0 && z == 0) continue; // Skip miner itself
+                Coordinate c = new Coordinate(x, -1, z, miner.world());
+                c.applyTransformation(miner.front, miner.coordinate());
+                if (c.getTileEntity() instanceof IInventory) {
+                    return (IInventory) c.getTileEntity();
+                }
             }
         }
-        return chestEntity;
+        return null;
     }
 
     private boolean drop(ItemStack stack) {

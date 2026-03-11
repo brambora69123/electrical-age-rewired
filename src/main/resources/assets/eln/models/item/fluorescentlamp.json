@@ -1,7 +1,7 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "eln:voltages/low",
-        "layer1": "eln:items/fluorescentlamp"
+        "layer0": "eln:voltages/neutral",
+        "layer1": "eln:blocks/fluorescentlampsocket"
     }
 }
