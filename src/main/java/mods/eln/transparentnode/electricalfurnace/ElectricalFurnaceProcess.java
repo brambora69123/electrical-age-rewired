@@ -14,7 +14,7 @@ public class ElectricalFurnaceProcess implements IProcess {
 
     public static final double energyNeededPerSmelt = 1000;
 
-    ItemStack itemStackInOld = null;
+    ItemStack itemStackInOld = ItemStack.EMPTY;
 
     boolean smeltInProcess = false;
     double energyNeeded = 0;
@@ -37,10 +37,9 @@ public class ElectricalFurnaceProcess implements IProcess {
         }
 
         ItemStack itemStackIn = inventory.getStackInSlot(ElectricalFurnaceElement.inSlotId);
-        ItemStack itemStackOut = inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId);
-        if (itemStackInOld != itemStackIn || (!smeltCan()) || !smeltInProcess) {
+        if (!ItemStack.areItemStacksEqual(itemStackInOld, itemStackIn) || (!smeltCan()) || !smeltInProcess) {
             smeltInit();
-            itemStackInOld = itemStackIn;
+            itemStackInOld = itemStackIn.copy();
         }
 
         if (smeltInProcess) {
@@ -123,16 +122,11 @@ public class ElectricalFurnaceProcess implements IProcess {
             ItemStack outputStack = inventory.getStackInSlot(ElectricalFurnaceElement.outSlotId);
 
             if (outputStack == null || outputStack.isEmpty()) {
-                inventory.setInventorySlotContents(1, var1.copy());
+                inventory.setInventorySlotContents(ElectricalFurnaceElement.outSlotId, var1.copy());
             } else if (outputStack.isItemEqual(var1)) {
-                inventory.decrStackSize(ElectricalFurnaceElement.outSlotId, -var1.getCount());
+                outputStack.grow(var1.getCount());
             }
 
-            /*--this.furnaceItemStacks[0].stackSize;
-
-            if (this.furnaceItemStacks[0].stackSize <= 0) {
-                this.furnaceItemStacks[0] = null;
-            }*/
             inventory.decrStackSize(ElectricalFurnaceElement.inSlotId, 1);
         }
     }

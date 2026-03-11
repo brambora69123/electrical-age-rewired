@@ -187,6 +187,12 @@ public class GhostManager extends WorldSavedData {
     }
 
     public void createGhost(Coordinate coordinate, Coordinate observerCoordinate, int UUID, Block block, int meta) {
+        GhostElement oldElement = ghostTable.get(coordinate);
+        if (oldElement != null && oldElement.observatorCoordinate.equals(observerCoordinate)) {
+            oldElement.UUID = UUID;
+            return;
+        }
+
         coordinate.world().setBlockToAir(coordinate.pos);
 
         if (coordinate.world().setBlockState(coordinate.pos, block.getStateFromMeta(meta), 3)) {

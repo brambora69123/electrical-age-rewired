@@ -194,8 +194,9 @@ public class AutoMinerRender extends TransparentNodeElementRender {
                         break;
                 }
                 BlockPos pos = tileEntity.getPos();
+                float offset = Math.max(0, pipeLength - 3);
                 render.generate(this.tileEntity.getWorld(), pos.getX() + 0.5,
-                    pos.getY() + 0.5 - (Math.max(0, pipeLength - 5)),
+                    pos.getY() + 0.5 - offset,
                     pos.getZ() + 0.5, -(float) (Math.PI * 1 / 2) + camAlpha, -(float) (Math.PI / 2));
             }
         }

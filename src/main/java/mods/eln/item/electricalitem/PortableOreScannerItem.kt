@@ -361,7 +361,6 @@ class PortableOreScannerItem(name: String, obj: Obj3D,
         class OreScannerConfigElement(var blockKey: Int, var factor: Float)
 
         fun generate(w: World, posX: Double, posY: Double, posZ: Double, alphaY: Float, alphaX: Float) {
-            // TODO(1.10): This is pretty much entirely broken.
             val blockKeyFactor = OreColorMapping.map
 
             val posXint = Math.round(posX).toInt()
@@ -454,10 +453,11 @@ class PortableOreScannerItem(name: String, obj: Obj3D,
                                     val zLocal = zBlock and 0xF
 
                                     val state = storage.get(xLocal, yLocal, zLocal)
-                                    blockKey = Block.getStateId(state).toShort()
+                                    val block = state.block
+                                    blockKey = (Block.getIdFromBlock(block) + (block.getMetaFromState(state) shl 12)).toShort()
                                 }
                             }
-                            if (blockKey >= 1024 * 64) {
+                            if (blockKey.toInt() and 0xFFFF >= 1024 * 64) {
                                 blockKey = 0
                             }
                             worldBlocks[xInt][yInt][zInt] = blockKey
@@ -470,22 +470,19 @@ class PortableOreScannerItem(name: String, obj: Obj3D,
                             viewRange - d
                         }
 
-                        stackGreen += blockKeyFactor[blockKey.toInt()] * dToStack
+                        val blockKeyInt = blockKey.toInt() and 0xFFFF
+                        stackGreen += blockKeyFactor[blockKeyInt] * dToStack
 
-                        // TODO(1.12): This needs a total rewrite.
-                        val state = Block.getStateById(blockKey.toInt())
-                        val b = state.block
-                        //val b = Block.getBlockById((blockKey and 0xFFFU).toInt())
-/*
-                        if (b !== ModBlock.AIR && b !== Eln.lightBlock) {
-                            stackRed += if (state.isOpaqueCube)
-                                0.2f * dToStack
-                            else
-                                0.1f * dToStack
+                        val blockId = blockKeyInt and 0xFFF
+                        val meta = (blockKeyInt shr 12) and 0xF
+                        val b = Block.getBlockById(blockId)
+                        val state = b.getStateFromMeta(meta)
+
+                        if (b != Blocks.AIR && b != mods.eln.init.ModBlock.ghostBlock) {
+                            stackRed += if (state.isOpaqueCube) 0.2f * dToStack else 0.1f * dToStack
                         } else {
                             stackBlue += 0.06f * dToStack
                         }
-*/
 
                         x += vx * dBest
                         y += vy * dBest
@@ -574,12 +571,6 @@ object OreColorMapping {
 
     fun updateColorMapping(): FloatArray {
         val blockKeyMapping = FloatArray(1024 * 64)
-/*
-        for (blockId in 0..4095) {
-            for (meta in 0..15) {
-                blockKeyMapping[blockId + (meta shl 12)] = 0f
-            }
-        }
 
         for (c in Eln.oreScannerConfig) {
             if (c.blockKey >= 0 && c.blockKey < blockKeyMapping.size)
@@ -587,8 +578,6 @@ object OreColorMapping {
         }
 
         cache = blockKeyMapping
-        return blockKeyMapping
-*/
         return blockKeyMapping
     }
 }

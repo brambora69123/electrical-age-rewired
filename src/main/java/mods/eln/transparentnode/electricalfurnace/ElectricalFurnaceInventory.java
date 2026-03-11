@@ -29,13 +29,22 @@ public class ElectricalFurnaceInventory extends TransparentNodeElementInventory 
     }
 
     @Override
-    public boolean canInsertItem(int var1, ItemStack var2, EnumFacing side) {
-        switch (Direction.fromFacing(side)) {
-            case YP:
-                return true;
-            default:
-                return false;
+    public boolean canInsertItem(int slot, ItemStack stack, EnumFacing side) {
+        if (slot == ElectricalFurnaceElement.inSlotId) {
+            return !net.minecraft.item.crafting.FurnaceRecipes.instance().getSmeltingResult(stack).isEmpty();
         }
+        return false;
+    }
+
+    @Override
+    public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (slot == ElectricalFurnaceElement.inSlotId) {
+            return !net.minecraft.item.crafting.FurnaceRecipes.instance().getSmeltingResult(stack).isEmpty();
+        }
+        if (slot == ElectricalFurnaceElement.outSlotId) {
+            return false;
+        }
+        return super.isItemValidForSlot(slot, stack);
     }
 
     @Override

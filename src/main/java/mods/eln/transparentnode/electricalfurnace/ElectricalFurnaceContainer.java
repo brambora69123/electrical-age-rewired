@@ -13,6 +13,7 @@ import mods.eln.node.NodeBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
+import net.minecraft.item.ItemStack;
 
 import static mods.eln.i18n.I18N.tr;
 
@@ -22,8 +23,18 @@ public class ElectricalFurnaceContainer extends BasicContainer implements INodeC
 
     public ElectricalFurnaceContainer(NodeBase node, EntityPlayer player, IInventory inventory) {
         super(player, inventory, new Slot[]{
-            new SlotWithSkin(inventory, ElectricalFurnaceElement.outSlotId, 84, 58, SlotSkin.big),
-            new SlotWithSkin(inventory, ElectricalFurnaceElement.inSlotId, 7, 58, SlotSkin.medium),
+            new SlotWithSkin(inventory, ElectricalFurnaceElement.outSlotId, 84, 58, SlotSkin.big) {
+                @Override
+                public boolean isItemValid(ItemStack stack) {
+                    return false;
+                }
+            },
+            new SlotWithSkin(inventory, ElectricalFurnaceElement.inSlotId, 7, 58, SlotSkin.medium) {
+                @Override
+                public boolean isItemValid(ItemStack stack) {
+                    return inventory.isItemValidForSlot(ElectricalFurnaceElement.inSlotId, stack);
+                }
+            },
 
             new GenericItemUsingDamageSlot(inventory, 2, 70, 6 + 20 + 6, 1, HeatingCorpElement.class, SlotSkin.medium,
                 new String[]{tr("Heating corp slot")}),

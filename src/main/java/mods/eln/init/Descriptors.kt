@@ -1452,7 +1452,7 @@ object Descriptors {
         transparentNodeItem.addDescriptor(0 + (id shl 6), passiveDissipator)
 
         val activeDissipator50V = ThermalDissipatorActiveDescriptor(
-            "50V Small Active Thermal Dissipator", Eln.obj.getObj("activethermaldissipatora"),
+            "Small Active Thermal Dissipator", Eln.obj.getObj("activethermaldissipatora"),
             Cable.LVU, 50.0, 500.0, lowVoltageCableDescriptor,
             200.0, -100.0, 200.0, 50.0, 10.0, 1.0
         )
@@ -1488,7 +1488,6 @@ object Descriptors {
             addRectangle(-2, 0, 0, 1, 1, 1)
             addRectangle(-4, -1, 2, 2, 0, 0)
             addElement(0, 1, 0)
-            addElement(-1, 0, 0, ElnContent.ghostBlock, 0)
             addRectangle(-3, -3, 0, 1, -1, -1)
             addRectangle(-3, -3, 0, 1, 1, 1)
         }
@@ -1498,7 +1497,7 @@ object Descriptors {
 
     @JvmStatic
     private fun registerTurret(transparentNodeItem: TransparentNodeItem, id: Int) {
-        val turret = TurretDescriptor("Defence Turret", "Turret")
+        val turret = TurretDescriptor("800V Defence Turret", "Turret")
         transparentNodeItem.addDescriptor(0 + (id shl 6), turret)
     }
 

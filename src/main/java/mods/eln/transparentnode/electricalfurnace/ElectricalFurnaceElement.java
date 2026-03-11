@@ -205,7 +205,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
             stream.writeShort((int) thermalLoad.Tc);
 
             ItemStack stack;
-            if ((stack = inventory.getStackInSlot(inSlotId)) == null) {
+            if ((stack = inventory.getStackInSlot(inSlotId)) == null || stack.isEmpty()) {
                 stream.writeShort(-1);
                 stream.writeShort(-1);
             } else {
@@ -276,8 +276,9 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.Tc));
-        if (inventory.getStackInSlot(heatingCorpSlotId) != null) {
-            info.put(I18N.tr("Heating element"), inventory.getStackInSlot(heatingCorpSlotId).getDisplayName());
+        ItemStack stack = inventory.getStackInSlot(heatingCorpSlotId);
+        if (stack != null && !stack.isEmpty()) {
+            info.put(I18N.tr("Heating element"), stack.getDisplayName());
         } else {
             info.put(I18N.tr("Heating element"), I18N.tr("None"));
         }

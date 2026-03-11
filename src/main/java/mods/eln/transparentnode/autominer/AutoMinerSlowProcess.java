@@ -63,7 +63,8 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         IInventory i = getDropInventory();
         if (i == null) return false;
         for (int idx = 0; idx < i.getSizeInventory(); idx++) {
-            if (i.getStackInSlot(idx) == null)
+            ItemStack stack = i.getStackInSlot(idx);
+            if (stack == null || stack.isEmpty())
                 return true;
         }
         return false;
@@ -129,10 +130,11 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                     case pipeRemove:
                         // miner.pushLog("Pipe " + pipeLength + " removed");
                         Eln.ghostManager.removeGhostAndBlock(jobCoord);
-                        if (miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId) == null) {
+                        ItemStack pipeStackInSlot = miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId);
+                        if (pipeStackInSlot.isEmpty()) {
                             miner.getInventory().setInventorySlotContents(AutoMinerContainer.MiningPipeSlotId, Eln.miningPipeDescriptor.newItemStack(1));
                         } else {
-                            miner.getInventory().decrStackSize(AutoMinerContainer.MiningPipeSlotId, -1);
+                            pipeStackInSlot.grow(1);
                         }
 
                         pipeLength--;
@@ -206,15 +208,16 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
     }
 
     private IInventory getDropInventory() {
-        // Check for chest in multiple locations around the miner
-        // Original checked x=1, 2 at y=-1. Let's check a bit more thoroughly.
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                if (x == 0 && z == 0) continue; // Skip miner itself
-                Coordinate c = new Coordinate(x, -1, z, miner.world());
-                c.applyTransformation(miner.front, miner.coordinate());
-                if (c.getTileEntity() instanceof IInventory) {
-                    return (IInventory) c.getTileEntity();
+        // Search around the miner for any inventory (checking ground level y=-1 to top level y=1)
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -3; x <= 3; x++) {
+                for (int z = -3; z <= 3; z++) {
+                    if (y == 0 && x == 0 && z == 0) continue; // Skip miner main block
+                    Coordinate c = new Coordinate(x, y, z, miner.world());
+                    c.applyTransformation(miner.front, miner.coordinate());
+                    if (c.getTileEntity() instanceof IInventory) {
+                        return (IInventory) c.getTileEntity();
+                    }
                 }
             }
         }
@@ -248,6 +251,8 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
             int index = itemsToDrop.size() - 1;
             if (drop(itemsToDrop.get(index))) {
                 itemsToDrop.remove(index);
+            } else {
+                break;
             }
         }
 
@@ -310,7 +315,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                     } else {
                         IBlockState state = chunk.getBlockState(jobCoord.pos);
                         Block block = state.getBlock();
-                        if (block == Blocks.AIR
+                        if (block != Blocks.AIR
                             && block != Blocks.FLOWING_WATER && block != Blocks.WATER
                             && block != Blocks.FLOWING_LAVA && block != Blocks.LAVA) {
                             if (block != Blocks.OBSIDIAN && block != Blocks.BEDROCK) {

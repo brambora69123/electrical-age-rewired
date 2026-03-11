@@ -131,6 +131,8 @@ class Eln {
         // Initialize tile entities, entities, and other content
         ElnContent.init()
 
+        regenOreScannerFactors()
+
         // Register with Waila for integration
         registerWailaIntegration()
 
@@ -502,7 +504,39 @@ class Eln {
         var killMonstersAroundLamps = false
         var killMonstersAroundLampsRange = 8
         var noSymbols = false
+        @JvmField
         var noVoltageBackground = false
+
+        @JvmField
+        val oreScannerConfig = ArrayList<mods.eln.item.electricalitem.PortableOreScannerItem.RenderStorage.OreScannerConfigElement>()
+
+        fun regenOreScannerFactors() {
+            oreScannerConfig.clear()
+
+            // Add vanilla ores
+            val vanillaOres = mapOf(
+                net.minecraft.init.Blocks.COAL_ORE to 0.05f,
+                net.minecraft.init.Blocks.IRON_ORE to 0.15f,
+                net.minecraft.init.Blocks.GOLD_ORE to 0.40f,
+                net.minecraft.init.Blocks.LAPIS_ORE to 0.40f,
+                net.minecraft.init.Blocks.REDSTONE_ORE to 0.40f,
+                net.minecraft.init.Blocks.DIAMOND_ORE to 1.0f,
+                net.minecraft.init.Blocks.EMERALD_ORE to 0.40f
+            )
+
+            for ((block, factor) in vanillaOres) {
+                oreScannerConfig.add(mods.eln.item.electricalitem.PortableOreScannerItem.RenderStorage.OreScannerConfigElement(net.minecraft.block.Block.getIdFromBlock(block), factor))
+            }
+
+            // Add Eln ores
+            val oreBlock = mods.eln.init.ModBlock.oreBlock
+            for (meta in 0..3) {
+                oreScannerConfig.add(mods.eln.item.electricalitem.PortableOreScannerItem.RenderStorage.OreScannerConfigElement(net.minecraft.block.Block.getIdFromBlock(oreBlock) + (meta shl 12), 0.15f))
+            }
+
+            // NOW update the mapping table
+            mods.eln.item.electricalitem.OreColorMapping.updateColorMapping()
+        }
 
         // =====================================================================
         // Creative Tab

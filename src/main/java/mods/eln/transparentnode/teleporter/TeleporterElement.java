@@ -121,8 +121,8 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         lightCoordinate = new Coordinate(this.descriptor.lightCoordinate);
         lightCoordinate.applyTransformation(front, node.coordinate);
 
-        descriptor.ghostDoorClose.newRotate(front).eraseGeo(node.coordinate);
-        descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
+        descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
+        descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
 
         connect();
     }
@@ -219,12 +219,6 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                     doorState = true;
                     processRatio = 0;
                     break;
-                case StateClose:
-                    descriptor.ghostDoorOpen.newRotate(front).eraseGeo(node.coordinate);
-                    break;
-                case StateOpen:
-                    descriptor.ghostDoorClose.newRotate(front).eraseGeo(node.coordinate);
-                    break;
                 default:
                     break;
             }
@@ -233,12 +227,19 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
 
             switch (this.state) {
                 case StateClose:
+                    descriptor.ghostDoorOpen.newRotate(front).erase(node.coordinate, descriptor.ghostDoorOpen.getUuid());
                     doorState = false;
-                    descriptor.ghostDoorClose.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
+                    descriptor.ghostDoorClose.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorClose.getUuid());
                     break;
                 case StateOpen:
+                    descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
                     doorState = true;
-                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
+                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
+                    break;
+                case StateIdle:
+                    descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
+                    doorState = true;
+                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
                     break;
                 case StateCharge:
                     powerResistor.setR(Math.pow(descriptor.cable.electricalNominalVoltage, 2) / powerCharge);

@@ -113,6 +113,7 @@ public class GhostGroup {
 
     public GhostGroup newRotate(Direction dir) {
         GhostGroup other = new GhostGroup();
+        other.setUuid(uuid);
         for (GhostGroupElement element : this.elementList) {
             int x, y, z;
             switch (dir) {

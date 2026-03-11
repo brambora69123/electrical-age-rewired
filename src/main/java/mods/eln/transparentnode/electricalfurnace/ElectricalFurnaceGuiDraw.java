@@ -90,11 +90,11 @@ public class ElectricalFurnaceGuiDraw extends GuiContainerEln {
         //drawString(8, 6, Utils.plotPower("Consummation", render.heatingCorpResistorP));
 
         ItemStack stack = render.inventory.getStackInSlot(ElectricalFurnaceElement.heatingCorpSlotId);
-        if (stack == null) {
+        HeatingCorpElement desc;
+        if (stack == null || stack.isEmpty() || (desc = (HeatingCorpElement) HeatingCorpElement.getDescriptor(stack)) == null) {
             supplyBar.setEnabled(false);
         } else {
             supplyBar.setEnabled(true);
-            HeatingCorpElement desc = (HeatingCorpElement) HeatingCorpElement.getDescriptor(stack);
             supplyBar.setNominalU((float) desc.electricalNominalU);
         }
         supplyBar.setVoltage(render.voltage);

@@ -26,7 +26,7 @@ public abstract class GridRender extends TransparentNodeElementRender {
         super(tileEntity, descriptor);
         this.descriptor = (GridDescriptor) descriptor;
 
-        cableTexture = new ResourceLocation("eln", this.descriptor.cableTexture);
+        cableTexture = new ResourceLocation(this.descriptor.cableTexture);
     }
 
     @Override

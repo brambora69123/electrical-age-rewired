@@ -66,6 +66,9 @@ public class TeleporterDescriptor extends TransparentNodeDescriptor {
         this.ghostDoorOpen = ghostDoorOpen;
         this.lightCoordinate = lightCoordinate;
 
+        ghostDoorOpen.setUuid(mods.eln.misc.Utils.getUuid());
+        ghostDoorClose.setUuid(mods.eln.misc.Utils.getUuid());
+
         voltageLevelColor = VoltageLevelColor.HighVoltage;
     }
 

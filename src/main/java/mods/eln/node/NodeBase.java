@@ -108,7 +108,9 @@ public abstract class NodeBase {
             BlockPos neighborPos = new BlockPos(vector[0], vector[1], vector[2]);
 
             Block b = world.getBlockState(neighborPos).getBlock();
-            neighborOpaque |= 1 << direction.getInt();
+            if (b.isOpaqueCube(world.getBlockState(neighborPos))) {
+                neighborOpaque |= 1 << direction.getInt();
+            }
             if (isBlockWrappable(b, world, neighborPos)) {
                 neighborWrapable |= 1 << direction.getInt();
             }
