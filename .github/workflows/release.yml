@@ -1,56 +1,78 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      release_notes:
-        description: 'Release notes'
-        required: false
-        type: string
-      is_prerelease:
-        description: 'Is this a pre-release?'
-        required: false
-        default: false
-        type: boolean
+    push:
+        tags:
+            - 'v*'
+    workflow_dispatch:
+        inputs:
+            version_tag:
+                description: 'Version tag (e.g., v1.0.0)'
+                required: true
+                type: string
+            release_notes:
+                description: 'Release notes'
+                required: false
+                type: string
+            is_prerelease:
+                description: 'Is this a pre-release?'
+                required: false
+                default: false
+                type: boolean
 
 jobs:
-  release:
-    name: Build and Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    release:
+        name: Build and Release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'gradle'
+            - name: Set Version Variable
+              id: vars
+              run: |
+                  # If triggered by a tag push, use that. If manual, use the input.
+                  if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+                    echo "TAG_NAME=${{ github.event.inputs.version_tag }}" >> $GITHUB_ENV
+                  else
+                    echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+                  fi
 
-      - name: Setup workspace
-        run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
+            - name: Create and Push Tag
+              if: github.event_name == 'workflow_dispatch'
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git tag ${{ env.TAG_NAME }}
+                  git push origin ${{ env.TAG_NAME }}
 
-      - name: Build mod
-        run: ./gradlew build --no-daemon --stacktrace
+            - name: Set up JDK 25
+              uses: actions/setup-java@v4
+              with:
+                  java-version: '25'
+                  distribution: 'temurin'
+                  cache: 'gradle'
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          body: ${{ github.event.inputs.release_notes }}
-          prerelease: ${{ github.event.inputs.is_prerelease || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
-          generate_release_notes: true
-          files: |
-            build/libs/*.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Setup workspace
+              run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
+
+            - name: Build mod
+              run: ./gradlew build --no-daemon --stacktrace
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ env.TAG_NAME }}
+                  name: ${{ env.TAG_NAME }}
+                  body: ${{ github.event.inputs.release_notes }}
+                  prerelease: ${{ github.event.inputs.is_prerelease || contains(env.TAG_NAME, '-alpha') || contains(env.TAG_NAME, '-beta') || contains(env.TAG_NAME, '-rc') }}
+                  generate_release_notes: true
+                  files: |
+                      build/libs/*.jar
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
