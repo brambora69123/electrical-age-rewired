@@ -47,6 +47,8 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint;
 import mods.eln.packets.GenericPacket;
 import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.oredict.OreDictionary;
 import org.lwjgl.opengl.GL11;
 
@@ -664,6 +666,19 @@ public class Utils {
         }
 
         return true;
+    }
+
+    public static boolean tryPutStackInItemHandler(ItemStack stack, IItemHandler inventory) {
+        if (inventory == null) return false;
+        if (stack == null || stack.isEmpty()) return true;
+
+        ItemStack remaining = ItemHandlerHelper.insertItemStacked(inventory, stack.copy(), false);
+        if (remaining.isEmpty()) {
+            stack.setCount(0);
+            return true;
+        }
+        stack.setCount(remaining.getCount());
+        return false;
     }
 
     @Deprecated

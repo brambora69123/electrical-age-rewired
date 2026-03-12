@@ -171,7 +171,7 @@ public class EnergyMeterElement extends SixNodeElement {
         if (state == shunt.getState()) return;
         //	if (energyStack <= 0 && mod == Mod.ModPrepay) return;
         shunt.setState(state);
-        play(new SoundCommand("random.click").mulVolume(0.3F, 0.6f).smallRange());
+        play(new SoundCommand("block.lever.click").mulVolume(0.3F, 0.6f).smallRange());
         needPublish();
     }
 

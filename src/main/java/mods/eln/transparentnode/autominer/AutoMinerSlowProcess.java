@@ -18,7 +18,11 @@ import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.Vec3d;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.wrapper.InvWrapper;
 
 import java.util.ArrayList;
 
@@ -60,11 +64,12 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
     }
 
     private boolean isStorageReady() {
-        IInventory i = getDropInventory();
+        IItemHandler i = getDropItemHandler();
         if (i == null) return false;
-        for (int idx = 0; idx < i.getSizeInventory(); idx++) {
+        for (int idx = 0; idx < i.getSlots(); idx++) {
             ItemStack stack = i.getStackInSlot(idx);
-            if (stack == null || stack.isEmpty())
+            // Storage is ready if ANY slot has room for at least one item
+            if (stack.isEmpty() || stack.getCount() < i.getSlotLimit(idx))
                 return true;
         }
         return false;
@@ -207,25 +212,55 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         oldJob = job;
     }
 
-    private IInventory getDropInventory() {
+    private IItemHandler getDropItemHandler() {
+        // In local coords, x=1 and x=2 are behind the machine.
+        for (int x = 1; x <= 2; x++) {
+            Coordinate c = new Coordinate(x, -1, 0, miner.world());
+            c.applyTransformation(miner.front, miner.coordinate());
+            IItemHandler handler = getHandlerAt(c);
+            if (handler != null) return handler;
+        }
+
+        // Second priority: directly behind at machine level (y=0)
+        for (int x = 1; x <= 2; x++) {
+            Coordinate c = new Coordinate(x, 0, 0, miner.world());
+            c.applyTransformation(miner.front, miner.coordinate());
+            IItemHandler handler = getHandlerAt(c);
+            if (handler != null) return handler;
+        }
+
         // Search around the miner for any inventory (checking ground level y=-1 to top level y=1)
         for (int y = -1; y <= 1; y++) {
             for (int x = -3; x <= 3; x++) {
                 for (int z = -3; z <= 3; z++) {
                     if (y == 0 && x == 0 && z == 0) continue; // Skip miner main block
+                    // Already checked these specific spots
+                    if ((y == -1 || y == 0) && (x == 1 || x == 2) && z == 0) continue;
+
                     Coordinate c = new Coordinate(x, y, z, miner.world());
                     c.applyTransformation(miner.front, miner.coordinate());
-                    if (c.getTileEntity() instanceof IInventory) {
-                        return (IInventory) c.getTileEntity();
-                    }
+                    IItemHandler handler = getHandlerAt(c);
+                    if (handler != null) return handler;
                 }
             }
         }
         return null;
     }
 
+    private IItemHandler getHandlerAt(Coordinate c) {
+        TileEntity te = c.getTileEntity();
+        if (te == null) return null;
+        if (te.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
+            return te.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
+        }
+        if (te instanceof IInventory) {
+            return new InvWrapper((IInventory) te);
+        }
+        return null;
+    }
+
     private boolean drop(ItemStack stack) {
-        return Utils.tryPutStackInInventory(stack, getDropInventory());
+        return Utils.tryPutStackInItemHandler(stack, getDropItemHandler());
     }
 
     private boolean isMinable(Block block) {

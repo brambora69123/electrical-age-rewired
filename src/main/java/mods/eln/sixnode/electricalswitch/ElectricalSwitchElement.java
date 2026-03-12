@@ -174,7 +174,7 @@ public class ElectricalSwitchElement extends SixNodeElement {
             return false;
         } else {
             setSwitchState(!switchState);
-            play(new SoundCommand("random.click").mulVolume(0.3F, 0.6f).smallRange());
+            play(new SoundCommand("block.lever.click").mulVolume(0.3F, 0.6f).smallRange());
             return true;
         }
     }

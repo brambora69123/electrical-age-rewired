@@ -109,17 +109,15 @@ object Items {
 
     private fun registerFerromagneticCore(sharedItem: mods.eln.generic.SharedItem) {
         val id = 7
-        val obj = Eln.obj.getObj("FerromagneticCore")
-        sharedItem.addElement(0 + (id shl 6), FerromagneticCoreDescriptor("Small Ferromagnetic Core", obj, 0.5))
-        sharedItem.addElement(1 + (id shl 6), FerromagneticCoreDescriptor("Medium Ferromagnetic Core", obj, 1.0))
-        sharedItem.addElement(2 + (id shl 6), FerromagneticCoreDescriptor("Big Ferromagnetic Core", obj, 2.0))
+        val obj = Eln.obj.getObj("feromagneticcorea")
+        sharedItem.addElement(0 + (id shl 6), FerromagneticCoreDescriptor("Cheap Ferromagnetic Core", obj, 10.0))
+        sharedItem.addElement(1 + (id shl 6), FerromagneticCoreDescriptor("Average Ferromagnetic Core", obj, 4.0))
+        sharedItem.addElement(2 + (id shl 6), FerromagneticCoreDescriptor("Optimal Ferromagnetic Core", obj, 1.0))
     }
 
     private fun registerCombustionChamber(sharedItem: mods.eln.generic.SharedItem) {
         val id = 6
-        sharedItem.addElement(0 + (id shl 6), CombustionChamber("Small Combustion Chamber"))
-        sharedItem.addElement(1 + (id shl 6), CombustionChamber("Medium Combustion Chamber"))
-        sharedItem.addElement(2 + (id shl 6), CombustionChamber("Big Combustion Chamber"))
+        sharedItem.addElement(0 + (id shl 6), CombustionChamber("Combustion Chamber"))
     }
 
     private fun registerSolarTracker(sharedItem: mods.eln.generic.SharedItem) {

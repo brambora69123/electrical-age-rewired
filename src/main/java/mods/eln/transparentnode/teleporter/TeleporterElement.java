@@ -436,8 +436,9 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                                 x = (int) (e.posX + (Math.random() * 2 - 1) * failDistance);
                                 z = (int) (e.posZ + (Math.random() * 2 - 1) * failDistance);
                                 y = 20;
-                                BlockPos pos = new BlockPos(x, y, z);
-                                while (!(e.world.isAirBlock(pos) && e.world.isAirBlock(pos.up()))) {
+                                while (y < 255) {
+                                    BlockPos pos = new BlockPos(x, y, z);
+                                    if (e.world.isAirBlock(pos) && e.world.isAirBlock(pos.up())) break;
                                     y++;
                                 }
                                 Utils.serverTeleport(e, x + 0.5, y, z + 0.5);

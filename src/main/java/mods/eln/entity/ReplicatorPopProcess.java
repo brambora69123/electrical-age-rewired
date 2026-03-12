@@ -43,11 +43,21 @@ public class ReplicatorPopProcess implements IProcess {
                     x = (int) (player.posX + Utils.rand(-100, 100));
                     z = (int) (player.posZ + Utils.rand(-100, 100));
                     y = 2;
-                    BlockPos pos = new BlockPos(x,y,z);
                     Utils.println("POP");
 
-                    while (world.isAirBlock(pos) || Utils.getLight(world, EnumSkyBlock.BLOCK, pos) > 6) {
-                        y++;
+                    while (y < 250) {
+                        BlockPos pos = new BlockPos(x, y, z);
+                        // Skip solid blocks and bright areas
+                        if (!world.isAirBlock(pos) || Utils.getLight(world, EnumSkyBlock.BLOCK, pos) > 6) {
+                            y++;
+                        } else {
+                            // Check if there's enough vertical space (2 blocks)
+                            if (world.isAirBlock(pos.up())) {
+                                break; 
+                            } else {
+                                y++;
+                            }
+                        }
                     }
 
                     ReplicatorEntity replicator = new ReplicatorEntity(world);
