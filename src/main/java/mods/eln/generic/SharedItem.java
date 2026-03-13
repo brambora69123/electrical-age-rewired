@@ -11,7 +11,11 @@ public class SharedItem extends GenericItemUsingDamage<GenericItemUsingDamageDes
     public SharedItem(String name) {
         super();
         setTranslationKey(name);
-        setRegistryName(name);
+        if (name.contains(":")) {
+            setRegistryName(name);
+        } else {
+            setRegistryName(mods.eln.Eln.MODID, name);
+        }
         setCreativeTab(mods.eln.Eln.Tab);
     }
 

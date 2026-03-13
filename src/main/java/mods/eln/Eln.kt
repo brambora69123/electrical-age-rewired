@@ -98,13 +98,6 @@ class Eln {
         // Blocks and items are created here, registered via RegistryEvent
         ElnContent.preInit()
 
-        // Initialize shared items (multi-meter, thermometer, etc.)
-        sharedItem = mods.eln.generic.SharedItem("shared_item")
-        sharedItemStackOne = mods.eln.generic.SharedItem("shared_item_stack_one").apply {
-            setMaxStackSize(1)
-        }
-        Items.init()
-
         // Initialize network channels
         initNetwork()
 

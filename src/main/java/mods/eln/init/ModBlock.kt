@@ -54,15 +54,15 @@ object ModBlock {
         flubberBlock = RubberBlock("flubber", 2f)
         ghostBlock = GhostBlock().apply {
             setTranslationKey("ghost")
-            setRegistryName("ghost")
+            setRegistryName(Eln.MODID, "ghost")
         }
         sixNodeBlock = SixNodeBlock(Material.ROCK, SixNodeEntity::class.java).apply {
-            setRegistryName("sixnode")
+            setRegistryName(Eln.MODID, "sixnode")
             setTranslationKey("sixnode")
             setCreativeTab(Eln.Tab)
         }
         transparentNodeBlock = TransparentNodeBlock(Material.ROCK, TransparentNodeEntity::class.java).apply {
-            setRegistryName("transparentnode")
+            setRegistryName(Eln.MODID, "transparentnode")
             setTranslationKey("transparentnode")
             setCreativeTab(Eln.Tab)
         }
@@ -86,7 +86,7 @@ object ModBlock {
 class RubberBlock(name: String, private val bounce: Float) : Block(Material.WOOD) {
     init {
         setTranslationKey(name)
-        setRegistryName(name)
+        setRegistryName(Eln.MODID, name)
         setCreativeTab(Eln.Tab)
     }
     
@@ -106,7 +106,7 @@ class RubberBlock(name: String, private val bounce: Float) : Block(Material.WOOD
 class ElnBlockMod(name: String, material: Material, val uuid: String = name.take(1)) : Block(material) {
     init {
         setTranslationKey("eln.ore.$name")
-        setRegistryName(name)
+        setRegistryName(Eln.MODID, name)
         setCreativeTab(Eln.Tab)
     }
 }

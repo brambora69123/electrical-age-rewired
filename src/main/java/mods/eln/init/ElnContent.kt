@@ -125,9 +125,6 @@ object ElnContent {
         // Initialize shared items sub-components
         Items.init()
 
-        // Initialize mining pipe descriptor
-        Eln.miningPipeDescriptor = MiningPipeDescriptor("Mining Pipe")
-
         Eln.logger.info("Electrical Age pre-initialization complete")
     }
 
