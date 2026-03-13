@@ -72,7 +72,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
         @Override
         public void process(double time) {
             energy -= powerResistor.getP() * time;
-            if (inventory.getStackInSlot(EggIncubatorContainer.EggSlotId) != null) {
+            if (!inventory.getStackInSlot(EggIncubatorContainer.EggSlotId).isEmpty()) {
                 descriptor.setState(powerResistor, true);
                 if (energy <= 0) {
                     inventory.decrStackSize(EggIncubatorContainer.EggSlotId, 1);
@@ -175,7 +175,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
         super.networkSerialize(stream);
         try {
             ItemStack eggStack = inventory.getStackInSlot(EggIncubatorContainer.EggSlotId);
-            stream.writeByte(eggStack == null || eggStack.isEmpty() ? 0 : eggStack.getCount());
+            stream.writeByte(eggStack.isEmpty() ? 0 : eggStack.getCount());
 
             node.lrduCubeMask.getTranslate(front.down()).serialize(stream);
 
@@ -190,7 +190,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         ItemStack eggStack = inventory.getStackInSlot(EggIncubatorContainer.EggSlotId);
-        info.put(I18N.tr("Has egg"), eggStack != null && !eggStack.isEmpty() ?
+        info.put(I18N.tr("Has egg"), !eggStack.isEmpty() ?
             I18N.tr("Yes") : I18N.tr("No"));
         if (Config.INSTANCE.getWailaEasyMode()) {
             info.put(I18N.tr("Power consumption"), Utils.plotPower("", powerResistor.getP()));

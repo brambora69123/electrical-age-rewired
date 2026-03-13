@@ -8,17 +8,10 @@ import mods.eln.node.transparent.TransparentNodeBlock
 import mods.eln.node.transparent.TransparentNodeEntity
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
-import net.minecraft.block.properties.PropertyEnum
-import net.minecraft.block.state.IBlockState
-import net.minecraft.block.state.BlockStateContainer
 import net.minecraft.entity.Entity
-import net.minecraft.item.ItemBlock
-import net.minecraft.item.ItemStack
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import java.lang.Math.abs
-import java.util.Locale
-import java.util.Locale.getDefault
 
 /**
  * Legacy compatibility object - provides static field access for Java code.
@@ -28,10 +21,13 @@ import java.util.Locale.getDefault
  */
 object ModBlock {
     @JvmStatic
-    lateinit var oreBlock: ElnOreBlock
-
+    lateinit var copperOreBlock: Block
     @JvmStatic
-    lateinit var rubberBlock: RubberBlock
+    lateinit var leadOreBlock: Block
+    @JvmStatic
+    lateinit var tungstenOreBlock: Block
+    @JvmStatic
+    lateinit var cinnabarOreBlock: Block
 
     @JvmStatic
     lateinit var flubberBlock: RubberBlock
@@ -50,8 +46,11 @@ object ModBlock {
      */
     @JvmStatic
     internal fun init() {
-        oreBlock = ElnOreBlock("copper_ore", "lead_ore", "tungsten_ore", "cinnabar_ore")
-        rubberBlock = RubberBlock("rubber", 0.75f)
+        copperOreBlock = ElnBlockMod("copper_ore", Material.ROCK).setHardness(3.0f).setResistance(5.0f)
+        leadOreBlock = ElnBlockMod("lead_ore", Material.ROCK).setHardness(3.0f).setResistance(5.0f)
+        tungstenOreBlock = ElnBlockMod("tungsten_ore", Material.ROCK).setHardness(3.0f).setResistance(5.0f)
+        cinnabarOreBlock = ElnBlockMod("cinnabar_ore", Material.ROCK).setHardness(3.0f).setResistance(5.0f)
+
         flubberBlock = RubberBlock("flubber", 2f)
         ghostBlock = GhostBlock().apply {
             setTranslationKey("ghost")
@@ -70,90 +69,17 @@ object ModBlock {
 
         // Set creative tab for all blocks
         val tab = Eln.Tab
-        oreBlock.creativeTab = tab
-        rubberBlock.creativeTab = tab
-        flubberBlock.creativeTab = tab
-        ghostBlock.creativeTab = tab
+        copperOreBlock.creativeTab = tab
+        leadOreBlock.creativeTab = tab
+        tungstenOreBlock.creativeTab = tab
+        cinnabarOreBlock.creativeTab = tab
+        
         sixNodeBlock.creativeTab = tab
         transparentNodeBlock.creativeTab = tab
-    }
-}
-
-class ElnOreBlock(vararg variants: String) : Block(Material.ROCK) {
-    init {
-        setHardness(3.0f)
-        setResistance(5.0f)
-        setTranslationKey("ore")
-        setRegistryName("ore")
-        setCreativeTab(Eln.Tab)
-    }
-    
-    override fun getTranslationKey(): String {
-        return "eln:ore"
-    }
-    
-    companion object {
-        val VARIANT: PropertyEnum<VariantType> = PropertyEnum.create("variant", VariantType::class.java)
-    }
-    
-    enum class VariantType(val modelName: String, val model: String) : net.minecraft.util.IStringSerializable {
-        COPPER_ORE("copper_ore", "copper_ore"),
-        LEAD_ORE("lead_ore", "lead_ore"),
-        TUNGSTEN_ORE("tungsten_ore", "tungsten_ore"),
-        CINNABAR_ORE("cinnabar_ore", "cinnabar_ore");
         
-        override fun getName(): String = modelName
-    }
-    
-    override fun createBlockState(): BlockStateContainer {
-        return BlockStateContainer(this, VARIANT)
-    }
-    
-    override fun getStateFromMeta(meta: Int): IBlockState {
-        val variant = when (meta) {
-            0 -> VariantType.COPPER_ORE
-            1 -> VariantType.LEAD_ORE
-            2 -> VariantType.TUNGSTEN_ORE
-            3 -> VariantType.CINNABAR_ORE
-            else -> VariantType.COPPER_ORE
-        }
-        return defaultState.withProperty(VARIANT, variant)
-    }
-    
-    override fun getMetaFromState(state: IBlockState): Int {
-        return when (state.getValue(VARIANT)) {
-            VariantType.COPPER_ORE -> 0
-            VariantType.LEAD_ORE -> 1
-            VariantType.TUNGSTEN_ORE -> 2
-            VariantType.CINNABAR_ORE -> 3
-            else -> 0
-        }
-    }
-    
-    override fun damageDropped(state: IBlockState): Int {
-        return getMetaFromState(state)
-    }
-}
-
-class ElnItemBlockOre(block: Block) : ItemBlock(block) {
-    init {
-        setHasSubtypes(true)
-    }
-
-    override fun getTranslationKey(): String {
-        return "eln.ore"
-    }
-
-    override fun getTranslationKey(stack: ItemStack): String {
-        val meta = stack.metadata
-        val variant = when (meta) {
-            0 -> ElnOreBlock.VariantType.COPPER_ORE
-            1 -> ElnOreBlock.VariantType.LEAD_ORE
-            2 -> ElnOreBlock.VariantType.TUNGSTEN_ORE
-            3 -> ElnOreBlock.VariantType.CINNABAR_ORE
-            else -> ElnOreBlock.VariantType.COPPER_ORE
-        }
-        return "eln.ore.${variant.modelName.lowercase(getDefault())}"
+        // flubber and ghost blocks are kept out of creative menu
+        flubberBlock.creativeTab = null
+        ghostBlock.creativeTab = null
     }
 }
 
@@ -177,15 +103,10 @@ class RubberBlock(name: String, private val bounce: Float) : Block(Material.WOOD
     }
 }
 
-class SixNodeProxyBlock()
-
-class ElnProxyBlock(name: String, val uuid: String)
-
 class ElnBlockMod(name: String, material: Material, val uuid: String = name.take(1)) : Block(material) {
     init {
-        setTranslationKey(name)
+        setTranslationKey("eln.ore.$name")
         setRegistryName(name)
         setCreativeTab(Eln.Tab)
     }
-
 }

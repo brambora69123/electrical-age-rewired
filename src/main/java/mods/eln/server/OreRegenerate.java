@@ -2,6 +2,7 @@ package mods.eln.server;
 
 import mods.eln.init.Config;
 import mods.eln.init.ModBlock;
+import net.minecraft.block.Block;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
@@ -67,7 +68,9 @@ public class OreRegenerate {
                 for (int y = 0; y < 60; y += 2) {
                     for (int z = y & 1; z < 16; z += 2) {
                         for (int x = y & 1; x < 16; x += 2) {
-                            if (chunk.getBlockState(x, y, z).getBlock() == ModBlock.oreBlock) {
+                            Block block = chunk.getBlockState(x, y, z).getBlock();
+                            if (block == ModBlock.copperOreBlock || block == ModBlock.leadOreBlock || 
+                                block == ModBlock.tungstenOreBlock || block == ModBlock.cinnabarOreBlock) {
                                 //	Utils.println("NO Regenrate ore ! left " + jobs.size());
                                 return;
                             }

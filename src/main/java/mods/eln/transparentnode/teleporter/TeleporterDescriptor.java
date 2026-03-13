@@ -69,7 +69,7 @@ public class TeleporterDescriptor extends TransparentNodeDescriptor {
         ghostDoorOpen.setUuid(mods.eln.misc.Utils.getUuid());
         ghostDoorClose.setUuid(mods.eln.misc.Utils.getUuid());
 
-        voltageLevelColor = VoltageLevelColor.HighVoltage;
+        voltageLevelColor = VoltageLevelColor.fromCable(cable);
     }
 
     GhostGroup ghostDoorOpen, ghostDoorClose;

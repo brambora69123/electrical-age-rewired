@@ -68,6 +68,9 @@ object Items {
         registerRawCable(sharedItem)
         registerMiscItem(sharedItem)
         registerBrush(sharedItem)
+        registerPlate(sharedItem)
+        registerMagnet(sharedItem)
+        registerFuses(sharedItem)
         registerElectricalDrill(sharedItem) // id 15
         registerOreScanner(sharedItem) // id 16
         registerMiningPipe(sharedItem) // id 17
@@ -75,6 +78,76 @@ object Items {
         registerElectricalTool(sharedItemStackOne)
         registerPortableItem(sharedItemStackOne)
         registerFuelBurnerItem(sharedItemStackOne)
+
+        registerArmor()
+        registerTool()
+    }
+
+    private fun registerArmor() {
+        // Armor is handled in Eln.kt/ElnContent.kt usually, 
+        // but Eln_old had them. We assume they are already defined in ElnContent.
+    }
+
+    private fun registerTool() {
+        // Same as armor.
+    }
+
+    private fun registerPlate(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 12
+        
+        val copperPlate = GenericItemUsingDamageDescriptorWithComment("Copper Plate", arrayOf())
+        sharedItem.addElement(0 + (id shl 6), copperPlate)
+        OreDictionary.registerOre("plateCopper", copperPlate.newItemStack())
+
+        val ironPlate = GenericItemUsingDamageDescriptorWithComment("Iron Plate", arrayOf())
+        sharedItem.addElement(1 + (id shl 6), ironPlate)
+        OreDictionary.registerOre("plateIron", ironPlate.newItemStack())
+
+        val goldPlate = GenericItemUsingDamageDescriptorWithComment("Gold Plate", arrayOf())
+        sharedItem.addElement(2 + (id shl 6), goldPlate)
+        OreDictionary.registerOre("plateGold", goldPlate.newItemStack())
+
+        val leadPlate = GenericItemUsingDamageDescriptorWithComment("Lead Plate", arrayOf())
+        sharedItem.addElement(3 + (id shl 6), leadPlate)
+        OreDictionary.registerOre("plateLead", leadPlate.newItemStack())
+
+        val siliconPlate = GenericItemUsingDamageDescriptorWithComment("Silicon Plate", arrayOf())
+        sharedItem.addElement(4 + (id shl 6), siliconPlate)
+        OreDictionary.registerOre("plateSilicon", siliconPlate.newItemStack())
+
+        val alloyPlate = GenericItemUsingDamageDescriptorWithComment("Alloy Plate", arrayOf())
+        sharedItem.addElement(5 + (id shl 6), alloyPlate)
+        OreDictionary.registerOre("plateAlloy", alloyPlate.newItemStack())
+
+        val coalPlate = GenericItemUsingDamageDescriptorWithComment("Coal Plate", arrayOf())
+        sharedItem.addElement(6 + (id shl 6), coalPlate)
+        OreDictionary.registerOre("plateCoal", coalPlate.newItemStack())
+        
+        val tungstenPlate = GenericItemUsingDamageDescriptorWithComment("Tungsten Plate", arrayOf())
+        sharedItem.addElement(7 + (id shl 6), tungstenPlate)
+        OreDictionary.registerOre("plateTungsten", tungstenPlate.newItemStack())
+    }
+
+    private fun registerMagnet(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 13
+        sharedItem.addElement(0 + (id shl 6), GenericItemUsingDamageDescriptor("Basic Magnet"))
+        sharedItem.addElement(1 + (id shl 6), GenericItemUsingDamageDescriptor("Advanced Magnet"))
+    }
+
+    private fun registerFuses(sharedItem: mods.eln.generic.SharedItem) {
+        val id = 98 // From Eln_old.java registerElectricalManager(98)
+        
+        val breakerObj = Eln.obj.getObj("ElectricalFuse")
+        
+        sharedItem.addElement(7 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for low voltage cables", Descriptors.lowVoltageCableDescriptor, breakerObj).apply({ setDefaultIcon("lowvoltageleadfuse") }))
+        sharedItem.addElement(8 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for medium voltage cables", Descriptors.mediumVoltageCableDescriptor, breakerObj).apply { setDefaultIcon("mediumvoltageleadfuse") })
+        sharedItem.addElement(9 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for high voltage cables", Descriptors.highVoltageCableDescriptor, breakerObj).apply { setDefaultIcon("highvoltageleadfuse") })
+        sharedItem.addElement(10 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for very high voltage cables", Descriptors.veryHighVoltageCableDescriptor, breakerObj).apply { setDefaultIcon("veryhighvoltageleadfuse") })
+        
+        val blownFuse = mods.eln.item.ElectricalFuseDescriptor("Blown Lead Fuse", null, breakerObj)
+        blownFuse.setDefaultIcon("blownelectricalfuse")
+        mods.eln.item.ElectricalFuseDescriptor.BlownFuse = blownFuse
+        sharedItem.addElement(11 + (id shl 6), blownFuse)
     }
 
     private fun registerHeatingCorp(sharedItem: mods.eln.generic.SharedItem) {
@@ -140,6 +213,14 @@ object Items {
         sharedItem.addElement(5 + (id shl 6), tungstenIngot)
         OreDictionary.registerOre("ingotTungsten", tungstenIngot.newItemStack())
 
+        val siliconIngot = GenericItemUsingDamageDescriptorWithComment("Silicon Ingot", arrayOf())
+        sharedItem.addElement(7 + (id shl 6), siliconIngot)
+        OreDictionary.registerOre("ingotSilicon", siliconIngot.newItemStack())
+
+        val alloyIngot = GenericItemUsingDamageDescriptorWithComment("Alloy Ingot", arrayOf())
+        sharedItem.addElement(8 + (id shl 6), alloyIngot)
+        OreDictionary.registerOre("ingotAlloy", alloyIngot.newItemStack())
+
         val ferriteIngot = GenericItemUsingDamageDescriptorWithComment("Ferrite Ingot", arrayOf("Useless", "Really useless"))
         sharedItem.addElement(6 + (id shl 6), ferriteIngot)
         OreDictionary.registerOre("ingotFerrite", ferriteIngot.newItemStack())
@@ -171,6 +252,18 @@ object Items {
         val coalDust = GenericItemUsingDamageDescriptorWithComment("Coal Dust", arrayOf())
         sharedItem.addElement(8 + (id shl 6), coalDust)
         OreDictionary.registerOre("dustCoal", coalDust.newItemStack())
+
+        val siliconDust = GenericItemUsingDamageDescriptorWithComment("Silicon Dust", arrayOf())
+        sharedItem.addElement(10 + (id shl 6), siliconDust)
+        OreDictionary.registerOre("dustSilicon", siliconDust.newItemStack())
+
+        val alloyDust = GenericItemUsingDamageDescriptorWithComment("Alloy Dust", arrayOf())
+        sharedItem.addElement(11 + (id shl 6), alloyDust)
+        OreDictionary.registerOre("dustAlloy", alloyDust.newItemStack())
+
+        val cinnabarDust = GenericItemUsingDamageDescriptorWithComment("Cinnabar Dust", arrayOf())
+        sharedItem.addElement(12 + (id shl 6), cinnabarDust)
+        OreDictionary.registerOre("dustCinnabar", cinnabarDust.newItemStack())
     }
 
     private fun registerTreeResinAndRubber(sharedItem: mods.eln.generic.SharedItem) {
@@ -201,6 +294,7 @@ object Items {
     private fun registerMiningPipe(sharedItem: mods.eln.generic.SharedItem) {
         val id = 17
         Eln.miningPipeDescriptor = MiningPipeDescriptor("Mining Pipe")
+        Eln.miningPipeDescriptor.setDefaultIcon("miningpipe")
         sharedItem.addElement(0 + (id shl 6), Eln.miningPipeDescriptor)
     }
 
@@ -247,12 +341,14 @@ object Items {
         val id = 120
         sharedItem.addElement(0 + (id shl 6), GenericItemUsingDamageDescriptorWithComment("Cheap Chip", arrayOf()))
         sharedItem.addElement(1 + (id shl 6), GenericItemUsingDamageDescriptorWithComment("Advanced Chip", arrayOf()))
+        sharedItem.addElement(2 + (id shl 6), GenericItemUsingDamageDescriptor("Dielectric"))
+        sharedItem.addElement(3 + (id shl 6), GenericItemUsingDamageDescriptor("Mercury"))
     }
 
     private fun registerRegulatorItem(sharedItem: mods.eln.generic.SharedItem) {
         val id = 3
         sharedItem.addElement(0 + (id shl 6), RegulatorOnOffDescriptor("On/Off Regulator", "onoffregulator", 5.0))
-        sharedItem.addElement(1 + (id shl 6), RegulatorAnalogDescriptor("Analog Regulator", "analogregulator"))
+        sharedItem.addElement(1 + (id shl 6), RegulatorAnalogDescriptor("Analogic Regulator", "analogicregulator"))
     }
 
     private fun registerProtection(sharedItem: mods.eln.generic.SharedItem) {

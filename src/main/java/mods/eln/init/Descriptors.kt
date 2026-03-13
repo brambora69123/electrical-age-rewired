@@ -1,11 +1,12 @@
 package mods.eln.init
 
 import mods.eln.Eln
-import mods.eln.Eln_old
 import mods.eln.cable.CableRenderDescriptor
 import mods.eln.ghost.GhostGroup
 import mods.eln.gridnode.electricalpole.ElectricalPoleDescriptor
-import mods.eln.i18n.I18N
+import mods.eln.init.Cable.Companion.LVU
+import mods.eln.init.Cable.Companion.MVU
+import mods.eln.init.Config.fuelGeneratorPowerFactor
 import mods.eln.misc.*
 import mods.eln.misc.series.SerieEE
 import mods.eln.node.six.SixNodeItem
@@ -31,6 +32,7 @@ import mods.eln.sixnode.electricalredstoneoutput.ElectricalRedstoneOutputDescrip
 import mods.eln.sixnode.electricalrelay.ElectricalRelayDescriptor
 import mods.eln.sixnode.electricalsensor.ElectricalSensorDescriptor
 import mods.eln.sixnode.electricalswitch.ElectricalSwitchDescriptor
+import mods.eln.sixnode.electricaltimeout.ElectricalTimeoutDescriptor
 import mods.eln.sixnode.electricalvumeter.ElectricalVuMeterDescriptor
 import mods.eln.sixnode.electricalwatch.ElectricalWatchDescriptor
 import mods.eln.sixnode.electricalweathersensor.ElectricalWeatherSensorDescriptor
@@ -43,7 +45,8 @@ import mods.eln.sixnode.lampsocket.LampSocketStandardObjRender
 import mods.eln.sixnode.lampsocket.LampSocketSuspendedObjRender
 import mods.eln.sixnode.lampsocket.LampSocketType
 import mods.eln.sixnode.lampsupply.LampSupplyDescriptor
-import mods.eln.sixnode.logicgate.*
+import mods.eln.sixnode.logicgate.LogicGateDescriptor
+import mods.eln.sixnode.logicgate.PalDescriptor
 import mods.eln.sixnode.modbusrtu.ModbusRtuDescriptor
 import mods.eln.sixnode.powercapacitorsix.PowerCapacitorSixDescriptor
 import mods.eln.sixnode.powerinductorsix.PowerInductorSixDescriptor
@@ -151,11 +154,12 @@ object Descriptors {
         registerLampSupply(sixNodeItem, 65)
         registerBatteryCharger(sixNodeItem, 66)
         registerPowerSocket(sixNodeItem, 67)
+
         registerWirelessSignal(sixNodeItem, 92)
         registerElectricalDataLogger(sixNodeItem, 93)
         registerElectricalRelay(sixNodeItem, 94)
         registerElectricalGateSource(sixNodeItem, 95)
-        registerPassiveComponent(sixNodeItem, 96)
+        registerPassiveComponent(sixNodeItem, transparentNodeItem, 96)
         registerSwitch(sixNodeItem, 97)
         registerElectricalManager(sixNodeItem, 98)
         registerElectricalSensor(sixNodeItem, 100)
@@ -174,6 +178,7 @@ object Descriptors {
         registerTransformer(transparentNodeItem, 2)
         registerHeatFurnace(transparentNodeItem, 3)
         registerTurbine(transparentNodeItem, 4)
+        registerElectricalAntenna(transparentNodeItem, 7)
         registerBattery(transparentNodeItem, 16)
         registerElectricalFurnace(transparentNodeItem, 32)
         registerMacerator(transparentNodeItem, 33)
@@ -189,7 +194,6 @@ object Descriptors {
         registerTurret(transparentNodeItem, 66)
         registerFuelGenerator(transparentNodeItem, 67)
         registerGridDevices(transparentNodeItem, 123)
-        registerElectricalAntenna(transparentNodeItem, 7)
         registerMechanical(transparentNodeItem, 8)
 
         Eln.logger.info("SixNodeItem orderList size: ${sixNodeItem.orderList.size}")
@@ -461,7 +465,6 @@ object Descriptors {
                 6,
                 emergencyLamp
             )
-        emergencyLamp50V.setDefaultIcon("50vemergencylamp")
         sixNodeItem.addDescriptor(15 + (id shl 6), emergencyLamp50V)
 
         val emergencyLamp200V = EmergencyLampDescriptor(
@@ -473,7 +476,6 @@ object Descriptors {
                 8,
                 emergencyLamp
             )
-        emergencyLamp200V.setDefaultIcon("200vemergencylamp")
         sixNodeItem.addDescriptor(16 + (id shl 6), emergencyLamp200V)
     }
 
@@ -481,7 +483,6 @@ object Descriptors {
     private fun registerLampSupply(sixNodeItem: SixNodeItem, id: Int) {
         val obj = Eln.obj.getObj("distributionboard")
         val lampSupplyDescriptor = LampSupplyDescriptor("Lamp Supply", obj, 32)
-        lampSupplyDescriptor.setDefaultIcon("lampsupply")
         sixNodeItem.addDescriptor(0 + (id shl 6), lampSupplyDescriptor)
     }
 
@@ -495,7 +496,6 @@ object Descriptors {
             lowVoltageCableDescriptor,
             Cable.LVU, 200.0
         )
-        weakBatteryChargerDescriptor.setDefaultIcon("batterycharger")
         sixNodeItem.addDescriptor(0 + (id shl 6), weakBatteryChargerDescriptor)
 
         // 50V Battery Charger (subId=1)
@@ -504,7 +504,6 @@ object Descriptors {
             lowVoltageCableDescriptor,
             Cable.LVU, 400.0
         )
-        batteryChargerDescriptor.setDefaultIcon("batterycharger")
         sixNodeItem.addDescriptor(1 + (id shl 6), batteryChargerDescriptor)
 
         // 200V Battery Charger (subId=4)
@@ -513,7 +512,6 @@ object Descriptors {
             mediumVoltageCableDescriptor,
             Cable.MVU, 1000.0
         )
-        mvBatteryChargerDescriptor.setDefaultIcon("batterycharger")
         sixNodeItem.addDescriptor(4 + (id shl 6), mvBatteryChargerDescriptor)
     }
 
@@ -523,12 +521,12 @@ object Descriptors {
         // LV Power Socket (50V)
         val powerSocketLV = PowerSocketDescriptor(1, "50V Power Socket", obj, 10)
         powerSocketLV.setDefaultIcon("powersocketlv")
-        sixNodeItem.addDescriptor(0 + (id shl 6), powerSocketLV)
+        sixNodeItem.addDescriptor(1 + (id shl 6), powerSocketLV)
 
         // MV Power Socket (200V)
         val powerSocketMV = PowerSocketDescriptor(2, "200V Power Socket", obj, 10)
         powerSocketMV.setDefaultIcon("powersocketmv")
-        sixNodeItem.addDescriptor(1 + (id shl 6), powerSocketMV)
+        sixNodeItem.addDescriptor(2 + (id shl 6), powerSocketMV)
     }
 
     @JvmStatic
@@ -634,7 +632,6 @@ object Descriptors {
             "Signal Switch", ledswitchRender, true,
             if (Eln.noSymbols) "signalswitch" else "switch"
         )
-        signalSwitchDescriptor.setDefaultIcon("signalswitch")
         sixNodeItem.addDescriptor(1 + (id shl 6), signalSwitchDescriptor)
 
         // Signal Button (subId=8)
@@ -642,7 +639,6 @@ object Descriptors {
             "Signal Button", ledswitchRender, true, "button"
         )
         signalButtonDescriptor.setWithAutoReset()
-        signalButtonDescriptor.setDefaultIcon("signalbutton")
         sixNodeItem.addDescriptor(8 + (id shl 6), signalButtonDescriptor)
 
         // Wireless Button (subId=12)
@@ -661,7 +657,7 @@ object Descriptors {
     }
 
     @JvmStatic
-    private fun registerPassiveComponent(sixNodeItem: SixNodeItem, id: Int) {
+    private fun registerPassiveComponent(sixNodeItem: SixNodeItem, transparentNodeItem: TransparentNodeItem, id: Int) {
         // Resistor - uses PowerElectricPrimitives model (subId=0)
         val resistorObj = Eln.obj.getObj("powerelectricprimitives")
         val resistorSeries = SerieEE(1.0, doubleArrayOf(10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0))
@@ -721,6 +717,33 @@ object Descriptors {
             "Power Inductor", inductorObj, inductorSeries
         )
         sixNodeItem.addDescriptor(34 + (id shl 6), inductorDescriptor)
+
+        // Rheostat (subId=37)
+        val rheostatDescriptor = ResistorDescriptor(
+            "Rheostat", resistorObj, SerieEE.newE12(-2.0), 0.0, true
+        )
+        sixNodeItem.addDescriptor(37 + (id shl 6), rheostatDescriptor)
+
+        // Thermistor (subId=38)
+        val thermistorDescriptor = ResistorDescriptor(
+            "Thermistor", resistorObj, SerieEE.newE12(-2.0), -0.01, false
+        )
+        sixNodeItem.addDescriptor(38 + (id shl 6), thermistorDescriptor)
+
+
+        // Large Rheostat (subId=39)
+        val largeRheostatName = "Large Rheostat"
+        val largeRheostatDissipator = ThermalDissipatorPassiveDescriptor(
+            largeRheostatName,
+            Eln.obj.getObj("LargeRheostat"),
+            1000.0, -100.0,
+            4000.0, 800.0,
+            10.0, 1.0
+        )
+        val largeRheostat = mods.eln.transparentnode.LargeRheostatDescriptor(
+            largeRheostatName, largeRheostatDissipator, veryHighVoltageCableDescriptor, SerieEE.newE12(0.0)
+        )
+        transparentNodeItem.addDescriptor(39 + (id shl 6), largeRheostat)
     }
 
     @JvmStatic
@@ -780,7 +803,7 @@ object Descriptors {
             Eln.cableThermalLoadInitializer, true
         )
         signalSwitchDescriptor.setDefaultIcon("signalswitch")
-        sixNodeItem.addDescriptor(3 + (id shl 6), signalSwitchDescriptor)
+        sixNodeItem.addWithoutRegistry(3 + (id shl 6), signalSwitchDescriptor)
 
         // Signal Switch with LED (subId=8)
         val ledSwitchObj = Eln.obj.getObj("ledswitch")
@@ -792,7 +815,7 @@ object Descriptors {
             Eln.cableThermalLoadInitializer, true
         )
         signalSwitchLedDescriptor.setDefaultIcon("signalswitch")
-        sixNodeItem.addDescriptor(8 + (id shl 6), signalSwitchLedDescriptor)
+        sixNodeItem.addWithoutRegistry(8 + (id shl 6), signalSwitchLedDescriptor)
     }
 
     @JvmStatic
@@ -820,6 +843,22 @@ object Descriptors {
         val fuseHolderObj = Eln.obj.getObj("ElectricalFuse")
         val fuseHolderDescriptor = mods.eln.sixnode.ElectricalFuseHolderDescriptor("Electrical Fuse Holder", fuseHolderObj)
         sixNodeItem.addDescriptor(6 + (id shl 6), fuseHolderDescriptor)
+
+        // Lead Fuses (registered in sharedItem but count towards IDs here)
+        val sharedItem = Eln.sharedItem
+        
+        // subId 7
+        sharedItem.addElement(7 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for low voltage cables", lowVoltageCableDescriptor, fuseHolderObj))
+        // subId 8
+        sharedItem.addElement(8 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for medium voltage cables", mediumVoltageCableDescriptor, fuseHolderObj))
+        // subId 9
+        sharedItem.addElement(9 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for high voltage cables", highVoltageCableDescriptor, fuseHolderObj))
+        // subId 10
+        sharedItem.addElement(10 + (id shl 6), mods.eln.item.ElectricalFuseDescriptor("Lead Fuse for very high voltage cables", veryHighVoltageCableDescriptor, fuseHolderObj))
+        // subId 11
+        val blownFuse = mods.eln.item.ElectricalFuseDescriptor("Blown Lead Fuse", null, fuseHolderObj)
+        mods.eln.item.ElectricalFuseDescriptor.BlownFuse = blownFuse
+        sharedItem.addWithoutRegistry(11 + (id shl 6), blownFuse)
     }
 
     @JvmStatic
@@ -869,14 +908,12 @@ object Descriptors {
         val alarmDescriptor = ElectricalAlarmDescriptor(
             "Nuclear Alarm", obj, 7, "eln:alarma", 11.0, 1.0f
         )
-        alarmDescriptor.setDefaultIcon("electricalalarm")
         sixNodeItem.addDescriptor(0 + (id shl 6), alarmDescriptor)
 
         val nuclearAlarmDescriptor = ElectricalAlarmDescriptor(
             "Standard Alarm", obj, 7, "eln:smallalarm_critical", 1.2, 2.0f
         )
-        nuclearAlarmDescriptor.setDefaultIcon("electricalalarm")
-        sixNodeItem.addDescriptor(1 + (id shl 6), alarmDescriptor)
+        sixNodeItem.addDescriptor(1 + (id shl 6), nuclearAlarmDescriptor)
     }
 
     @JvmStatic
@@ -884,41 +921,41 @@ object Descriptors {
         // Weather Sensor
         val weatherObj = Eln.obj.getObj("electricalweathersensor")
         val weatherSensorDescriptor = ElectricalWeatherSensorDescriptor(
-            "Weather Sensor", weatherObj
+            "Electrical Weather Sensor", weatherObj
         )
-        weatherSensorDescriptor.setDefaultIcon("electricalweathersensor")
+        weatherSensorDescriptor.setDefaultIcon("weathersensor")
         sixNodeItem.addDescriptor(0 + (id shl 6), weatherSensorDescriptor)
 
         // Wind Sensor - using Anemometer model
         val windObj = Eln.obj.getObj("anemometer")
         val windSensorDescriptor = ElectricalWindSensorDescriptor(
-            "Wind Sensor", windObj, 30.0
+            "Electrical Anemometer Sensor", windObj, 30.0
         )
-        windSensorDescriptor.setDefaultIcon("electricalwindsensor")
+        windSensorDescriptor.setDefaultIcon("anemometersensor")
         sixNodeItem.addDescriptor(1 + (id shl 6), windSensorDescriptor)
 
         // Light Sensor
         val lightObj = Eln.obj.getObj("lightsensor")
         val lightSensorDescriptor = ElectricalLightSensorDescriptor(
-            "Light Sensor", lightObj, false
+            "Electrical Light Sensor", lightObj, false
         )
-        lightSensorDescriptor.setDefaultIcon("electricallightsensor")
+        lightSensorDescriptor.setDefaultIcon("lightsensor")
         sixNodeItem.addDescriptor(2 + (id shl 6), lightSensorDescriptor)
 
         // Fire Detector
         val fireObj = Eln.obj.getObj("firedetector")
         val fireDetectorDescriptor = ElectricalFireDetectorDescriptor(
-            "Fire Detector", fireObj, 8.0, false
+            "Electrical Fire Detector", fireObj, 8.0, false
         )
-        fireDetectorDescriptor.setDefaultIcon("electricalfiredetector")
+        fireDetectorDescriptor.setDefaultIcon("firedetector")
         sixNodeItem.addDescriptor(3 + (id shl 6), fireDetectorDescriptor)
 
         // Entity Sensor - using ProximitySensor model
         val entityObj = Eln.obj.getObj("proximitysensor")
         val entitySensorDescriptor = ElectricalEntitySensorDescriptor(
-            "Entity Sensor", entityObj, 8.0
+            "Electrical Entity Sensor", entityObj, 8.0
         )
-        entitySensorDescriptor.setDefaultIcon("electricalentitysensor")
+        entitySensorDescriptor.setDefaultIcon("proximitysensor")
         sixNodeItem.addDescriptor(4 + (id shl 6), entitySensorDescriptor)
     }
 
@@ -927,7 +964,7 @@ object Descriptors {
         // Redstone Input
         val redstoneInputObj = Eln.obj.getObj("redtoele")
         val redstoneInputDescriptor = ElectricalRedstoneInputDescriptor(
-            "Redstone Input", redstoneInputObj
+            "Redstone-to-Voltage Converter", redstoneInputObj
         )
         redstoneInputDescriptor.setDefaultIcon("redstoneinput")
         sixNodeItem.addDescriptor(0 + (id shl 6), redstoneInputDescriptor)
@@ -935,9 +972,9 @@ object Descriptors {
         // Redstone Output
         val redstoneOutputObj = Eln.obj.getObj("eletored")
         val redstoneOutputDescriptor = ElectricalRedstoneOutputDescriptor(
-            "Redstone Output", redstoneOutputObj
+            "Voltage-to-Redstone Converter", redstoneOutputObj
         )
-        redstoneOutputDescriptor.setDefaultIcon("redstoneoutput")
+        redstoneInputDescriptor.setDefaultIcon("redstoneoutput")
         sixNodeItem.addDescriptor(1 + (id shl 6), redstoneOutputDescriptor)
     }
 
@@ -993,6 +1030,17 @@ object Descriptors {
         // JK Flip Flop Chip (subId=11)
         val jkFlipFlopDescriptor = LogicGateDescriptor("JK Flip Flop Chip", logicObj, "JKFF", mods.eln.sixnode.logicgate.JKFlipFlop::class.java)
         sixNodeItem.addDescriptor(11 + (id shl 6), jkFlipFlopDescriptor)
+
+        // Electrical Timer (subId=12)
+        val timerObj = Eln.obj.getObj("electricaltimer")
+        val timerDescriptor = ElectricalTimeoutDescriptor("Electrical Timer", timerObj)
+        timerDescriptor.setTickSound("eln:timer", 0.01f)
+        sixNodeItem.addDescriptor(12 + (id shl 6), timerDescriptor)
+
+        // Signal Processor (subId=13)
+        val plcObj = Eln.obj.getObj("PLC")
+        val signalProcessorDescriptor = mods.eln.sixnode.electricalmath.ElectricalMathDescriptor("Signal Processor", plcObj)
+        sixNodeItem.addDescriptor(13 + (id shl 6), signalProcessorDescriptor)
     }
 
     @JvmStatic
@@ -1070,7 +1118,11 @@ object Descriptors {
         val modbusObj = Eln.obj.getObj("rtu")
         val modbusRtuDescriptor = ModbusRtuDescriptor("Modbus RTU", modbusObj)
         // Note: In original, this was only registered if modbusEnable was true
-        sixNodeItem.addDescriptor(0 + (id shl 6), modbusRtuDescriptor)
+        if (Config.modbusEnable) {
+            sixNodeItem.addDescriptor(0 + (id shl 6), modbusRtuDescriptor)
+        } else {
+            sixNodeItem.addWithoutRegistry(0 + (id shl 6), modbusRtuDescriptor)
+        }
 
         // Analog Watch (subId=4)
         val analogWatchObj = Eln.obj.getObj("WallClock")
@@ -1098,19 +1150,19 @@ object Descriptors {
     private fun registerPowerComponent(transparentNodeItem: TransparentNodeItem, id: Int) {
         // Power Capacitor - uses PowerElectricPrimitives model
         val capacitorObj = Eln.obj.getObj("powerelectricprimitives")
-        val capacitorSeries = SerieEE(-6.0, doubleArrayOf(1.0, 2.2, 3.3, 4.7, 6.8))
+        val capacitorSeries = SerieEE(-2.0, doubleArrayOf(1.0, 1.5, 2.2, 3.3, 4.7, 6.8))
         val powerCapacitorDescriptor = PowerCapacitorDescriptor(
-            "Power Capacitor", capacitorObj, capacitorSeries, 1000.0
+            "Power Capacitor", capacitorObj, capacitorSeries, 300.0
         )
-        transparentNodeItem.addDescriptor(0 + (id shl 6), powerCapacitorDescriptor)
+        transparentNodeItem.addWithoutRegistry(20 + (id shl 6), powerCapacitorDescriptor)
 
         // Power Inductor - uses PowerElectricPrimitives model
         val inductorObj = Eln.obj.getObj("powerelectricprimitives")
-        val inductorSeries = SerieEE(-6.0, doubleArrayOf(1.0, 2.2, 3.3, 4.7, 6.8))
+        val inductorSeries = SerieEE(-1.0, doubleArrayOf(1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2))
         val powerInductorDescriptor = PowerInductorDescriptor(
             "Power Inductor", inductorObj, inductorSeries
         )
-        transparentNodeItem.addDescriptor(1 + (id shl 6), powerInductorDescriptor)
+        transparentNodeItem.addWithoutRegistry(16 + (id shl 6), powerInductorDescriptor)
     }
 
     @JvmStatic
@@ -1204,6 +1256,7 @@ object Descriptors {
             heatTime, 60.0, -100.0, "Non-rechargeable battery"
         ).apply {
             setRenderSpec("coal")
+            setDefaultIcon("singleusebattery")
         }
         transparentNodeItem.addDescriptor(5 + (id shl 6), singleUseBattery)
 
@@ -1215,7 +1268,6 @@ object Descriptors {
             heatTime, 60.0, -100.0, "Low voltage capacitor"
         ).apply {
             setCurrentDrop(stdU * 1.2, stdP * 8.0 * 2.0)
-            setDefaultIcon("empty-texture")
         }
         transparentNodeItem.addWithoutRegistry(32 + (id shl 6), condensator50V)
 
@@ -1227,7 +1279,6 @@ object Descriptors {
             heatTime, 60.0, -100.0, "Medium voltage capacitor"
         ).apply {
             setCurrentDrop(Cable.MVU * 1.2, Cable.MVP() * 2.0)
-            setDefaultIcon("empty-texture")
         }
         transparentNodeItem.addWithoutRegistry(36 + (id shl 6), condensator200V)
     }
@@ -1254,7 +1305,7 @@ object Descriptors {
         val TtoU = FunctionTable(doubleArrayOf(0.0, 0.1, 0.85, 1.0, 1.1, 1.15, 1.18, 1.19, 1.25), 8.0 / 5.0)
         val PoutToPin = FunctionTable(doubleArrayOf(0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.3, 1.8, 2.7), 8.0 / 5.0)
 
-        // 50V Turbine
+        // 50V Turbine (subId=1)
         val turbine50V = TurbineDescriptor(
             "50V Turbine", "turbineb", stdCableRender50V,
             TtoU.duplicate(250.0, Cable.LVU), PoutToPin.duplicate(300.0, 300.0),
@@ -1264,7 +1315,7 @@ object Descriptors {
         )
         transparentNodeItem.addDescriptor(1 + (id shl 6), turbine50V)
 
-        // 200V Turbine
+        // 200V Turbine (subId=8)
         val turbine200V = TurbineDescriptor(
             "200V Turbine", "turbinebblue", stdCableRender200V,
             TtoU.duplicate(350.0, Cable.MVU), PoutToPin.duplicate(500.0, 500.0),
@@ -1273,6 +1324,21 @@ object Descriptors {
             350.0 / 40.0, 500.0 / (Cable.MVU / 25.0), "eln:heat_turbine_200v"
         )
         transparentNodeItem.addDescriptor(8 + (id shl 6), turbine200V)
+
+        // Water Turbine (subId=16)
+        val waterTurbinePowerFactor = 1.0 // Assume 1.0 or get from Config if available
+        val waterTurbine = mods.eln.transparentnode.waterturbine.WaterTurbineDescriptor(
+            "Water Turbine", Eln.obj.getObj("SmallWaterWheel"),
+            lowVoltageCableDescriptor,
+            30.0 * waterTurbinePowerFactor,
+            Cable.LVU * 1.18,
+            Coordinate(1, -1, 0, 0),
+            "eln:water_turbine", 1.0f
+        )
+        val waterTurbineGhost = GhostGroup()
+        waterTurbineGhost.addRectangle(1, 1, 0, 1, -1, 1)
+        waterTurbine.setGhostGroup(waterTurbineGhost)
+        transparentNodeItem.addDescriptor(16 + (id shl 6), waterTurbine)
     }
 
     @JvmStatic
@@ -1347,7 +1413,7 @@ object Descriptors {
             ThermalLoadInitializer(80.0, -100.0, 10.0, 100000.0),
             mediumVoltageCableDescriptor, magnetizerRecipes
         )
-        transparentNodeItem.addDescriptor(1 + (id shl 6), magnetizer200V)
+        transparentNodeItem.addDescriptor(4 + (id shl 6), magnetizer200V)
     }
 
     @JvmStatic
@@ -1372,9 +1438,10 @@ object Descriptors {
     @JvmStatic
     private fun registerEggIncubator(transparentNodeItem: TransparentNodeItem, id: Int) {
         val eggIncubator = EggIncubatorDescriptor(
-            "Egg Incubator", Eln.obj.getObj("eggincubator"),
+            "50V Egg Incubator", Eln.obj.getObj("eggincubator"),
             lowVoltageCableDescriptor, 100.0, Cable.LVU * 1.1
         )
+        eggIncubator.setDefaultIcon("eggincubator")
         transparentNodeItem.addDescriptor(0 + (id shl 6), eggIncubator)
     }
 
@@ -1430,6 +1497,30 @@ object Descriptors {
             0.01, Math.PI / 4.0, Math.PI / 4.0 * 3.0
         )
         transparentNodeItem.addDescriptor(2 + (id shl 6), smallRotSolarPanel)
+
+        // 2x3 Solar Panel
+        val bigSolarPanel = SolarPanelDescriptor(
+            "2x3 Solar Panel", Eln.obj.getObj("bigSolarPanel"), stdCableRender200V,
+            GhostGroup().apply {
+                addRectangle(0, 1, 0, 0, -1, 1)
+                removeElement(0, 0, 0)
+            }, 1, 1, 0,
+            Coordinate(1, 0, 0, 0), LVSolarU * 2.0, 65.0 * solarPanelPowerFactor * 8.0,
+            0.01, Math.PI / 2.0, Math.PI / 2.0
+        )
+        transparentNodeItem.addDescriptor(3 + (id shl 6), bigSolarPanel)
+
+        // 2x3 Rotating Solar Panel
+        val bigRotSolarPanel = SolarPanelDescriptor(
+            "2x3 Rotating Solar Panel", Eln.obj.getObj("bigSolarPanelrot"), stdCableRender200V,
+            GhostGroup().apply {
+                addRectangle(0, 1, 0, 0, -1, 1)
+                removeElement(0, 0, 0)
+            }, 1, 1, 1,
+            Coordinate(1, 0, 0, 0), LVSolarU * 2.0, 65.0 * solarPanelPowerFactor * 8.0,
+            0.01, Math.PI / 8.0 * 3.0, Math.PI / 8.0 * 5.0
+        )
+        transparentNodeItem.addDescriptor(4 + (id shl 6), bigRotSolarPanel)
     }
 
     @JvmStatic
@@ -1493,6 +1584,7 @@ object Descriptors {
         }
         teleporter.setGhostGroup(g)
         transparentNodeItem.addDescriptor(0 + (id shl 6), teleporter)
+
     }
 
     @JvmStatic
@@ -1503,11 +1595,21 @@ object Descriptors {
 
     @JvmStatic
     private fun registerFuelGenerator(transparentNodeItem: TransparentNodeItem, id: Int) {
-        val fuelGenerator = FuelGeneratorDescriptor(
-            "Fuel Generator", Eln.obj.getObj("fuelgenerator"),
-            lowVoltageCableDescriptor, 1000.0, Cable.LVU * 1.1, 1000.0
+        val fuelGeneratorTankCapacity = (20 * 60).toDouble()
+
+        val fuelGenerator50V = FuelGeneratorDescriptor(
+            "50V Fuel Generator", Eln.obj.getObj("fuelgenerator50v"),
+            lowVoltageCableDescriptor, fuelGeneratorPowerFactor * 300, LVU * 1.05, fuelGeneratorTankCapacity
         )
-        transparentNodeItem.addDescriptor(0 + (id shl 6), fuelGenerator)
+        transparentNodeItem.addDescriptor(1 + (id shl 6), fuelGenerator50V)
+
+        val fuelGenerator200V =
+            FuelGeneratorDescriptor(
+                "200V Fuel Generator", Eln.obj.getObj("fuelgenerator200v"),
+                mediumVoltageCableDescriptor, fuelGeneratorPowerFactor * 1500, MVU * 1.05,
+                fuelGeneratorTankCapacity
+            )
+        transparentNodeItem.addDescriptor(2 + (id shl 6), fuelGenerator200V)
     }
 
     @JvmStatic
@@ -1515,27 +1617,6 @@ object Descriptors {
         val poleObj = Eln.obj.getObj("utilitypole")
         val transformerObj = Eln.obj.getObj("transformator")
         val downlinkObj = Eln.obj.getObj("downlink")
-
-        // Utility Pole
-        val utilityPole = ElectricalPoleDescriptor(
-            "Utility Pole", poleObj,
-            "eln:textures/wire.png", highVoltageCableDescriptor, false
-        )
-        val poleGhost = GhostGroup().apply {
-            addElement(0, 1, 0)
-            addElement(0, 2, 0)
-            addElement(0, 3, 0)
-        }
-        utilityPole.setGhostGroup(poleGhost)
-        transparentNodeItem.addDescriptor(0 + (id shl 6), utilityPole)
-
-        // Utility Pole w/ DC-DC
-        val utilityPoleDCDC = ElectricalPoleDescriptor(
-            "Utility Pole w/DC-DC Converter", poleObj,
-            "eln:textures/wire.png", highVoltageCableDescriptor, true
-        )
-        utilityPoleDCDC.setGhostGroup(poleGhost)
-        transparentNodeItem.addDescriptor(1 + (id shl 6), utilityPoleDCDC)
 
         // Downlink (subId=2)
         if (downlinkObj != null) {
@@ -1558,6 +1639,29 @@ object Descriptors {
             gridTransformer.setGhostGroup(g)
             transparentNodeItem.addDescriptor(3 + (id shl 6), gridTransformer)
         }
+
+        val poleGhost = GhostGroup().apply {
+            addElement(0, 1, 0)
+            addElement(0, 2, 0)
+            addElement(0, 3, 0)
+        }
+
+        // Utility Pole (subId=4)
+        val utilityPole = ElectricalPoleDescriptor(
+            "Utility Pole", poleObj,
+            "eln:textures/wire.png", highVoltageCableDescriptor, false
+        )
+        utilityPole.setGhostGroup(poleGhost)
+        transparentNodeItem.addDescriptor(4 + (id shl 6), utilityPole)
+
+        // Utility Pole w/ DC-DC (subId=5)
+        val utilityPoleDCDC = ElectricalPoleDescriptor(
+            "Utility Pole w/DC-DC Converter", poleObj,
+            "eln:textures/wire.png", highVoltageCableDescriptor, true
+        )
+        utilityPoleDCDC.setDefaultIcon("utilitypolewdcdcconverter")
+        utilityPoleDCDC.setGhostGroup(poleGhost)
+        transparentNodeItem.addDescriptor(5 + (id shl 6), utilityPoleDCDC)
     }
 
     @JvmStatic

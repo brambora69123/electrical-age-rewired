@@ -1,6 +1,6 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "eln:blocks/rubber"
+        "layer0": "eln:items/rubber"
     }
 }

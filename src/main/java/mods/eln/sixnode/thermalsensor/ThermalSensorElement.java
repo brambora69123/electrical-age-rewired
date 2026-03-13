@@ -110,7 +110,7 @@ public class ThermalSensorElement extends SixNodeElement {
     @Override
     public ThermalLoad getThermalLoad(LRDU lrdu) {
         if (!descriptor.temperatureOnly) {
-            if (getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId) != null) {
+            if (!getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId).isEmpty()) {
                 if (front.left() == lrdu) return thermalLoad;
                 if (front.right() == lrdu) return thermalLoad;
             }
@@ -123,7 +123,7 @@ public class ThermalSensorElement extends SixNodeElement {
     @Override
     public int getConnectionMask(LRDU lrdu) {
         if (!descriptor.temperatureOnly) {
-            if (getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId) != null) {
+            if (!getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId).isEmpty()) {
                 if (front.left() == lrdu) return NodeBase.maskThermal;
                 if (front.right() == lrdu) return NodeBase.maskThermal;
             }

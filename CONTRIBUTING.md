@@ -4,72 +4,44 @@ This is an open source project. We appreciate any help from the community to imp
 
 ### Bugs or ideas for new items
 
-Did you found a bug or do you have an idea how to improve the mod? We are happy to hear from you.
+Did you find a bug or do you have an idea how to improve the mod? We are happy to hear from you.
 
-- [Discord](https://discord.gg/YjK2JAD)
+- [Discord](https://discord.gg/USruYk7pjW)
 - [Bug Tracker](https://github.com/brambora69123/electrical-age-rewired/issues)
 
-Contributions via [pull request](https://github.com/brambora69123/electrical-age-rewired/pulls),
-and [bug reports](https://github.com/brambora69123/electrical-age-rewired/issues) are welcome!
-Please submit your pull request to the `develop` branch and use the GitHub issue tracker to report issues.
+Contributions via [pull request](https://github.com/brambora69123/electrical-age-rewired/pulls) and [bug reports](https://github.com/brambora69123/electrical-age-rewired/issues) are welcome!
+Please submit your pull requests to the **main** branch and use the GitHub issue tracker to report issues.
 
 ### Translations
 
-Is the mod not available in your language or are some translations missing?
-Well you can change that by adding or modifying a translation:
+Is the mod not available in your language or are some translations missing? You can change that by adding or modifying a translation.
 
-We use Transifex as localization platform. Create an account and ask to join the
-[ELN Team](https://www.transifex.com/electrical-age/eln/) on Transifex to translate the mod into your language. No
-coding skills are required at all.
+Some translation strings might contain placeholders for runtime arguments in order to include numbers or other objects into the sentence. These are identified by **%N$**, where *N* is the number of the argument. A translation string should include these placeholders at the appropriate position in the text.
 
-Some translation strings might contain placeholders for runtime arguments in order to include numbers or other runtime
-objects into the sentence. These are identified by **%N$** whereas *N* is the number of the argument in the argument
-list (at runtime). A translation string should include these placeholders too at the appropriate position in the text.
+You can easily add new languages by copying the en-US.lang, and translating the **right** side (right to equals).
+
+---
 
 # Development
 
-The default branch for the Electrical Age source repository on github is **"master"**, while there is another important
-branch called **"develop"**. Each of them serves his own purpose.
+We follow a modern, streamlined development workflow centered around a single source of truth.
 
-### master branch
-The **"master"** branch is a stable branch, and gets updated only on releases. Whenever people checkout the **"master"**
-branch, they get the source code of the latest release of the Electrical Age mod.
+### The Main Branch
+The **main** branch is the default branch for the Electrical Age source repository.
+- All active development happens here.
+- Pull requests should always be targeted against the **main** branch.
+- If you want the "bleeding edge" version of the mod to build yourself, this is the branch to use.
 
-### develop branch
-The **"develop"** branch, is where commits during development are integrated into. It is where the Electrical Age team
-pushes or merges their actual changes together and where contributions from the community (Pull requests) are
-integrated into the development version of the mod. Anyone who wish to try the cutting edge version of Electrical Age
-can download the develop branch and build the mod himself.
+### Releases and Tagging
+Instead of maintaining a separate "stable" branch, we use **Git Tags** to mark specific points in time when the code is stable and ready for public use.
 
-Pull requests are always merged into the **"develop"** branch. If you are willing to contribute, make sure sending us
-pull requests against the develop branch but not the *master* branch. Unlike a lot of projects **"develop"** is the main branch on GitHub, so this is the default if you don't go out of your way to change it.
+- **Stable Releases:** When the community and maintainers agree the `main` branch is in a good state, we create a new release and tag it (e.g., `v1.2.0`).
+- **Hotfixes:** If a critical bug is found in a release, we fix it on `main` and create a new minor version tag.
 
+### Contribution Workflow
+1. **Fork** the repository and create a local feature branch for your changes.
+2. Ensure your code is up to date with the current **main** branch.
+3. Submit a **Pull Request** to the **main** branch.
+4. Once reviewed and merged, your changes will be part of the next tagged release.
 
-### GIT Flow
-They are named *master* and *develop* because most of the core developers adapt the git flow convention when working
-on Electrical Age. When working on a feature that is likely taking quite some time to finish, a local feature branch is
-created, and not necessarily pushed to the github. This way, when there are pending pull requests, they do not have to
-wait too long, since they can be merged into develop branch first.
-
-An introduction of git-flow can be found [here](http://nvie.com/posts/a-successful-git-branching-model/) or
-[here](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow).
-
-You do not necessarily have to adopt git-flow for yourself in order to contribute to the mod, as long as your changes
- use the branch **"develop"** as a base and the pull request is against the **"develop"** branch, we will be able
-  to integrate your changes easily.
-
-#### In short for EA:
-
-- Features get developed on **feature branches**, either in your local repository or pushed to github. Feature branches
-can be rebased.
-- Once ready, **feature branches** are PR'd to **develop**.
-- When the EA team wants to make a release, **develop** is branched into a **release branch**. Any necessary
-stabilization works happen there; **develop** is never frozen, and efforts to PR in **feature branches** should not
-stop just because a release is happening.
-- When a release is made, the **release branch** is pushed to **master** and **master** is tagged at that point.
-- If hotfixes need to be made, then they can be made on the **release branch**. Anything that also applies to the
-**development branch** is first committed there, then cherry-picked to the **release branch**. The **release branch**
-is then pushed to **master** (again), and tagged (again), going from e.g. 0.52.0 to 0.52.1.
-- **develop**, **master** and the **release branches** are all protected; no rebasing happens there.
-- If you want to test multiple features together, you should still develop them separately. You can create a separate combined branch in your own repository that you regularly merge the feature branches into. Do not attempt to PR the combo branch.
-- If you want to develop one feature on top of another, then make sure you PR the 'base' feature before the derived one. If you send us a too-large PR we will ask you to chop it up.
+> **Note:** For very large features, please consider breaking them into smaller, logical PRs. This makes it much easier for our team to review and integrate your work quickly.

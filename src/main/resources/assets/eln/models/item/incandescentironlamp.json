@@ -1,7 +1,0 @@
-{
-    "parent": "item/generated",
-    "textures": {
-        "layer0": "eln:voltages/low",
-        "layer1": "eln:items/incandescentironlamp"
-    }
-}

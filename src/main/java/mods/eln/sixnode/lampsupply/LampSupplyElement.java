@@ -195,7 +195,7 @@ public class LampSupplyElement extends SixNodeElement {
 
     @Override
     public ElectricalLoad getElectricalLoad(LRDU lrdu) {
-        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId) == null) return null;
+        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId).isEmpty()) return null;
         if (front == lrdu) return powerLoad;
         return null;
     }
@@ -207,7 +207,7 @@ public class LampSupplyElement extends SixNodeElement {
 
     @Override
     public int getConnectionMask(LRDU lrdu) {
-        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId) == null) return 0;
+        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId).isEmpty()) return 0;
         if (front == lrdu) return NodeBase.maskElectricalPower;
         return 0;
     }
@@ -327,7 +327,7 @@ public class LampSupplyElement extends SixNodeElement {
 
     void setupFromInventory() {
         ItemStack cableStack = getInventory().getStackInSlot(LampSupplyContainer.cableSlotId);
-        if (cableStack != null) {
+        if (!cableStack.isEmpty()) {
             ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack);
             if (desc != null) {
                 desc.applyTo(powerLoad);
@@ -409,6 +409,6 @@ public class LampSupplyElement extends SixNodeElement {
 
     private int getRange(LampSupplyDescriptor desc, IInventory inventory2) {
         ItemStack stack = inventory2.getStackInSlot(LampSupplyContainer.cableSlotId);
-        return desc.range + (stack == null ? 0 : stack.getCount());
+        return desc.range + (stack.isEmpty() ? 0 : stack.getCount());
     }
 }

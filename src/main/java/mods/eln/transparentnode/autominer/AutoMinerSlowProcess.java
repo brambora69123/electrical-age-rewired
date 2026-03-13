@@ -2,7 +2,7 @@ package mods.eln.transparentnode.autominer;
 
 import mods.eln.Eln;
 import mods.eln.init.Config;
-import mods.eln.init.ElnOreBlock;
+import mods.eln.init.ModBlock;
 import mods.eln.item.ElectricalDrillDescriptor;
 import mods.eln.item.MiningPipeDescriptor;
 import mods.eln.item.electricalitem.OreColorMapping;
@@ -400,7 +400,10 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         IBlockState state = chunk.getBlockState(coordinate.pos);
         Block block = state.getBlock();
         if (block instanceof BlockOre) return true;
-        if (block instanceof ElnOreBlock) return true;
+        if (block == ModBlock.copperOreBlock) return true;
+        if (block == ModBlock.leadOreBlock) return true;
+        if (block == ModBlock.tungstenOreBlock) return true;
+        if (block == ModBlock.cinnabarOreBlock) return true;
         if (block instanceof BlockRedstoneOre) return true;
 
 

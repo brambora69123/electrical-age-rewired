@@ -113,11 +113,11 @@ public class BatteryElement extends TransparentNodeElement {
     }
 
     public boolean hasOverVoltageProtection() {
-        return getInventory().getStackInSlot(0) != null;
+        return !getInventory().getStackInSlot(0).isEmpty();
     }
 
     public boolean hasOverHeatingProtection() {
-        return getInventory().getStackInSlot(1) != null;
+        return !getInventory().getStackInSlot(1).isEmpty();
     }
 
     @Override

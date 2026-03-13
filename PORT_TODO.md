@@ -1,5 +1,7 @@
 # Porting TODO List (from age-series/ElectricalAge 1.7.10 Fork)
 
+We might want to try merge v1.24.8, and we can pick what we want, and adjust it to our codebase.
+
 This list tracks features, bugfixes, and optimizations from the actively maintained 1.7.10 fork (up to v1.24.8) that need to be ported to this 1.12.2 version.
 
 ## 🔴 CRITICAL: Simulation & Logic Fixes
@@ -29,7 +31,7 @@ This list tracks features, bugfixes, and optimizations from the actively maintai
     - [ ] Horizontal Trackbars.
     - [ ] Multilanguage Tutorial Signs.
     - [ ] Expanded WAILA/Hwyla tooltips (Matrix debugging info).
-- [ ] **Autominer Improvements:** Output to any inventory (not just vanilla chests) and "full chest" logic.
+- [x] **Autominer Improvements:** Output to any inventory (not just vanilla chests) and "full chest" logic.
 - [ ] **Sound System:** Client-side looped sounds with pitch/volume shifting based on machine state.
 
 ## 🔵 Technical & Build (Reference Only)

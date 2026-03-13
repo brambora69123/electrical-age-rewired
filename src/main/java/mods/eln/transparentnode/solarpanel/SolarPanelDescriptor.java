@@ -95,12 +95,12 @@ public class SolarPanelDescriptor extends TransparentNodeDescriptor {
 
     @Override
     public Direction getFrontFromPlace(Direction side, EntityLivingBase entityLiving) {
-        if (canRotate && groundCoordinate != null) {
-            // That is, if this isn't a 1x1 panel.
-            return Direction.ZN;
-        } else {
-            return super.getFrontFromPlace(side, entityLiving);
+        Direction front = super.getFrontFromPlace(side, entityLiving);
+        if (groundCoordinate != null) {
+            // For large panels, restrict to Z axis (North/South) to allow flipping but prevent 90-degree rotation
+            if (front == Direction.XN || front == Direction.XP) return Direction.ZN;
         }
+        return front;
     }
 
     void draw(float alpha, Direction front) {

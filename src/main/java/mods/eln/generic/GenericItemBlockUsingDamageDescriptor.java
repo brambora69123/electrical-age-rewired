@@ -14,6 +14,7 @@ public class GenericItemBlockUsingDamageDescriptor {
 
     public String IconName;
     public String name;
+    public mods.eln.misc.VoltageLevelColor voltageLevelColor = mods.eln.misc.VoltageLevelColor.None;
 
     public Item parentItem;
     public int parentItemDamage;

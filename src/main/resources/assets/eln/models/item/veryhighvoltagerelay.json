@@ -1,6 +1,7 @@
 {
     "parent": "item/generated",
     "textures": {
-        "layer0": "eln:blocks/veryhighvoltagerelay"
+        "layer0": "eln:voltages/veryhigh",
+        "layer1": "eln:blocks/veryhighvoltagerelay"
     }
 }

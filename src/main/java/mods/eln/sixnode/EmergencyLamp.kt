@@ -37,7 +37,7 @@ class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor
 
     init {
         voltageLevelColor = VoltageLevelColor.fromCable(cable)
-        setDefaultIcon("emergencylamp")
+        setDefaultIcon(name)
     }
 
     fun draw(onCeiling: Boolean = false, on: Boolean = false, mirrorSign: Boolean = false) {

@@ -529,9 +529,15 @@ class Eln {
             }
 
             // Add Eln ores
-            val oreBlock = mods.eln.init.ModBlock.oreBlock
-            for (meta in 0..3) {
-                oreScannerConfig.add(mods.eln.item.electricalitem.PortableOreScannerItem.RenderStorage.OreScannerConfigElement(net.minecraft.block.Block.getIdFromBlock(oreBlock) + (meta shl 12), 0.15f))
+            val elnOres = mapOf(
+                mods.eln.init.ModBlock.copperOreBlock to 0.15f,
+                mods.eln.init.ModBlock.leadOreBlock to 0.15f,
+                mods.eln.init.ModBlock.tungstenOreBlock to 0.15f,
+                mods.eln.init.ModBlock.cinnabarOreBlock to 0.15f
+            )
+
+            for ((block, factor) in elnOres) {
+                oreScannerConfig.add(mods.eln.item.electricalitem.PortableOreScannerItem.RenderStorage.OreScannerConfigElement(net.minecraft.block.Block.getIdFromBlock(block), factor))
             }
 
             // NOW update the mapping table

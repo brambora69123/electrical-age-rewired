@@ -60,8 +60,11 @@ object ElnContent {
     // =====================================================================
     // Block instances - created in preInit via ModBlock
     // =====================================================================
-    val oreBlock get() = ModBlock.oreBlock
-    val rubberBlock get() = ModBlock.rubberBlock
+    val copperOreBlock get() = ModBlock.copperOreBlock
+    val leadOreBlock get() = ModBlock.leadOreBlock
+    val tungstenOreBlock get() = ModBlock.tungstenOreBlock
+    val cinnabarOreBlock get() = ModBlock.cinnabarOreBlock
+    
     val flubberBlock get() = ModBlock.flubberBlock
     val ghostBlock get() = ModBlock.ghostBlock
     val sixNodeBlock get() = ModBlock.sixNodeBlock
@@ -78,14 +81,23 @@ object ElnContent {
         ModBlock.init()
 
         // Add blocks to registration list
+        // Non-ore blocks first
         registeredBlocks.addAll(
             listOf(
-                ModBlock.oreBlock,
-                ModBlock.rubberBlock,
                 ModBlock.flubberBlock,
                 ModBlock.ghostBlock,
                 ModBlock.sixNodeBlock,
                 ModBlock.transparentNodeBlock
+            )
+        )
+        
+        // Ore blocks last to show up at bottom of creative menu
+        registeredBlocks.addAll(
+            listOf(
+                ModBlock.copperOreBlock,
+                ModBlock.leadOreBlock,
+                ModBlock.tungstenOreBlock,
+                ModBlock.cinnabarOreBlock
             )
         )
 
@@ -124,31 +136,31 @@ object ElnContent {
         
         // Copper Tools
         val swordCopper = net.minecraft.item.ItemSword(Item.ToolMaterial.IRON).apply {
-            setTranslationKey("eln.copper_sword")
+            setTranslationKey("copper_sword")
             setRegistryName(Eln.MODID, "copper_sword")
             creativeTab = tab
         }
         Eln.swordCopper = swordCopper
         val hoeCopper = net.minecraft.item.ItemHoe(Item.ToolMaterial.IRON).apply {
-            setTranslationKey("eln.copper_hoe")
+            setTranslationKey("copper_hoe")
             setRegistryName(Eln.MODID, "copper_hoe")
             creativeTab = tab
         }
         Eln.hoeCopper = hoeCopper
         val shovelCopper = net.minecraft.item.ItemSpade(Item.ToolMaterial.IRON).apply {
-            setTranslationKey("eln.copper_shovel")
+            setTranslationKey("copper_shovel")
             setRegistryName(Eln.MODID, "copper_shovel")
             creativeTab = tab
         }
         Eln.shovelCopper = shovelCopper
         val pickaxeCopper = mods.eln.item.ItemPickaxeEln(Item.ToolMaterial.IRON).apply {
-            setTranslationKey("eln.copper_pickaxe")
+            setTranslationKey("copper_pickaxe")
             setRegistryName(Eln.MODID, "copper_pickaxe")
             creativeTab = tab
         }
         Eln.pickaxeCopper = pickaxeCopper
         val axeCopper = mods.eln.item.ItemAxeEln(Item.ToolMaterial.IRON).apply {
-            setTranslationKey("eln.copper_axe")
+            setTranslationKey("copper_axe")
             setRegistryName(Eln.MODID, "copper_axe")
             creativeTab = tab
         }
@@ -170,7 +182,7 @@ object ElnContent {
         val helmetCopper = mods.eln.generic.genericArmorItem(
             copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.HEAD
         ).apply {
-            setTranslationKey("eln.copper_helmet")
+            setTranslationKey("copper_helmet")
             setRegistryName(Eln.MODID, "copper_helmet")
             creativeTab = tab
         }
@@ -178,7 +190,7 @@ object ElnContent {
         val plateCopper = mods.eln.generic.genericArmorItem(
             copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.CHEST
         ).apply {
-            setTranslationKey("eln.copper_chestplate")
+            setTranslationKey("copper_chestplate")
             setRegistryName(Eln.MODID, "copper_chestplate")
             creativeTab = tab
         }
@@ -186,7 +198,7 @@ object ElnContent {
         val legsCopper = mods.eln.generic.genericArmorItem(
             copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.LEGS
         ).apply {
-            setTranslationKey("eln.copper_leggings")
+            setTranslationKey("copper_leggings")
             setRegistryName(Eln.MODID, "copper_leggings")
             creativeTab = tab
         }
@@ -194,7 +206,7 @@ object ElnContent {
         val bootsCopper = mods.eln.generic.genericArmorItem(
             copperArmorMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.FEET
         ).apply {
-            setTranslationKey("eln.copper_boots")
+            setTranslationKey("copper_boots")
             setRegistryName(Eln.MODID, "copper_boots")
             creativeTab = tab
         }
@@ -219,7 +231,7 @@ object ElnContent {
             eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.HEAD,
             3 * energyPerDamage, 250.0, 2.0 / 20.0, 2.0 * energyPerDamage, energyPerDamage
         ).apply {
-            setTranslationKey("eln.ecoal_helmet")
+            setTranslationKey("ecoal_helmet")
             setRegistryName(Eln.MODID, "ecoal_helmet")
             creativeTab = tab
         }
@@ -228,7 +240,7 @@ object ElnContent {
             eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.CHEST,
             8 * energyPerDamage, 250.0, 6.0 / 20.0, 6.0 * energyPerDamage, energyPerDamage
         ).apply {
-            setTranslationKey("eln.ecoal_chestplate")
+            setTranslationKey("ecoal_chestplate")
             setRegistryName(Eln.MODID, "ecoal_chestplate")
             creativeTab = tab
         }
@@ -237,7 +249,7 @@ object ElnContent {
             eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.LEGS,
             7 * energyPerDamage, 250.0, 5.0 / 20.0, 5.0 * energyPerDamage, energyPerDamage
         ).apply {
-            setTranslationKey("eln.ecoal_leggings")
+            setTranslationKey("ecoal_leggings")
             setRegistryName(Eln.MODID, "ecoal_leggings")
             creativeTab = tab
         }
@@ -246,7 +258,7 @@ object ElnContent {
             eCoalMaterial, 2, net.minecraft.inventory.EntityEquipmentSlot.FEET,
             3 * energyPerDamage, 250.0, 2.0 / 20.0, 2.0 * energyPerDamage, energyPerDamage
         ).apply {
-            setTranslationKey("eln.ecoal_boots")
+            setTranslationKey("ecoal_boots")
             setRegistryName(Eln.MODID, "ecoal_boots")
             creativeTab = tab
         }
@@ -287,14 +299,17 @@ object ElnContent {
             if (block === ModBlock.sixNodeBlock || block === ModBlock.transparentNodeBlock) {
                 continue // These are registered separately below
             }
-            
-            val itemBlock = if (block === ModBlock.oreBlock) {
-                ElnItemBlockOre(block)
-            } else {
-                net.minecraft.item.ItemBlock(block)
-            }
-            
+
+            val itemBlock = net.minecraft.item.ItemBlock(block)
             itemBlock.registryName = block.registryName
+
+            // Explicitly set creative tab based on block type
+            if (block === ModBlock.flubberBlock || block === ModBlock.ghostBlock) {
+                itemBlock.creativeTab = null
+            } else {
+                itemBlock.creativeTab = Eln.Tab
+            }
+
             event.registry.register(itemBlock)
             Eln.logger.debug("Registered block item: ${itemBlock.registryName}")
         }
@@ -399,17 +414,10 @@ object ElnContent {
     @JvmStatic
     private fun initOreDictionary() {
         // Register ores for ore dictionary
-        if (Config.generateCopper) {
-            OreDictionary.registerOre("oreCopper", ItemStack(ModBlock.oreBlock, 1, 0))
-        }
-        if (Config.generateLead) {
-            OreDictionary.registerOre("oreLead", ItemStack(ModBlock.oreBlock, 1, 1))
-        }
-        if (Config.generateTungsten) {
-            OreDictionary.registerOre("oreTungsten", ItemStack(ModBlock.oreBlock, 1, 2))
-        }
-        // Cinnabar
-        OreDictionary.registerOre("oreCinnabar", ItemStack(ModBlock.oreBlock, 1, 3))
+        OreDictionary.registerOre("oreCopper", ItemStack(ModBlock.copperOreBlock))
+        OreDictionary.registerOre("oreLead", ItemStack(ModBlock.leadOreBlock))
+        OreDictionary.registerOre("oreTungsten", ItemStack(ModBlock.tungstenOreBlock))
+        OreDictionary.registerOre("oreCinnabar", ItemStack(ModBlock.cinnabarOreBlock))
 
         Eln.logger.info("Registered Electrical Age ore dictionary entries")
     }

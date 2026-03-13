@@ -164,7 +164,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         ItemStack itemStack;
         heatingCorpResistor.setState(powerOn);
         itemStack = inventory.getStackInSlot(heatingCorpSlotId);
-        if (itemStack == null || itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
+        if (itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             thermalRegulator.setRmin(MnaConst.highImpedance);
             voltageWatchdog.setUNominal(100000);
         } else {
@@ -179,7 +179,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         }
 
         itemStack = inventory.getStackInSlot(thermalRegulatorSlotId);
-        if (itemStack == null || itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
+        if (itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             thermalRegulator.setNone();
         } else {
             IRegulatorDescriptor element = ((GenericItemUsingDamage<IRegulatorDescriptor>) itemStack.getItem()).getDescriptor(itemStack);
@@ -205,7 +205,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
             stream.writeShort((int) thermalLoad.Tc);
 
             ItemStack stack;
-            if ((stack = inventory.getStackInSlot(inSlotId)) == null || stack.isEmpty()) {
+            if ((stack = inventory.getStackInSlot(inSlotId)).isEmpty()) {
                 stream.writeShort(-1);
                 stream.writeShort(-1);
             } else {
@@ -277,7 +277,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.Tc));
         ItemStack stack = inventory.getStackInSlot(heatingCorpSlotId);
-        if (stack != null && !stack.isEmpty()) {
+        if (!stack.isEmpty()) {
             info.put(I18N.tr("Heating element"), stack.getDisplayName());
         } else {
             info.put(I18N.tr("Heating element"), I18N.tr("None"));

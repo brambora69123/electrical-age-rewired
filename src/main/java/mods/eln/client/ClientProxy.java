@@ -67,13 +67,7 @@ public class ClientProxy extends CommonProxy {
             
             Item item = Item.getItemFromBlock(block);
             if (item != null) {
-                if (block == ModBlock.oreBlock) {
-                    // Ore block has variants (copper=0, lead=1)
-                    ModelLoader.setCustomModelResourceLocation(item, 0, new ModelResourceLocation(new ResourceLocation(Eln.MODID, "ore"), "variant=copper_ore"));
-                    ModelLoader.setCustomModelResourceLocation(item, 1, new ModelResourceLocation(new ResourceLocation(Eln.MODID, "ore"), "variant=lead_ore"));
-                } else {
-                    registerSimpleModel(item);
-                }
+                registerSimpleModel(item);
             }
         }
     }
