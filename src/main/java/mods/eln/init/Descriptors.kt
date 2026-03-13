@@ -1686,12 +1686,12 @@ object Descriptors {
     @JvmStatic
     private fun registerMechanical(transparentNodeItem: TransparentNodeItem, id: Int) {
         val stdGeneratorObj = Eln.obj.getObj("generator")
-        val turbineObj = Eln.obj.getObj("turbineb")
-        val gasTurbineObj = Eln.obj.getObj("GasTurbine")
-        val flywheelObj = Eln.obj.getObj("Flywheel")
-        val jointObj = Eln.obj.getObj("StraightJoint")
-        val jointHubObj = Eln.obj.getObj("JointHub")
-        val tachometerObj = Eln.obj.getObj("Tachometer")
+        val turbineObj = Eln.obj.getObj("turbine")
+        val gasTurbineObj = Eln.obj.getObj("gasturbine")
+        val flywheelObj = Eln.obj.getObj("flywheel")
+        val jointObj = Eln.obj.getObj("straightjoint")
+        val jointHubObj = Eln.obj.getObj("jointhub")
+        val tachometerObj = Eln.obj.getObj("tachometer")
 
         // Generators
         val generator50V = mods.eln.mechanical.GeneratorDescriptor(
