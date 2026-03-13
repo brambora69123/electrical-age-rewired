@@ -10,7 +10,6 @@ import mods.eln.node.Node;
 import mods.eln.node.NodeBlockEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.ISidedInventory;
@@ -19,8 +18,14 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.wrapper.InvWrapper;
+import net.minecraftforge.items.wrapper.SidedInvWrapper;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -157,9 +162,34 @@ public class TransparentNodeEntity extends NodeBlockEntity implements ISidedInve
         return 0;
     }
 
+    @Override
+    public boolean hasCapability(Capability<?> capability, @Nullable EnumFacing facing) {
+        if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+            return getSidedInventory() != null;
+        }
+        return super.hasCapability(capability, facing);
+    }
+
+    @Nullable
+    @Override
+    public <T> T getCapability(Capability<T> capability, @Nullable EnumFacing facing) {
+        if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+            ISidedInventory inventory = getSidedInventory();
+            if (inventory != null) {
+                if (facing != null) {
+                    return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.cast(new SidedInvWrapper(inventory, facing));
+                } else {
+                    return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.cast(new InvWrapper(inventory));
+                }
+            }
+        }
+        return super.getCapability(capability, facing);
+    }
+
+    @Nullable
     ISidedInventory getSidedInventory() {
         if (world.isRemote) {
-            if (elementRender == null) return FakeSideInventory.getInstance();
+            if (elementRender == null) return null;
             IInventory i = elementRender.getInventory();
             if (i instanceof ISidedInventory) {
                 return (ISidedInventory) i;
@@ -174,74 +204,89 @@ public class TransparentNodeEntity extends NodeBlockEntity implements ISidedInve
                 }
             }
         }
-        return FakeSideInventory.getInstance();
+        return null;
     }
 
     @Override
     public int getSizeInventory() {
-        return getSidedInventory().getSizeInventory();
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? 0 : inv.getSizeInventory();
     }
 
     @NotNull
     @Override
     public ItemStack getStackInSlot(int var1) {
-        return getSidedInventory().getStackInSlot(var1);
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? ItemStack.EMPTY : inv.getStackInSlot(var1);
     }
 
     @NotNull
     @Override
     public ItemStack decrStackSize(int var1, int var2) {
-        return getSidedInventory().decrStackSize(var1, var2);
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? ItemStack.EMPTY : inv.decrStackSize(var1, var2);
     }
 
     @NotNull
     @Override
     public ItemStack removeStackFromSlot(int var1) {
-        return getSidedInventory().removeStackFromSlot(var1);
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? ItemStack.EMPTY : inv.removeStackFromSlot(var1);
     }
 
     @Override
     public void setInventorySlotContents(int var1, @NotNull ItemStack var2) {
-        getSidedInventory().setInventorySlotContents(var1, var2);
+        ISidedInventory inv = getSidedInventory();
+        if (inv != null) inv.setInventorySlotContents(var1, var2);
     }
 
     @NotNull
     @Override
     public String getName() {
-        return getSidedInventory().getName();
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? "None" : inv.getName();
     }
 
     @Override
     public boolean hasCustomName() {
-        return getSidedInventory().hasCustomName();
+        ISidedInventory inv = getSidedInventory();
+        return inv != null && inv.hasCustomName();
     }
 
     @Override
     public int getInventoryStackLimit() {
-        return getSidedInventory().getInventoryStackLimit();
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? 0 : inv.getInventoryStackLimit();
     }
 
     @Override
     public boolean isEmpty() {
-        return getSidedInventory().isEmpty();
+        ISidedInventory inv = getSidedInventory();
+        return inv == null || inv.isEmpty();
     }
 
     @Override
     public boolean isUsableByPlayer(@NotNull EntityPlayer player) {
-        return getSidedInventory().isUsableByPlayer(player);
+        ISidedInventory inv = getSidedInventory();
+        return inv != null && inv.isUsableByPlayer(player);
     }
 
     @Override
     public void openInventory(EntityPlayer player) {
-        getSidedInventory().openInventory(player);
+        ISidedInventory inv = getSidedInventory();
+        if (inv != null) inv.openInventory(player);
     }
 
     @Override
-    public void closeInventory(EntityPlayer player) { getSidedInventory().closeInventory(player); }
+    public void closeInventory(EntityPlayer player) {
+        ISidedInventory inv = getSidedInventory();
+        if (inv != null) inv.closeInventory(player);
+    }
 
     @Override
     public boolean isItemValidForSlot(int var1, ItemStack stack) {
-        return getSidedInventory().isItemValidForSlot(var1, stack);
+        ISidedInventory inv = getSidedInventory();
+        return inv != null && inv.isItemValidForSlot(var1, stack);
     }
 
     @Override
@@ -264,16 +309,19 @@ public class TransparentNodeEntity extends NodeBlockEntity implements ISidedInve
 
     @Override
     public int[] getSlotsForFace(@NotNull EnumFacing facing) {
-        return getSidedInventory().getSlotsForFace(facing);
+        ISidedInventory inv = getSidedInventory();
+        return inv == null ? new int[0] : inv.getSlotsForFace(facing);
     }
 
     @Override
     public boolean canInsertItem(int var1, @NotNull ItemStack stack, @NotNull EnumFacing facing) {
-        return getSidedInventory().canInsertItem(var1, stack, facing);
+        ISidedInventory inv = getSidedInventory();
+        return inv != null && inv.canInsertItem(var1, stack, facing);
     }
 
     @Override
     public boolean canExtractItem(int var1, @NotNull ItemStack stack, @NotNull EnumFacing facing) {
-        return getSidedInventory().canExtractItem(var1, stack, facing);
+        ISidedInventory inv = getSidedInventory();
+        return inv != null && inv.canExtractItem(var1, stack, facing);
     }
 }
