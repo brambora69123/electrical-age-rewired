@@ -8,7 +8,9 @@ Electrical Age is a Minecraft Mod offering the ability to perform large-scale in
 
 We don't have a Wiki yet, but you can join our Discord server!
 
-![Discord](https://img.shields.io/discord/1407039747397779566?style=for-the-badge)
+<a href="https://discord.gg/USruYk7pjW">
+<img src="https://img.shields.io/discord/1407039747397779566?style=for-the-badge" alt="Discord">
+</a>
 
 ## Note on this port
 Although we are already through the way with a lot of stuff, like the sim, it's largely unfinished. Expect bugs, missing
