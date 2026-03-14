@@ -126,7 +126,7 @@ public class PowerSocketElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotUIP(powerLoad.getU(), powerLoad.getCurrent());
+        return Utils.plotUIP(powerLoad.getVoltage(), powerLoad.getCurrent());
     }
 
     @Override

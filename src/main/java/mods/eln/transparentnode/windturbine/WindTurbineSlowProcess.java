@@ -32,7 +32,7 @@ class WindTurbineSlowProcess implements IProcess, INBTTReady {
     }
 
     double getWind() {
-        return Math.abs(localWind + Utils.getWind(turbine.node.coordinate.getDimension(), turbine.node.coordinate.pos.getY() +
+        return Math.abs(localWind + Utils.getWind(turbine.node.coordinate.dimension, turbine.node.coordinate.y +
             turbine.descriptor.offY)) * environmentWindFactor;
     }
 
@@ -62,8 +62,10 @@ class WindTurbineSlowProcess implements IProcess, INBTTReady {
             z2 = zc + d.rayZ;
 
             int blockBusyCount = -d.blockMalusSubCount;
-            if (turbine.node.coordinate.doesWorldExist()) {
+            boolean notInCache = false;
+            if (turbine.node.coordinate.getWorldExist()) {
                 World world = turbine.node.coordinate.world();
+                //IChunkProvider chunk = world.getChunkProvider();
 
                 for (int x = x1; x <= x2; x++) {
                     for (int y = y1; y <= y2; y++) {
@@ -111,8 +113,8 @@ class WindTurbineSlowProcess implements IProcess, INBTTReady {
 
         P = d.PfW.getValue(wind);
 
-        turbine.powerSource.setP(P);
-        turbine.powerSource.setUmax(d.maxVoltage);
+        turbine.powerSource.setPower(P);
+        turbine.powerSource.setMaximumVoltage(d.maxVoltage);
 
         counter++;
         if (counter % 20 == 0) {

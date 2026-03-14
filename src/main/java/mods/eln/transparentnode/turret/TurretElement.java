@@ -3,9 +3,9 @@ package mods.eln.transparentnode.turret;
 import mods.eln.Eln;
 import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Cable;
-import mods.eln.init.Config;
+import mods.eln.item.ConfigCopyToolDescriptor;
 import mods.eln.item.EntitySensorFilterDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -27,6 +27,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -34,7 +36,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TurretElement extends TransparentNodeElement {
+public class TurretElement extends TransparentNodeElement implements IConfigurable {
 
     public static final byte ToggleFilterMeaning = 1;
     public static final byte UnserializeChargePower = 2;
@@ -98,6 +100,10 @@ public class TurretElement extends TransparentNodeElement {
     }
 
     public void shoot() {
+        Coordinate lightSourceCoordinate = new Coordinate();
+        lightSourceCoordinate.copyFrom(coordinate());
+        lightSourceCoordinate.move(front);
+        LightBlockEntity.addLight(lightSourceCoordinate, 25, 2);
         if (simulation.shoot()) needPublish();
     }
 
@@ -119,8 +125,9 @@ public class TurretElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -130,13 +137,15 @@ public class TurretElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(load.getU(), load.getI());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(load.getVoltage(), load.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return null;
     }
 
@@ -146,9 +155,9 @@ public class TurretElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side,
+    public boolean onBlockActivated(EntityPlayer player, Direction side,
                                     float vx, float vy, float vz) {
-        return acceptingInventory.take(entityPlayer.getHeldItemMainhand());
+        return acceptingInventory.take(player.getCurrentEquippedItem());
     }
 
     @Override
@@ -196,8 +205,9 @@ public class TurretElement extends TransparentNodeElement {
         return acceptingInventory.getInventory();
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new TurretContainer(player, acceptingInventory.getInventory());
     }
 
@@ -230,6 +240,7 @@ public class TurretElement extends TransparentNodeElement {
         return unserializeNulldId;
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
@@ -263,10 +274,30 @@ public class TurretElement extends TransparentNodeElement {
             }
         }
 
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        if (Eln.wailaEasyMode) {
             info.put(I18N.tr("Charge level"),
                 Utils.plotPercent("", energyBuffer / descriptor.getProperties().impulseEnergy));
         }
         return info;
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("chargePower")) {
+            chargePower = compound.getDouble("chargePower");
+            needPublish();
+        }
+        if(compound.hasKey("filterInvert")) {
+            filterIsSpare = compound.getBoolean("filterInvert");
+        }
+        if(ConfigCopyToolDescriptor.readGenDescriptor(compound, "filter", getInventory(), 0, invoker))
+            needPublish();
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        compound.setDouble("chargePower", chargePower);
+        compound.setBoolean("filterInvert", filterIsSpare);
+        ConfigCopyToolDescriptor.writeGenDescriptor(compound, "filter", getInventory().getStackInSlot(0));
     }
 }

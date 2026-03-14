@@ -3,7 +3,7 @@ package mods.eln.mechanical
 import mods.eln.init.Config
 import mods.eln.fluid.FuelRegistry
 import mods.eln.fluid.PreciseElementFluidHandler
-import mods.eln.init.Cable
+import mods.eln.i18n.I18N.tr
 import mods.eln.misc.*
 import mods.eln.node.NodeBase
 import mods.eln.node.published
@@ -18,6 +18,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.util.*
 
 abstract class TurbineDescriptor(baseName: String, obj: Obj3D) :
     SimpleShaftDescriptor(baseName, TurbineElement::class, TurbineRender::class, EntityMetaTag.Fluid) {
@@ -41,11 +42,12 @@ abstract class TurbineDescriptor(baseName: String, obj: Obj3D) :
         fluidTypes.map { FuelRegistry.heatEnergyPerMilliBucket(it) * fluidConsumption }
     }
     val maxFluidPower: Double by lazy {
-        power.max() ?: 0.0
+        power.max()
     }
     val minFluidPower: Double by lazy {
-        power.min() ?: 0.0
+        power.min()
     }
+    open val displayFluidUsageInBuckets = false
 
     override val obj = obj
     override val static = arrayOf(
@@ -58,27 +60,35 @@ abstract class TurbineDescriptor(baseName: String, obj: Obj3D) :
     )
 
     override fun addInformation(stack: ItemStack, player: EntityPlayer, list: MutableList<String>, par4: Boolean) {
-        list.add("Converts ${fluidDescription} into mechanical energy.")
-        list.add("Nominal usage ->")
-        list.add("  ${fluidDescription.capitalize()} input: ${fluidConsumption} mB/s")
+        list.add(tr("Converts %1$ into mechanical energy.",fluidDescription))
+        list.add(tr("Nominal usage ->"))
+        val formattedRate = formatFluidRate(fluidConsumption)
+        list.add("  "+tr("%1$ input: %2$",fluidDescription.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },formattedRate))
         if (power.isEmpty()) {
-            list.add("  No valid fluids for this turbine!")
+            list.add("  "+tr("No valid fluids for this turbine!"))
         } else if (power.size == 1) {
-            list.add(Utils.plotPower("  Power out: ", power[0]))
+            list.add(Utils.plotPower(tr("  Power out: "),power[0]))
         } else {
-            list.add("  Power out: ${Utils.plotPower(minFluidPower)}- ${Utils.plotPower(maxFluidPower)}")
+            list.add("  "+tr("Power out: %1$- %2$",Utils.plotPower(minFluidPower),Utils.plotPower(maxFluidPower)))
         }
-        list.add(Utils.plotRads("  Optimal rads: ", optimalRads))
-        list.add(Utils.plotRads("Max rads:  ", absoluteMaximumShaftSpeed))
+        list.add(Utils.plotRads(tr("  Optimal rads: "), optimalRads))
+        list.add(Utils.plotRads(tr("Max rads:  "),absoluteMaximumShaftSpeed))
+
+    }
+
+    open fun formatFluidRate(rate: Float): String {
+        val scaled = if (displayFluidUsageInBuckets) rate / 1000f else rate
+        val unit = if (displayFluidUsageInBuckets) "B/s" else "mB/s"
+        return Utils.plotValue(scaled.toDouble()) + " " + unit
     }
 }
 
-class SteamTurbineDescriptor(baseName: String, obj: Obj3D) :
+class SteamTurbineDescriptor(baseName: String, obj: Obj3D, private val capacityScale: Float = 1f) :
     TurbineDescriptor(baseName, obj) {
     // Steam turbines are for baseload.
     override val inertia = 20f
     // Computed to equal a single 36LP Railcraft boiler, or half of a 36HP.
-    override val fluidConsumption = 7200f
+    override val fluidConsumption = 7200f * capacityScale
     // Computed to equal what you'd get from Railcraft steam engines, plus a small
     // bonus because you're using Electrical Age you crazy person you.
     // This pretty much fills up a VHV line. The generator drag gives us a bit of leeway.
@@ -87,15 +97,16 @@ class SteamTurbineDescriptor(baseName: String, obj: Obj3D) :
     // Steam turbines can, just barely, be started without power.
     override val efficiencyCurve = 1.1f
     override val sound = "eln:steam_turbine"
+    override val displayFluidUsageInBuckets = true
 }
 
-class GasTurbineDescriptor(basename: String, obj: Obj3D) :
+class GasTurbineDescriptor(basename: String, obj: Obj3D, private val capacityScale: Float = 1f) :
     TurbineDescriptor(basename, obj) {
     // The main benefit of gas turbines.
     override val inertia = 5f
     // Provides about 8kW of power, given gasoline.
     // Less dense fuels will be proportionally less effective.
-    override val fluidConsumption = 4f
+    override val fluidConsumption = 4f * capacityScale
     override val fluidDescription = "gasoline"
     // It runs on puns.
     override val fluidTypes = FuelRegistry.gasolineList + FuelRegistry.gasList
@@ -147,12 +158,12 @@ class TurbineElement(node: TransparentNode, desc_: TransparentNodeDescriptor) :
             volume = power / desc.maxFluidPower.toFloat()
         }
 
-        override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
+        override fun readFromNBT(nbt: NBTTagCompound, str: String) {
             rc.readFromNBT(nbt, str)
         }
 
-        override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-            return rc.writeToNBT(nbt, str)
+        override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+            rc.writeToNBT(nbt, str)
         }
     }
 
@@ -165,15 +176,14 @@ class TurbineElement(node: TransparentNode, desc_: TransparentNodeDescriptor) :
     override fun getFluidHandler() = tank
 
     override fun getElectricalLoad(side: Direction, lrdu: LRDU) = throttle
-    override fun getThermalLoad(side: Direction?, lrdu: LRDU?) = null
+    override fun getThermalLoad(side: Direction, lrdu: LRDU) = null
     override fun getConnectionMask(side: Direction, lrdu: LRDU): Int {
         if (lrdu == LRDU.Down && (side == front || side == front.back())) return NodeBase.maskElectricalGate
         return 0
     }
 
-    override fun onBlockActivated(entityPlayer: EntityPlayer?, side: Direction?, vx: Float, vy: Float, vz: Float) = false
-
-    override fun thermoMeterString(side: Direction?) = Utils.plotPercent(" Eff:", efficiency.toDouble()) + fluidRate.toString() + "mB/s"
+    override fun thermoMeterString(side: Direction): String =
+        Utils.plotPercent(" Eff:", efficiency.toDouble()) + " " + desc.formatFluidRate(fluidRate)
 
     override fun writeToNBT(nbt: NBTTagCompound): NBTTagCompound? {
         super.writeToNBT(nbt)
@@ -189,13 +199,17 @@ class TurbineElement(node: TransparentNode, desc_: TransparentNodeDescriptor) :
 
     override fun getWaila(): Map<String, String> {
         var info = mutableMapOf<String, String>()
-        info.put("Speed", Utils.plotRads("", shaft.rads))
-        info.put("Energy", Utils.plotEnergy("", shaft.energy))
-        if (Config.wailaEasyMode) {
-            info.put("Efficency", Utils.plotPercent("", efficiency.toDouble()))
-            info.put("Fuel usage", Utils.plotBuckets("", fluidRate / 1000.0) + "/s")
+        info.put(tr("Speed"), Utils.plotRads("", shaft.rads))
+        info.put(tr("Energy"), Utils.plotEnergy("", shaft.energy))
+        if (Eln.wailaEasyMode) {
+            info.put(tr("Efficiency"), Utils.plotPercent("", efficiency.toDouble()))
+            info.put(tr("Fuel usage"), desc.formatFluidRate(fluidRate))
         }
         return info
+    }
+
+    override fun coordonate(): Coordinate {
+        return node!!.coordinate
     }
 
     override fun networkSerialize(stream: DataOutputStream) {

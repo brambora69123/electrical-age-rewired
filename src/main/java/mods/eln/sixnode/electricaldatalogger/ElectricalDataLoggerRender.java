@@ -11,6 +11,8 @@ import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -23,6 +25,7 @@ public class ElectricalDataLoggerRender extends SixNodeElementRender {
     long time;
 
     public boolean pause;
+    public byte color = 15;
 
     DataLogs log = new DataLogs(ElectricalDataLoggerElement.logsSizeMax);
     boolean waitFistSync = true;
@@ -63,7 +66,7 @@ public class ElectricalDataLoggerRender extends SixNodeElementRender {
                 drawSignalPin(front.inverse(), new float[]{6.37f, 6.37f, 5.67f, 6.12f});
             }
         }
-        descriptor.draw(log, side, front, this.tileEntity.getPos().getX(), this.tileEntity.getPos().getZ());
+        descriptor.draw(log, side, front, this.getTileEntity().pos.getX(), this.getTileEntity().pos.getZ(), color);
     }
 
 	/*
@@ -82,6 +85,8 @@ public class ElectricalDataLoggerRender extends SixNodeElementRender {
             log.samplingPeriod = stream.readFloat();
             log.maxValue = stream.readFloat();
             log.minValue = stream.readFloat();
+            log.showZeroLine = stream.readBoolean();
+            color = stream.readByte();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -108,8 +113,9 @@ public class ElectricalDataLoggerRender extends SixNodeElementRender {
         }
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalDataLoggerGui(player, inventory, this);
     }
 }

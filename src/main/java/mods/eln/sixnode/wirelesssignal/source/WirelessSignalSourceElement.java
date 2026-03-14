@@ -1,5 +1,7 @@
 package mods.eln.sixnode.wirelesssignal.source;
 
+import mods.eln.i18n.I18N;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -16,14 +18,19 @@ import mods.eln.sixnode.wirelesssignal.tx.WirelessSignalTxElement.LightningGlitc
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
-public class WirelessSignalSourceElement extends SixNodeElement implements IWirelessSignalTx {
+public class WirelessSignalSourceElement extends SixNodeElement implements IWirelessSignalTx, IConfigurable {
 
     public static final HashMap<String, ArrayList<IWirelessSignalTx>> channelMap = new HashMap<String, ArrayList<IWirelessSignalTx>>();
 
@@ -71,18 +78,20 @@ public class WirelessSignalSourceElement extends SixNodeElement implements IWire
         }
     }
 
+    @org.jetbrains.annotations.Nullable
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(@NotNull LRDU lrdu, int mask) {
+        return null;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
-        return null;
-    }
-
-    @Override
-    public int getConnectionMask(LRDU lrdu) {
+    public int getConnectionMask(@NotNull LRDU lrdu) {
         return 0;
     }
 
@@ -91,9 +100,25 @@ public class WirelessSignalSourceElement extends SixNodeElement implements IWire
         return null;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
+    }
+
+    @NotNull
+    @Override
+    public Map<String, String> getWaila() {
+        Map<String, String> info = new HashMap<String, String>();
+        info.put(I18N.tr("Channel"), channel);
+        if(!descriptor.autoReset) {
+            if (state) {
+                info.put(I18N.tr("State"), "§a" + I18N.tr("On"));
+            }else{
+                info.put(I18N.tr("State"), "§c" + I18N.tr("Off"));
+            }
+        }
+        return info;
     }
 
     @Override
@@ -101,7 +126,7 @@ public class WirelessSignalSourceElement extends SixNodeElement implements IWire
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+    public boolean onBlockActivated(@NotNull EntityPlayer entityPlayer, @NotNull Direction side, float vx, float vy, float vz) {
         if (Utils.isPlayerUsingWrench(entityPlayer))
             return false;
 
@@ -126,7 +151,7 @@ public class WirelessSignalSourceElement extends SixNodeElement implements IWire
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         WirelessSignalTxElement.channelRemove(this);
 
         super.readFromNBT(nbt);
@@ -188,5 +213,25 @@ public class WirelessSignalSourceElement extends SixNodeElement implements IWire
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("wirelessChannels")) {
+            String newChannel = compound.getTagList("wirelessChannels", 8).getStringTagAt(0);
+            if(newChannel != null && newChannel != "") {
+                WirelessSignalTxElement.channelRemove(this);
+                channel = newChannel;
+                WirelessSignalTxElement.channelRegister(this);
+                needPublish();
+            }
+        }
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        NBTTagList list = new NBTTagList();
+        list.appendTag(new NBTTagString(channel));
+        compound.setTag("wirelessChannels", list);
     }
 }

@@ -7,12 +7,14 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class TeleporterPowerNode extends GhostNode {
 
     @Override
-    public void initializeFromThat(Direction front,
-                                   EntityLivingBase entityLiving, ItemStack itemStack) {
+    public void initializeFromThat(@NotNull Direction front,
+                                   @Nullable EntityLivingBase entityLiving, @Nullable ItemStack itemStack) {
         connect();
 
     }
@@ -26,13 +28,13 @@ public class TeleporterPowerNode extends GhostNode {
     }
 
     @Override
-    public ThermalLoad getThermalLoad(Direction directionA, LRDU lrduA) {
+    public ThermalLoad getThermalLoad(Direction directionA, LRDU lrduA, int mask) {
 
         return null;
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(Direction directionB, LRDU lrduB) {
+    public ElectricalLoad getElectricalLoad(Direction directionB, LRDU lrduB, int mask) {
         if (e == null) return null;
         return e.powerLoad;
     }

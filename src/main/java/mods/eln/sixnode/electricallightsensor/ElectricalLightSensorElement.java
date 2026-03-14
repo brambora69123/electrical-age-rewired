@@ -14,7 +14,8 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateOutput;
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
-import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,13 +42,14 @@ public class ElectricalLightSensorElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu.left()) return outputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -59,19 +61,21 @@ public class ElectricalLightSensorElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", outputGate.getU()) + Utils.plotAmpere("I:", outputGate.getCurrent());
+        return Utils.plotVolt("U:", outputGate.getVoltage()) + Utils.plotAmpere("I:", outputGate.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Light level"), Utils.plotValue(slowProcess.light));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";

@@ -2,6 +2,7 @@ package mods.eln.sound
 
 import mods.eln.init.Config
 import net.minecraft.client.Minecraft
+import net.minecraft.client.audio.SoundManager
 
 class LoopedSoundManager(val updateInterval: Float = 0.5f) {
     private var remaining = 0f
@@ -16,7 +17,7 @@ class LoopedSoundManager(val updateInterval: Float = 0.5f) {
     fun dispose() = loops.forEach { it.active = false }
 
     // takes in two points and gets the squared distance delta between them
-    private fun sqDistDelta(cx: Double, cy: Double, cz: Double, px: Double, py: Double, pz: Double) = (cx - px) * (cx - px) + (cy - py) * (cy - py) + (cz - pz) * (cz - pz)
+    fun sqDistDelta(cx: Double, cy: Double, cz: Double, px: Double, py: Double, pz: Double) = (cx - px) * (cx - px) + (cy - py) * (cy - py) + (cz - pz) * (cz - pz)
 
     fun process(deltaT: Float) {
         remaining -= deltaT
@@ -47,7 +48,6 @@ class LoopedSoundManager(val updateInterval: Float = 0.5f) {
                     }
                 }
             }
-
             remaining = updateInterval
         }
     }

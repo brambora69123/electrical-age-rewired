@@ -1,7 +1,6 @@
 package mods.eln.sixnode.electricalfiredetector
 
 import mods.eln.Eln
-import mods.eln.init.Cable
 import mods.eln.misc.Coordinate
 import mods.eln.misc.Direction
 import mods.eln.misc.LRDU
@@ -23,13 +22,13 @@ class ElectricalFireDetectorRender(tileEntity: SixNodeEntity, side: Direction, d
     var firePresent = false
     var ledOn = false
 
-    val inventory: SixNodeElementInventory?
+    override val inventory: SixNodeElementInventory?
 
     init {
         if (this.descriptor.batteryPowered) {
             inventory = SixNodeElementInventory(1, 64, this)
             addLoopedSound(object : LoopedSound("eln:FireAlarm",
-                Coordinate(tileEntity),
+                Coordinate(tileEntity.pos.x, tileEntity.pos.y, tileEntity.pos.z, tileEntity.world()),
                 ISound.AttenuationType.LINEAR) {
                 override fun getVolume() = if (firePresent) 1f else 0f
             })
@@ -42,7 +41,7 @@ class ElectricalFireDetectorRender(tileEntity: SixNodeEntity, side: Direction, d
         super.draw()
 
         if (!descriptor.batteryPowered) {
-            drawSignalPin(front.right(), descriptor.pinDistance)
+            drawSignalPin(front!!.right(), descriptor.pinDistance)
         }
 
         descriptor.draw(ledOn)

@@ -5,45 +5,34 @@ import mods.eln.i18n.I18N.tr
 import mods.eln.item.electricalinterface.IItemEnergyBattery
 import mods.eln.misc.Utils
 import mods.eln.wiki.Data
-import net.minecraft.client.util.ITooltipFlag
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.inventory.EntityEquipmentSlot
-import net.minecraft.item.ItemArmor
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.DamageSource
-import net.minecraft.world.World
 import net.minecraftforge.common.ISpecialArmor
+import net.minecraftforge.common.ISpecialArmor.ArmorProperties
 
-class ElectricalArmor(materialIn: ItemArmor.ArmorMaterial,
-                      renderSlotIn: Int,
-                      equipmentSlotIn: EntityEquipmentSlot,
-                      private var energyStorage: Double,
-                      internal var chargePower: Double,
-                      private var ratioMax: Double,
-                      private var ratioMaxEnergy: Double,
-                      private var energyPerDamage: Double) : genericArmorItem(materialIn, renderSlotIn, equipmentSlotIn), IItemEnergyBattery, ISpecialArmor {
+class ElectricalArmor(
+    par2EnumArmorMaterial: ArmorMaterial?,
+    par3: Int,
+    type: ArmourType?,
+    t1: String?,
+    t2: String?,  //String icon,
+    var energyStorage: Double,
+    var chargePower: Double,
+    var ratioMax: Double,
+    var ratioMaxEnergy: Double,
+    var energyPerDamage: Double
+    ) : genericArmorItem(par2EnumArmorMaterial, par3, type, t1, t2), IItemEnergyBattery, ISpecialArmor {
 
-    private val defaultNBT: NBTTagCompound
-        get() {
-            val nbt = NBTTagCompound()
-            nbt.setDouble("energy", 0.0)
-            nbt.setBoolean("powerOn", false)
-            nbt.setInteger("rand", (Math.random() * 0xFFFFFFF).toInt())
-            return nbt
-        }
 
-    init {
-        Data.addPortable(ItemStack(this))
-    }
-
-    override fun getProperties(player: EntityLivingBase, armor: ItemStack, source: DamageSource, damage: Double, slot: Int): ISpecialArmor.ArmorProperties {
-        return ISpecialArmor.ArmorProperties(100, Math.min(1.0, getEnergy(armor) / ratioMaxEnergy) * ratioMax, (getEnergy(armor) / energyPerDamage * 25.0).toInt())
+    override fun getProperties(player: EntityLivingBase, armor: ItemStack, source: DamageSource, damage: Double, slot: Int): ArmorProperties {
+        return ArmorProperties(100, Math.min(1.0, getEnergy(armor) / ratioMaxEnergy) * ratioMax, (getEnergy(armor) / energyPerDamage * 25.0).toInt())
     }
 
     override fun getArmorDisplay(player: EntityPlayer, armor: ItemStack, slot: Int): Int {
-        return (Math.min(1.0, getEnergy(armor) / ratioMaxEnergy) * ratioMax * 20.0).toInt()
+        return (Math.min(1.0, getEnergy(armor) / ratioMaxEnergy) * ratioMax * 20).toInt()
     }
 
     override fun damageArmor(entity: EntityLivingBase, stack: ItemStack, source: DamageSource, damage: Int, slot: Int) {
@@ -53,7 +42,7 @@ class ElectricalArmor(materialIn: ItemArmor.ArmorMaterial,
         Utils.println("armor hit  damage=" + damage + " energy=" + e + " energyLost=" + damage * energyPerDamage)
     }
 
-    override fun getIsRepairable(par1ItemStack: ItemStack?, par2ItemStack: ItemStack): Boolean {
+    override fun getIsRepairable(par1ItemStack: ItemStack, par2ItemStack: ItemStack): Boolean {
         return false
     }
 
@@ -61,27 +50,45 @@ class ElectricalArmor(materialIn: ItemArmor.ArmorMaterial,
         return false
     }
 
-    private fun getNbt(stack: ItemStack): NBTTagCompound {
-        val nbt: NBTTagCompound? = stack.tagCompound
-        if (nbt == null) {
-            stack.tagCompound = defaultNBT
+    val defaultNBT: NBTTagCompound
+        get() {
+            val nbt = NBTTagCompound()
+            nbt.setDouble("energy", 0.0)
+            nbt.setBoolean("powerOn", false)
+            nbt.setInteger("rand", (Math.random() * 0xFFFFFFF).toInt())
+            return nbt
         }
-        return stack.tagCompound!!
+
+    protected fun getNbt(stack: ItemStack): NBTTagCompound? {
+        var nbt = stack.tagCompound
+        if (nbt == null) {
+            stack.tagCompound = defaultNBT.also { nbt = it }
+        }
+        return nbt
     }
 
-    override fun addInformation(stack: ItemStack, worldIn: World?, tooltip: MutableList<String>, flagIn: ITooltipFlag) {
-        super.addInformation(stack, worldIn, tooltip, flagIn)
-        tooltip.add(tr("Charge power: %sW", chargePower.toInt()))
-        tooltip.add(tr("Stored energy: %sJ (%s)", getEnergy(stack),
-                (getEnergy(stack) / energyStorage * 100).toInt()))
+    fun getPowerOn(stack: ItemStack): Boolean {
+        return getNbt(stack)!!.getBoolean("powerOn")
+    }
+
+    fun setPowerOn(stack: ItemStack, value: Boolean) {
+        getNbt(stack)!!.setBoolean("powerOn", value)
+    }
+
+    override fun addInformation(itemStack: ItemStack, entityPlayer: EntityPlayer?, list: MutableList<Any?>, par4: Boolean) {
+        super.addInformation(itemStack, entityPlayer, list, par4)
+        list.add(tr("Charge power: %1\$W", chargePower.toInt()))
+        list.add(tr("Stored energy: %1\$J (%2$%)", getEnergy(itemStack),
+            (getEnergy(itemStack) / energyStorage * 100).toInt()))
+        //list.add("Power button is " + (getPowerOn(itemStack) ? "ON" : "OFF"));
     }
 
     override fun getEnergy(stack: ItemStack): Double {
-        return getNbt(stack).getDouble("energy")
+        return getNbt(stack)!!.getDouble("energy")
     }
 
     override fun setEnergy(stack: ItemStack, value: Double) {
-        getNbt(stack).setDouble("energy", value)
+        getNbt(stack)!!.setDouble("energy", value)
     }
 
     override fun getEnergyMax(stack: ItemStack): Double {
@@ -103,6 +110,11 @@ class ElectricalArmor(materialIn: ItemArmor.ArmorMaterial,
     override fun electricalItemUpdate(stack: ItemStack, time: Double) {}
 
     override fun getItemEnchantability(): Int {
-        return 0
+        return 0;
+    }
+
+    init {
+        //rIcon = new ResourceLocation("eln", icon);
+        Data.addPortable(ItemStack(this))
     }
 }

@@ -2,8 +2,6 @@ package mods.eln.packets
 
 import io.netty.buffer.ByteBuf
 import mods.eln.misc.Coordinate
-import net.minecraftforge.fml.common.network.ByteBufUtils
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 
 open class GhostNodeWailaRequestPacket : IMessage {
     lateinit var coord: Coordinate
@@ -23,9 +21,9 @@ open class GhostNodeWailaRequestPacket : IMessage {
     }
 
     override fun toBytes(buf: ByteBuf?) {
-        ByteBufUtils.writeVarInt(buf, coord.pos.x, 5)
-        ByteBufUtils.writeVarInt(buf, coord.pos.y, 5)
-        ByteBufUtils.writeVarInt(buf, coord.pos.z, 5)
+        ByteBufUtils.writeVarInt(buf, coord.x, 5)
+        ByteBufUtils.writeVarInt(buf, coord.y, 5)
+        ByteBufUtils.writeVarInt(buf, coord.z, 5)
         ByteBufUtils.writeVarInt(buf, coord.dimension, 5)
     }
 }

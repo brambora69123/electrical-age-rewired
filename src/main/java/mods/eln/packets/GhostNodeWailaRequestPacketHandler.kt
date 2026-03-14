@@ -18,9 +18,9 @@ class GhostNodeWailaRequestPacketHandler : IMessageHandler<GhostNodeWailaRequest
         var realSide = Direction.XN
 
         if (realCoord != null) {
-            val node = NodeManager.instance.getNodeFromCoordinate(realCoord) as? TransparentNode
+            val node = NodeManager.instance!!.getNodeFromCoordonate(realCoord) as? TransparentNode
             if (node != null) {
-                itemStack = node.element.descriptor.newItemStack()
+                itemStack = node.element!!.descriptor!!.newItemStack()
                 type = GhostNodeWailaResponsePacket.TRANSPARENT_BLOCK_TYPE
             }
 

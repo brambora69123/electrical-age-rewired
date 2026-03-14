@@ -121,9 +121,9 @@ public class WaterTurbineDescriptor extends TransparentNodeDescriptor {
     }
 
 
-    public Coordinate getWaterCoordinate(World w) {
+    public Coordinate getWaterCoordonate(World w) {
         Coordinate coord = new Coordinate(waterCoord);
-        coord.setDimension(w.provider.getDimension());
+        coord.setDimension(w.provider.dimensionId);
         return coord;
     }
 

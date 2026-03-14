@@ -12,7 +12,7 @@ import net.minecraft.nbt.NBTTagCompound;
 
 public class NbtElectricalGateOutputProcess extends Capacitor implements INBTTReady {
 
-    double U;
+    double voltage;
     String name;
 
     boolean highImpedance = false;
@@ -27,16 +27,16 @@ public class NbtElectricalGateOutputProcess extends Capacitor implements INBTTRe
         this.highImpedance = enable;
         double baseC = Cable.gateOutputCurrent / Config.INSTANCE.getElectricalFrequency() / Cable.SVU;
         if (enable) {
-            setC(baseC / 1000);
+            setCoulombs(baseC / 1000);
         } else {
-            setC(baseC);
+            setCoulombs(baseC);
         }
     }
 
     @Override
     public void simProcessI(SubSystem s) {
         if (!highImpedance)
-            aPin.state = U;
+            aPin.state = voltage;
         super.simProcessI(s);
     }
 
@@ -47,14 +47,13 @@ public class NbtElectricalGateOutputProcess extends Capacitor implements INBTTRe
     @Override
     public void readFromNBT(NBTTagCompound nbt, String str) {
         setHighImpedance(nbt.getBoolean(str + name + "highImpedance"));
-        U = nbt.getDouble(str + name + "U");
+        voltage = nbt.getDouble(str + name + "U");
     }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt, String str) {
         nbt.setBoolean(str + name + "highImpedance", highImpedance);
-        nbt.setDouble(str + name + "U", U);
-        return nbt;
+        nbt.setDouble(str + name + "U", voltage);
     }
 
     public void setOutputNormalized(double value) {
@@ -63,37 +62,37 @@ public class NbtElectricalGateOutputProcess extends Capacitor implements INBTTRe
 
     public void state(boolean value) {
         if (value)
-            U = Cable.SVU;
+            voltage = Eln.SVU;
         else
-            U = 0.0;
+            voltage = 0.0;
     }
 
     public double getOutputNormalized() {
-        return U / Cable.SVU;
+        return voltage / Eln.SVU;
     }
 
     public boolean getOutputOnOff() {
-        return U >= Cable.SVU / 2;
+        return voltage >= Eln.SVU / 2;
     }
 
     public void setOutputNormalizedSafe(double value) {
         if (value > 1.0) value = 1.0;
         if (value < 0.0) value = 0.0;
         if (Double.isNaN(value)) value = 0.0;
-        U = value * Cable.SVU;
+        voltage = value * Eln.SVU;
     }
 
-    public void setU(double U) {
-        this.U = U;
+    public void setVoltage(double U) {
+        this.voltage = U;
     }
 
-    public void setUSafe(double value) {
-        value = Utils.limit(value, 0, Cable.SVU);
+    public void setVoltageSafe(double value) {
+        value = Utils.limit(value, 0, Eln.SVU);
         if (Double.isNaN(value)) value = 0.0;
-        U = value;
+        voltage = value;
     }
 
-    public double getU() {
-        return U;
+    public double U {
+        return voltage;
     }
 }

@@ -178,11 +178,21 @@ public class AutoMinerDescriptor extends TransparentNodeDescriptor {
 //        return type != ItemRenderType.INVENTORY;
 //    }
 
-    public Coordinate[] getPowerCoordinate(World w) {
+    @Override
+    public boolean handleRenderType(ItemStack item, ItemRenderType type) {
+        return true;
+    }
+
+    @Override
+    public boolean shouldUseRenderHelper(ItemRenderType type, ItemStack item, ItemRendererHelper helper) {
+        return type != ItemRenderType.INVENTORY;
+    }
+
+    public Coordinate[] getPowerCoordonate(World w) {
         Coordinate[] temp = new Coordinate[powerCoord.length];
         for (int idx = 0; idx < temp.length; idx++) {
             temp[idx] = new Coordinate(powerCoord[idx]);
-            temp[idx].setDimension(w.provider.getDimension());
+            temp[idx].setDimension(w.provider.dimensionId);
         }
         return temp;
     }

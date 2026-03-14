@@ -3,20 +3,19 @@ package mods.eln.sixnode
 import mods.eln.Eln
 import mods.eln.cable.CableRenderDescriptor
 import mods.eln.gui.*
-import mods.eln.i18n.I18N
-import mods.eln.init.Cable
-import mods.eln.init.Config
+import mods.eln.i18n.I18N.tr
+import mods.eln.item.IConfigurable
 import mods.eln.misc.*
-import mods.eln.node.Node
+import mods.eln.node.NodeBase
 import mods.eln.node.Synchronizable
 import mods.eln.node.six.*
 import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
-import mods.eln.sim.ThermalLoad
 import mods.eln.sim.nbt.NbtElectricalGateInput
 import mods.eln.sim.nbt.NbtElectricalGateOutput
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess
 import mods.eln.sixnode.SummingUnitElement.Companion.GainChangedEvents
+import mods.eln.solver.Constant
 import mods.eln.solver.Equation
 import mods.eln.solver.IValue
 import mods.eln.wiki.Data
@@ -25,10 +24,15 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagDouble
+import net.minecraft.nbt.NBTTagList
+import net.minecraftforge.client.IItemRenderer
+import org.lwjgl.opengl.GL11
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import kotlin.math.sin
 
 open class AnalogChipDescriptor(name: String, obj: Obj3D?, functionName: String,
                                 functionClass: Class<out AnalogFunction>,
@@ -56,29 +60,28 @@ open class AnalogChipDescriptor(name: String, obj: Obj3D?, functionName: String,
         top?.draw()
     }
 
-    // TODO(1.10): Reimplement chip renderings.
-//    override fun handleRenderType(item: ItemStack?, type: IItemRenderer.ItemRenderType?): Boolean = true
-//    override fun shouldUseRenderHelper(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
-//                                       helper: IItemRenderer.ItemRendererHelper?): Boolean =
-//        type != IItemRenderer.ItemRenderType.INVENTORY
-//
-//    override fun shouldUseRenderHelperEln(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
-//                                          helper: IItemRenderer.ItemRendererHelper?): Boolean =
-//        type != IItemRenderer.ItemRenderType.INVENTORY
-//
-//    override fun renderItem(type: IItemRenderer.ItemRenderType?, item: ItemStack?, vararg data: Any?) {
-//        if (type == IItemRenderer.ItemRenderType.INVENTORY) {
-//            super.renderItem(type, item, *data)
-//        } else {
-//            GL11.glTranslatef(0.0f, 0.0f, -0.2f)
-//            GL11.glScalef(1.25f, 1.25f, 1.25f)
-//            GL11.glRotatef(-90.0f, 0.0f, 1.0f, 0.0f)
-//            draw()
-//        }
-//    }
+    override fun handleRenderType(item: ItemStack, type: IItemRenderer.ItemRenderType): Boolean = true
+    override fun shouldUseRenderHelper(type: IItemRenderer.ItemRenderType, item: ItemStack,
+                                       helper: IItemRenderer.ItemRendererHelper): Boolean =
+        type != IItemRenderer.ItemRenderType.INVENTORY
 
-    override fun getFrontFromPlace(side: Direction?, player: EntityPlayer?): LRDU? =
-        super.getFrontFromPlace(side, player).left()
+    override fun shouldUseRenderHelperEln(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
+                                          helper: IItemRenderer.ItemRendererHelper?): Boolean =
+        type != IItemRenderer.ItemRenderType.INVENTORY
+
+    override fun renderItem(type: IItemRenderer.ItemRenderType, item: ItemStack, vararg data: Any) {
+        if (type == IItemRenderer.ItemRenderType.INVENTORY) {
+            super.renderItem(type, item, *data)
+        } else {
+            GL11.glTranslatef(0.0f, 0.0f, -0.2f)
+            GL11.glScalef(1.25f, 1.25f, 1.25f)
+            GL11.glRotatef(-90.0f, 0.0f, 1.0f, 0.0f)
+            draw()
+        }
+    }
+
+    override fun getFrontFromPlace(side: Direction, player: EntityPlayer): LRDU? =
+        super.getFrontFromPlace(side, player)!!.left()
 
     override fun setParent(item: Item?, damage: Int) {
         super.setParent(item, damage)
@@ -105,9 +108,9 @@ open class AnalogChipElement(node: SixNode, side: Direction, sixNodeDescriptor: 
 
     init {
         electricalLoadList.add(outputPin)
-        for (i in 0..descriptor.function.inputCount - 1) {
+        for (i in 0 until descriptor.function.inputCount) {
             inputPins[i] = NbtElectricalGateInput("input$i")
-            electricalLoadList.add(inputPins[i])
+            electricalLoadList.add(inputPins[i]!!)
         }
 
         electricalComponentList.add(outputProcess)
@@ -116,15 +119,15 @@ open class AnalogChipElement(node: SixNode, side: Direction, sixNodeDescriptor: 
             for (i in 0..2) {
                 val inputPin = inputPins[i]
                 if (inputPin != null && inputPin.connectedComponents.count() > 0) {
-                    inputs[i] = inputPin.u
+                    inputs[i] = inputPin.voltage
                 }
             }
 
-            outputProcess.setUSafe(function.process(inputs, time))
+            outputProcess.setVoltageSafe(function.process(inputs, time))
         })
     }
 
-    override fun getElectricalLoad(lrdu: LRDU?): ElectricalLoad? = when (lrdu) {
+    override fun getElectricalLoad(lrdu: LRDU, mask: Int): ElectricalLoad? = when (lrdu) {
         front -> outputPin
         front.inverse() -> inputPins[0]
         front.left() -> inputPins[1]
@@ -132,44 +135,44 @@ open class AnalogChipElement(node: SixNode, side: Direction, sixNodeDescriptor: 
         else -> null
     }
 
-    override fun getConnectionMask(lrdu: LRDU?): Int = when (lrdu) {
-        front -> Node.maskElectricalOutputGate
-        front.inverse() -> if (inputPins[0] != null) Node.maskElectricalInputGate else 0
-        front.left() -> if (inputPins[1] != null) Node.maskElectricalInputGate else 0
-        front.right() -> if (inputPins[2] != null) Node.maskElectricalInputGate else 0
+    override fun getConnectionMask(lrdu: LRDU): Int = when (lrdu) {
+        front -> NodeBase.maskElectricalOutputGate
+        front.inverse() -> if (inputPins[0] != null) NodeBase.maskElectricalInputGate else 0
+        front.left() -> if (inputPins[1] != null) NodeBase.maskElectricalInputGate else 0
+        front.right() -> if (inputPins[2] != null) NodeBase.maskElectricalInputGate else 0
         else -> 0
     }
 
-    override fun multiMeterString(): String? {
+    override fun multiMeterString(): String {
         val builder = StringBuilder()
         for (i in 1..3) {
             val pin = inputPins[i - 1]
-            if (pin != null && pin.connectedComponents.count() > 0) {
+            if (pin != null && pin.connectedComponents.isNotEmpty()) {
                 builder.append("I$i: ").append(if (pin.stateLow()) "0"
                 else if (pin.stateHigh()) "1" else "?").append(", ")
             }
         }
-        builder.append(I18N.tr(" O: ")).append(if (outputProcess.u == 50.0) "1" else "0")
+        builder.append(tr(" O: ")).append(if (outputProcess.voltage == Eln.SVU) "1" else "0")
         return builder.toString()
     }
 
-    override fun getWaila(): MutableMap<String, String> = function.getWaila(
-        inputPins.map { if (it != null && it.connectedComponents.count() > 0) it.u else null }.toTypedArray(),
-        outputPin.u)
+    override fun getWaila(): Map<String, String> = function.getWaila(
+        inputPins.map { if (it != null && it.connectedComponents.isNotEmpty()) it.voltage else null }.toTypedArray(),
+        outputPin.voltage
+    )
 
-    override fun readFromNBT(nbt: NBTTagCompound?) {
+    override val ghostObserverCoordonate: Coordinate?
+        get() = coordinate!!
+
+    override fun readFromNBT(nbt: NBTTagCompound) {
         super.readFromNBT(nbt)
         function.readFromNBT(nbt, "function")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?): NBTTagCompound? {
+    override fun writeToNBT(nbt: NBTTagCompound) {
         super.writeToNBT(nbt)
         return function.writeToNBT(nbt, "function")
     }
-
-    override fun getThermalLoad(lrdu: LRDU?): ThermalLoad? = null
-    override fun thermoMeterString(): String? = null
-    override fun initialize() {}
 }
 
 open class AnalogChipRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescriptor) :
@@ -178,15 +181,15 @@ open class AnalogChipRender(entity: SixNodeEntity, side: Direction, descriptor: 
 
     override fun draw() {
         super.draw()
-        front.glRotateOnX()
+        front!!.glRotateOnX()
         descriptor.draw()
     }
 
-    override fun getCableRender(lrdu: LRDU?): CableRenderDescriptor? = when (lrdu) {
-        front -> Cable.signal.descriptor.render
-        front.inverse() -> if (descriptor.function.inputCount >= 1) Cable.signal.descriptor.render else null
-        front.left() -> if (descriptor.function.inputCount >= 2) Cable.signal.descriptor.render else null
-        front.right() -> if (descriptor.function.inputCount >= 3) Cable.signal.descriptor.render else null
+    override fun getCableRender(lrdu: LRDU): CableRenderDescriptor? = when (lrdu) {
+        front -> Eln.instance.signalCableDescriptor.render
+        front!!.inverse() -> if (descriptor.function.inputCount >= 1) Eln.instance.signalCableDescriptor.render else null
+        front!!.left() -> if (descriptor.function.inputCount >= 2) Eln.instance.signalCableDescriptor.render else null
+        front!!.right() -> if (descriptor.function.inputCount >= 3) Eln.instance.signalCableDescriptor.render else null
         else -> null
     }
 }
@@ -209,19 +212,17 @@ abstract class AnalogFunction : INBTTReady {
     abstract fun process(inputs: Array<Double?>, deltaTime: Double): Double
 
     open fun getWaila(inputs: Array<Double?>, output: Double) = mutableMapOf(
-        Pair("Inputs", (1..inputCount).map { "${inputColors[it - 1]}${Utils.plotVolt("", inputs[it - 1] ?: 0.0)}" }.joinToString(" ")),
-        Pair("Output", Utils.plotVolt("", output))
+        Pair(tr("Inputs"), (1..inputCount).map { "${inputColors[it - 1]}${Utils.plotVolt("", inputs[it - 1] ?: 0.0)}" }.joinToString(" ")),
+        Pair(tr("Output"), Utils.plotVolt("", output))
     )
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {}
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        return nbt
-    }
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {}
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {}
 }
 
 class OpAmp : AnalogFunction() {
     override val inputCount = 2
-    override val infos: String = I18N.tr("Operational Amplifier - DC coupled\nhigh-gain voltage amplifier with\ndifferential input. Can be used to\ncompare voltages or as configurable amplifier.")
+    override val infos: String = tr("Operational Amplifier - DC coupled\nhigh-gain voltage amplifier with\ndifferential input. Can be used to\ncompare voltages or as configurable amplifier.")
 
     override fun process(inputs: Array<Double?>, deltaTime: Double): Double =
         10000 * ((inputs[0] ?: 0.0) - (inputs[1] ?: 0.0))
@@ -230,7 +231,7 @@ class OpAmp : AnalogFunction() {
 class PIDRegulator : AnalogFunction() {
     override val hasState = true
     override val inputCount = 2
-    override val infos: String = I18N.tr("Proportional–integral–derivative controller. A PID\ncontroller continuously calculates an error value as\nthe difference between a desired setpoint and a measured\nprocess variable and applies a correction based on\nproportional, integral, and derivative terms.")
+    override val infos = tr("Proportional–integral–derivative controller. A PID\ncontroller continuously calculates an error value as\nthe difference between a desired setpoint and a measured\nprocess variable and applies a correction based on\nproportional, integral, and derivative terms.")
 
     internal var Kp = 1.0
     internal var Ki = 0.0
@@ -239,41 +240,40 @@ class PIDRegulator : AnalogFunction() {
 
     override fun process(inputs: Array<Double?>, deltaTime: Double): Double {
         pid.setOperator(arrayOf(
-            IValue { (inputs[0] ?: 0.0) / Cable.SVU },
-            IValue { (inputs[1] ?: 0.0) / Cable.SVU } ,
-            IValue { Kp }, IValue { Ki} , IValue { Kd }
+            Constant((inputs[0] ?: 0.0) / Eln.SVU),
+            Constant((inputs[1] ?: 0.0) / Eln.SVU),
+            Constant(Kp), Constant(Ki), Constant(Kd)
         ))
         pid.process(deltaTime)
-        return Cable.SVU * pid.value
+        return Eln.SVU * pid.getValue()
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        Kp = nbt?.getDouble("Kp") ?: 1.0
-        Ki = nbt?.getDouble("Ki") ?: 0.0
-        Kd = nbt?.getDouble("Kd") ?: 0.0
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        Kp = nbt.getDouble("Kp")
+        Ki = nbt.getDouble("Ki")
+        Kd = nbt.getDouble("Kd")
         pid.readFromNBT(nbt, "pid")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setDouble("Kp", Kp)
-        nbt?.setDouble("Ki", Ki)
-        nbt?.setDouble("Kd", Kd)
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setDouble("Kp", Kp)
+        nbt.setDouble("Ki", Ki)
+        nbt.setDouble("Kd", Kd)
         pid.writeToNBT(nbt, "pid")
-        return nbt
     }
 
     override fun getWaila(inputs: Array<Double?>, output: Double): MutableMap<String, String> {
         val info = super.getWaila(inputs, output)
-        info[I18N.tr("Params")] = "Kp = $Kp, Ki = $Ki, Kd = $Kd"
-        if (Config.wailaEasyMode) {
-            info[I18N.tr("State")] = "Si = ${pid.iStack}"
+        info[tr("Params")] = "Kp = $Kp, Ki = $Ki, Kd = $Kd"
+        if (Eln.wailaEasyMode) {
+            info[tr("State")] = "Si = ${pid.iStack}"
         }
         return info
     }
 }
 
 class PIDRegulatorElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
-    AnalogChipElement(node, side, sixNodeDescriptor) {
+    AnalogChipElement(node, side, sixNodeDescriptor), IConfigurable {
     companion object {
         val KpParameterChangedEvent = 1
         val KiParameterChangedEvent = 2
@@ -282,23 +282,26 @@ class PIDRegulatorElement(node: SixNode, side: Direction, sixNodeDescriptor: Six
 
     override fun hasGui() = true
 
-    override fun networkSerialize(stream: DataOutputStream?) {
+    override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
         try {
             with(function as PIDRegulator) {
-                stream?.writeFloat(Kp.toFloat())
-                stream?.writeFloat(Ki.toFloat())
-                stream?.writeFloat(Kd.toFloat())
+                stream.writeFloat(Kp.toFloat())
+                stream.writeFloat(Ki.toFloat())
+                stream.writeFloat(Kd.toFloat())
             }
         } catch(e: IOException) {
             e.printStackTrace()
         }
     }
 
-    override fun networkUnserialize(stream: DataInputStream?) {
+    override val ghostObserverCoordonate: Coordinate
+        get() = coordinate!!
+
+    override fun networkUnserialize(stream: DataInputStream) {
         super.networkUnserialize(stream)
         try {
-            when (stream?.readByte()?.toInt()) {
+            when (stream.readByte().toInt()) {
                 KpParameterChangedEvent -> (function as PIDRegulator).Kp = stream.readFloat().toDouble()
                 KiParameterChangedEvent -> (function as PIDRegulator).Ki = stream.readFloat().toDouble()
                 KdParameterChangerEvent -> (function as PIDRegulator).Kd = stream.readFloat().toDouble()
@@ -306,6 +309,29 @@ class PIDRegulatorElement(node: SixNode, side: Direction, sixNodeDescriptor: Six
             needPublish()
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+    }
+
+    override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as PIDRegulator) {
+            if(compound.hasKey("kp")) {
+                Kp = compound.getDouble ("kp")
+            }
+            if(compound.hasKey("ki")) {
+                Ki = compound.getDouble("ki")
+            }
+            if(compound.hasKey("kd")) {
+                Kd = compound.getDouble("kd")
+            }
+        }
+        needPublish()
+    }
+
+    override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as PIDRegulator) {
+            compound.setDouble("kp", Kp)
+            compound.setDouble("ki", Ki)
+            compound.setDouble("kd", Kd)
         }
     }
 }
@@ -316,14 +342,14 @@ class PIDRegulatorRender(entity: SixNodeEntity, side: Direction, descriptor: Six
     internal var Ki = 0f
     internal var Kd = 0f
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?): GuiScreen? = PIDRegulatorGui(this)
+    override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen = PIDRegulatorGui(this)
 
-    override fun publishUnserialize(stream: DataInputStream?) {
+    override fun publishUnserialize(stream: DataInputStream) {
         super.publishUnserialize(stream)
         try {
-            Kp = stream?.readFloat() ?: 1f
-            Ki = stream?.readFloat() ?: 0f
-            Kd = stream?.readFloat() ?: 0f
+            Kp = stream.readFloat()
+            Ki = stream.readFloat()
+            Kd = stream.readFloat()
         } catch (e: IOException) {
             e.printStackTrace()
         }
@@ -343,11 +369,11 @@ class PIDRegulatorGui(val render: PIDRegulatorRender) : GuiScreenEln() {
         KpBar?.setStepIdMax(50)
         KpBar?.value = render.Kp
         KiBar = newGuiVerticalTrackBar(40, 20, 20, 80)
-        KiBar?.setRange(0f, 5f)
+        KiBar?.setRange(0f, 50f)
         KiBar?.setStepIdMax(50)
         KiBar?.value = render.Ki
         KdBar = newGuiVerticalTrackBar(70, 20, 20, 80)
-        KdBar?.setRange(0f, 5f);
+        KdBar?.setRange(0f, 50f)
         KdBar?.setStepIdMax(50)
         KdBar?.value = render.Kd
     }
@@ -394,60 +420,67 @@ class PIDRegulatorGui(val render: PIDRegulatorRender) : GuiScreenEln() {
 open class VoltageControlledSawtoothOscillator : AnalogFunction() {
     override val hasState = true
     override val inputCount = 1
-    override val infos = I18N.tr("A voltage-controlled oscillator or VCO is\nan electronic oscillator whose oscillation\nfrequency is controlled by a voltage input.")
+    override val infos = tr("A voltage-controlled oscillator or VCO is\nan electronic oscillator whose oscillation\nfrequency is controlled by a voltage input.")
 
     private var out = 0.0
 
+    // 0v = 0.1Hz through 5v = 10Hz
+    open val hertzFunction = LinearFunction(0f, 0.1f, Eln.SVU.toFloat(), (1 / Eln.simulator.callPeriod).toFloat())
+
     override fun process(inputs: Array<Double?>, deltaTime: Double): Double {
-        out += Math.pow(50.0, (inputs[0] ?: 0.0) / 50) * 2 * deltaTime
-        if (out > Cable.SVU) {
+        val hertz = hertzFunction.getValue(inputs[0]?: 0.0)
+        val halfPeriod = (1 / hertz) * 0.5
+        out += Eln.simulator.callPeriod/halfPeriod
+        if (out > Eln.SVU) {
             out = 0.0
         }
         return out
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        out = nbt?.getDouble("out") ?: 0.0
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        out = nbt.getDouble("out")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setDouble("out", out)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setDouble("out", out)
     }
 }
 
 class VoltageControlledSineOscillator : VoltageControlledSawtoothOscillator() {
+    val svu2 = Eln.SVU/2
+
+    override val hertzFunction = LinearFunction(0f, 0.01f, Eln.SVU.toFloat(), 0.5f)
+
     override fun process(inputs: Array<Double?>, deltaTime: Double) =
-        25.0 + 25.0 * Math.sin(Math.PI * super.process(inputs, deltaTime) / 25.0)
+        svu2 + svu2 * sin(Math.PI * 2 * super.process(inputs, deltaTime))
 }
 
 class Amplifier : AnalogFunction() {
     override val hasState = true
     override val inputCount = 1
-    override val infos = I18N.tr("An amplifier increases the voltage\nof an input signal by a configurable\ngain and outputs that voltage.")
+    override val infos = tr("An amplifier increases the voltage\nof an input signal by a configurable\ngain and outputs that voltage.")
 
     internal var gain = 1.0
 
     override fun process(inputs: Array<Double?>, deltaTime: Double) = gain * (inputs[0] ?: 0.0)
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        gain = nbt?.getDouble("gain") ?: 1.0
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        gain = nbt.getDouble("gain")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setDouble("gain", gain)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setDouble("gain", gain)
     }
 
     override fun getWaila(inputs: Array<Double?>, output: Double): MutableMap<String, String> {
         val info = super.getWaila(inputs, output)
-        info["Gain"] = Utils.plotValue(gain)
+        info[tr("Gain")] = Utils.plotValue(gain)
         return info
     }
 }
 
 class AmplifierElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
-    AnalogChipElement(node, side, sixNodeDescriptor) {
+    AnalogChipElement(node, side, sixNodeDescriptor), IConfigurable {
 
     companion object {
         val GainChangedEvent = 1
@@ -455,28 +488,45 @@ class AmplifierElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNod
 
     override fun hasGui() = true
 
-    override fun networkSerialize(stream: DataOutputStream?) {
+    override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
 
         try {
             with(function as Amplifier) {
-                stream?.writeFloat(gain.toFloat())
+                stream.writeFloat(gain.toFloat())
             }
         } catch(e: IOException) {
             e.printStackTrace()
         }
     }
 
-    override fun networkUnserialize(stream: DataInputStream?) {
+    override val ghostObserverCoordonate: Coordinate
+        get() = coordinate!!
+
+    override fun networkUnserialize(stream: DataInputStream) {
         super.networkUnserialize(stream)
 
         try {
-            when (stream?.readByte()?.toInt()) {
+            when (stream.readByte().toInt()) {
                 GainChangedEvent -> (function as Amplifier).gain = stream.readFloat().toDouble()
             }
             needPublish()
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+    }
+
+    override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as Amplifier) {
+            if(compound.hasKey("gain")) {
+                gain = compound.getDouble("gain")
+            }
+        }
+    }
+
+    override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as Amplifier) {
+            compound.setDouble("gain", gain)
         }
     }
 }
@@ -485,12 +535,12 @@ class AmplifierRender(entity: SixNodeEntity, side: Direction, descriptor: SixNod
     AnalogChipRender(entity, side, descriptor) {
     internal var gain = 1f
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?): GuiScreen? = AmplifierGui(this)
+    override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen = AmplifierGui(this)
 
-    override fun publishUnserialize(stream: DataInputStream?) {
+    override fun publishUnserialize(stream: DataInputStream) {
         super.publishUnserialize(stream)
         try {
-            gain = stream?.readFloat() ?: 1f
+            gain = stream.readFloat()
         } catch (e: IOException) {
             e.printStackTrace()
         }
@@ -504,7 +554,7 @@ class AmplifierGui(val render: AmplifierRender) : GuiScreenEln() {
         super.initGui()
 
         gainTF = newGuiTextField(6, 6, 50)
-        gainTF?.setComment(0, I18N.tr("Gain"))
+        gainTF?.setComment(0, tr("Gain"))
         gainTF?.setText(render.gain)
         gainTF?.setObserver { _, text ->
             try {
@@ -529,13 +579,13 @@ class AmplifierGui(val render: AmplifierRender) : GuiScreenEln() {
 
 class VoltageControlledAmplifier : AnalogFunction() {
     override val inputCount = 2
-    override val infos = I18N.tr("A voltage-controlled amplifier (VCA)\nis an electronic amplifier that varies\nits gain depending on the control voltage.")
+    override val infos = tr("A voltage-controlled amplifier (VCA)\nis an electronic amplifier that varies\nits gain depending on the control voltage.")
 
     override fun process(inputs: Array<Double?>, deltaTime: Double) = (inputs[1] ?: 5.0) / 5.0 * (inputs[0] ?: 0.0)
 
     override fun getWaila(inputs: Array<Double?>, output: Double): MutableMap<String, String> {
         val info = super.getWaila(inputs, output)
-        info["Gain"] = Utils.plotValue((inputs[1] ?: 5.0) / 5.0)
+        info[tr("Gain")] = Utils.plotValue((inputs[1] ?: 5.0) / 5.0)
         return info
     }
 }
@@ -543,35 +593,35 @@ class VoltageControlledAmplifier : AnalogFunction() {
 class SummingUnit : AnalogFunction() {
     override val hasState = true
     override val inputCount = 3
-    override val infos = I18N.tr("The summing unit outputs the sum of\nthe three weighted inputs.The\ngain for each input can be configured.")
+    override val infos = tr("The summing unit outputs the sum of\nthe three weighted inputs.The\ngain for each input can be configured.")
 
     internal val gains = arrayOf(1.0, 1.0, 1.0)
 
     override fun process(inputs: Array<Double?>, deltaTime: Double) =
         gains[0] * (inputs[0] ?: 0.0) + gains[1] * (inputs[1] ?: 0.0) + gains[2] * (inputs[2] ?: 0.0)
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
         for (i in gains.indices) {
-            gains[i] = nbt?.getDouble("gain$i") ?: 1.0
+            gains[i] = nbt.getDouble("gain$i")
         }
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
         for (i in gains.indices) {
-            nbt?.setDouble("gain$i", gains[i])
+            nbt.setDouble("gain$i", gains[i])
         }
         return nbt
     }
 
     override fun getWaila(inputs: Array<Double?>, output: Double): MutableMap<String, String> {
         val info = super.getWaila(inputs, output)
-        info["Gains"] = (0..2).map { "${inputColors[it]}${Utils.plotValue(gains[it])}" }.joinToString(" ")
+        info[tr("Gains")] = (0..2).map { "${inputColors[it]}${Utils.plotValue(gains[it])}" }.joinToString(" ")
         return info
     }
 }
 
 class SummingUnitElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
-    AnalogChipElement(node, side, sixNodeDescriptor) {
+    AnalogChipElement(node, side, sixNodeDescriptor), IConfigurable {
 
     companion object {
         val GainChangedEvents = arrayOf(1, 2, 3)
@@ -579,13 +629,13 @@ class SummingUnitElement(node: SixNode, side: Direction, sixNodeDescriptor: SixN
 
     override fun hasGui() = true
 
-    override fun networkSerialize(stream: DataOutputStream?) {
+    override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
 
         try {
             with(function as SummingUnit) {
                 gains.forEach {
-                    stream?.writeFloat(it.toFloat())
+                    stream.writeFloat(it.toFloat())
                 }
             }
         } catch(e: IOException) {
@@ -593,11 +643,14 @@ class SummingUnitElement(node: SixNode, side: Direction, sixNodeDescriptor: SixN
         }
     }
 
-    override fun networkUnserialize(stream: DataInputStream?) {
+    override val ghostObserverCoordonate: Coordinate
+        get() = coordinate!!
+
+    override fun networkUnserialize(stream: DataInputStream) {
         super.networkUnserialize(stream)
 
         try {
-            when (stream?.readByte()?.toInt()) {
+            when (stream.readByte().toInt()) {
                 GainChangedEvents[0] -> (function as SummingUnit).gains[0] = stream.readFloat().toDouble()
                 GainChangedEvents[1] -> (function as SummingUnit).gains[1] = stream.readFloat().toDouble()
                 GainChangedEvents[2] -> (function as SummingUnit).gains[2] = stream.readFloat().toDouble()
@@ -607,19 +660,40 @@ class SummingUnitElement(node: SixNode, side: Direction, sixNodeDescriptor: SixN
             e.printStackTrace()
         }
     }
+
+    override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as SummingUnit) {
+            if(compound.hasKey("gains")) {
+                val list = compound.getTagList("gains", 6)
+                for(idx in 0 until Math.min(list.tagCount(), 3)) {
+                    gains[idx] = list.func_150309_d(idx)
+                }
+            }
+        }
+    }
+
+    override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        with(function as SummingUnit) {
+            var list = NBTTagList();
+            for(d in gains) {
+                list.appendTag(NBTTagDouble(d))
+            }
+            compound.setTag("gains", list)
+        }
+    }
 }
 
 class SummingUnitRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescriptor) :
     AnalogChipRender(entity, side, descriptor) {
     internal var gains = floatArrayOf(1f, 1f, 1f)
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?): GuiScreen? = SummingUnitGui(this)
+    override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen = SummingUnitGui(this)
 
-    override fun publishUnserialize(stream: DataInputStream?) {
+    override fun publishUnserialize(stream: DataInputStream) {
         super.publishUnserialize(stream)
         try {
             for (i in gains.indices) {
-                gains[i] = stream?.readFloat() ?: 1f
+                gains[i] = stream.readFloat()
             }
         } catch (e: IOException) {
             e.printStackTrace()
@@ -653,9 +727,9 @@ class SummingUnitGui(val render: SummingUnitRender) : GuiScreenEln() {
                 }
             }
         }
-        gainTFs[0]?.setComment(0, I18N.tr("Gain for input \u00a741"))
-        gainTFs[1]?.setComment(0, I18N.tr("Gain for input \u00a722"))
-        gainTFs[2]?.setComment(0, I18N.tr("Gain for input \u00a713"))
+        gainTFs[0]?.setComment(0, tr("Gain for input \u00a741"))
+        gainTFs[1]?.setComment(0, tr("Gain for input \u00a722"))
+        gainTFs[2]?.setComment(0, tr("Gain for input \u00a713"))
     }
 
     override fun newHelper() = GuiHelper(this, 62, 64)
@@ -664,7 +738,7 @@ class SummingUnitGui(val render: SummingUnitRender) : GuiScreenEln() {
 class SampleAndHold : AnalogFunction() {
     override val hasState = true
     override val inputCount = 2
-    override val infos = I18N.tr("Samples the voltage of a varying analog signal when\nthe clock input changes fromFacing 0 to 1 and holds its\noutput voltage at a constant level until next clock pulse.\nYou can see it as an analog D-Flipflop.")
+    override val infos = tr("Samples the voltage of a varying analog signal when\nthe clock input changes from 0 to 1 and holds its\noutput voltage at a constant level until next clock pulse.\nYou can see it as an analog D-Flipflop.")
     private var clock = false
     private var value = 0.0
 
@@ -675,22 +749,21 @@ class SampleAndHold : AnalogFunction() {
         return value
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        clock = nbt?.getBoolean("clock") ?: false
-        value = nbt?.getDouble("value") ?: 0.0
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        clock = nbt.getBoolean("clock")
+        value = nbt.getDouble("value")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setBoolean("clock", clock)
-        nbt?.setDouble("value", value)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setBoolean("clock", clock)
+        nbt.setDouble("value", value)
     }
 }
 
 class Filter: AnalogFunction() {
     override val hasState = true
     override val inputCount = 1
-    override val infos = I18N.tr("Lowpass filter - Passes signals with a\nfrequency lower than a certain cutoff frequency\nand attenuates signals with frequencies higher\nthan the cutoff frequency.")
+    override val infos = tr("Lowpass filter - Passes signals with a\nfrequency lower than a certain cutoff frequency\nand attenuates signals with frequencies higher\nthan the cutoff frequency.")
 
     internal var feedback = 2.0 * Math.PI * 5.0
     private var output = 0.0
@@ -700,15 +773,15 @@ class Filter: AnalogFunction() {
         return output
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        nbt?.apply {
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        nbt.apply {
             feedback = getDouble("feedback")
             output = getDouble("output")
         }
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.apply {
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.apply {
             setDouble("feedback", feedback)
             setDouble("output", output)
         }
@@ -717,7 +790,7 @@ class Filter: AnalogFunction() {
 }
 
 class FilterElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDescriptor) :
-    AnalogChipElement(node, side, sixNodeDescriptor) {
+    AnalogChipElement(node, side, sixNodeDescriptor), IConfigurable {
 
     enum class Event(val value: Byte) {
         CUTOFF_FREQUENCY_CHANGED(1)
@@ -732,15 +805,18 @@ class FilterElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDe
 
     override fun hasGui() = true
 
-    override fun networkSerialize(stream: DataOutputStream?) {
+    override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
 
         try {
-            stream?.writeFloat(cutOffFrequency.toFloat())
+            stream.writeFloat(cutOffFrequency.toFloat())
         } catch(e: IOException) {
             e.printStackTrace()
         }
     }
+
+    override val ghostObserverCoordonate: Coordinate
+        get() = coordinate!!
 
     override fun networkUnserialize(stream: DataInputStream) {
         super.networkUnserialize(stream)
@@ -754,13 +830,23 @@ class FilterElement(node: SixNode, side: Direction, sixNodeDescriptor: SixNodeDe
             e.printStackTrace()
         }
     }
+
+    override fun readConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        if(compound.hasKey("cutoff")) {
+            cutOffFrequency = compound.getDouble("cutoff")
+        }
+    }
+
+    override fun writeConfigTool(compound: NBTTagCompound, invoker: EntityPlayer) {
+        compound.setDouble("cutoff", cutOffFrequency)
+    }
 }
 
 class FilterRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescriptor) :
     AnalogChipRender(entity, side, descriptor) {
     internal var cutOffFrequency = Synchronizable(Config.electricalFrequency.toFloat() / 4f)
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?): GuiScreen? = FilterGui(this)
+    override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen = FilterGui(this)
 
     override fun publishUnserialize(stream: DataInputStream) {
         super.publishUnserialize(stream)
@@ -797,8 +883,8 @@ class FilterGui(private var render: FilterRender) : GuiScreenEln() {
         if (render.cutOffFrequency.pending) {
             freq?.value = render.cutOffFrequency.value
         }
-        freq?.setComment(0, I18N.tr("Cut-off frequency %s Hz",
-            String.format("%1.3f", freq?.value ?: Config.electricalFrequency / 4f)))
+        freq?.setComment(0, tr("Cut-off frequency %1$ Hz",
+            String.format("%1.3f", freq?.value ?: Eln.instance.electricalFrequency / 4f)))
     }
 
     override fun newHelper(): GuiHelper {

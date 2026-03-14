@@ -6,15 +6,14 @@ import mods.eln.sim.mna.state.State;
 
 public abstract class Component {
 
-    SubSystem subSystem;
+    private SubSystem subSystem;
 
     public IAbstractor abstractedBy;
 
-    public Component() {
-        //System.out.println("new " + this);
-    }
+    public Component() {}
+    private String owner;
 
-    public void addedTo(SubSystem s) {
+    public void addToSubsystem(SubSystem s) {
         this.subSystem = s;
     }
 
@@ -23,7 +22,11 @@ public abstract class Component {
         return subSystem;
     }
 
-    public abstract void applyTo(SubSystem s);
+    protected SubSystem getLocalSubSystem() {
+        return subSystem;
+    }
+
+    public abstract void applyToSubsystem(SubSystem s);
 
     public abstract State[] getConnectedStates();
 
@@ -54,9 +57,20 @@ public abstract class Component {
         return abstractedBy != null;
     }
 
-    public void onAddToRootSystem() {
+    public void onAddToRootSystem() {}
+
+    public void onRemoveFromRootSystem() {}
+
+    public String toString() {
+        return "(" + this.getClass().getSimpleName() + ")";
     }
 
-    public void onRemovefromRootSystem() {
+    public Component setOwner(String owner) {
+        this.owner = owner;
+        return this;
+    }
+
+    public String getOwner() {
+        return owner;
     }
 }

@@ -8,11 +8,47 @@
             }
         ]
     },
+    "beep_loop": {
+        "category": "block",
+        "sounds": [
+            {
+                "name": "beep_loop",
+                "stream": false
+            }
+        ]
+    },
     "alarma": {
         "category": "record",
         "sounds": [
             {
                 "name": "eln:alarma",
+                "stream": false
+            }
+        ]
+    },
+	"arc": {
+		"category": "block",
+		"sounds": [
+			{
+				"name": "arc",
+				"stream": false
+			}
+		]
+	},
+    "arc_furnace": {
+        "category": "block",
+        "sounds": [
+            {
+                "name": "arc_furnace",
+                "stream": false
+            }
+        ]
+    },
+    "Arcfurnace_loop": {
+        "category": "block",
+        "sounds": [
+            {
+                "name": "Arcfurnace_loop",
                 "stream": false
             }
         ]
@@ -206,6 +242,15 @@
             }
         ]
     },
+    "TurretKill": {
+        "category": "block",
+        "sounds": [
+            {
+                "name": "TurretKill",
+                "stream": false
+            }
+        ]
+    },
     "FuelGenerator": {
         "category": "block",
         "sounds": [
@@ -256,6 +301,69 @@
         "sounds": [
             {
                 "name": "eln:steam_turbine",
+                "stream": false
+            }
+        ]
+    },
+	"shaft_motor": {
+		"category": "block",
+		"sounds": [
+			{
+				"name": "shaft_motor",
+				"stream": false
+			}
+		]
+	},
+	"clutch": {
+		"category": "block",
+		"sounds": [
+			{
+				"name": "clutch",
+				"stream": false
+			}
+		]
+	},
+	"click": {
+		"category": "block",
+		"sounds": [
+			{
+				"name": "click",
+				"stream": false
+			}
+		]
+	},
+	"beep_accept": {
+		"category": "player",
+		"sounds": [
+			{
+				"name": "beep_accept",
+				"stream": false
+			}
+		]
+	},
+	"beep_accept_2": {
+		"category": "player",
+		"sounds": [
+			{
+				"name": "beep_accept_2",
+				"stream": false
+			}
+		]
+	},
+	"beep_error": {
+		"category": "player",
+		"sounds": [
+			{
+				"name": "beep_error",
+				"stream": false
+			}
+		]
+	},
+    "RadialEngine": {
+        "category": "block",
+        "sounds": [
+            {
+                "name": "RadialEngine",
                 "stream": false
             }
         ]

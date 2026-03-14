@@ -7,6 +7,8 @@ import mods.eln.misc.Obj3D.Obj3DPart;
 import mods.eln.node.six.SixNodeDescriptor;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
@@ -65,40 +67,15 @@ public class ElectricalSourceDescriptor extends SixNodeDescriptor {
         list.add(tr("Creative block."));
     }
 
-    // TODO(1.10): Fix item render.
-//    @Override
-//    public boolean handleRenderType(ItemStack item, ItemRenderType type) {
-//        return true;
-//    }
-//
-//    @Override
-//    public void renderItem(ItemRenderType type, ItemStack item, Object... data) {
-//        switch (type) {
-//            case ENTITY:
-//                draw(false);
-//                break;
-//
-//            case EQUIPPED:
-//            case EQUIPPED_FIRST_PERSON:
-//                GL11.glPushMatrix();
-//                GL11.glTranslatef(0.8f, 0.3f, 0.2f);
-//                GL11.glRotatef(150, 0, 0, 1);
-//                draw(false);
-//                GL11.glPopMatrix();
-//                break;
-//
-//            case INVENTORY:
-//            case FIRST_PERSON_MAP:
-//                if (signalSource) {
-//                    VoltageLevelColor.SignalVoltage.drawIconBackground(type);
-//                }
-//                super.renderItem(type, item, data);
-//                break;
-//        }
-//    }
-
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public RealisticEnum addRealismContext(List list) {
+        list.add(tr("Acts as an ideal voltage source, with a small inline resistance"));
+        return RealisticEnum.IDEAL;
+    }
+
+    @Nullable
+    @Override
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         if (signalSource) {
             return super.getFrontFromPlace(side, player).left();
         } else {

@@ -11,13 +11,14 @@ class SixNodeWailaResponsePacket : TransparentNodeResponsePacket {
 
     constructor() {}
 
-    constructor(coord: Coordinate, side: Direction, itemStack: ItemStack, data: Map<String, String>) : super(data, coord, itemStack) {
+    constructor(coord: Coordinate, side: Direction, itemStack: ItemStack?, data: Map<String, String>) : super(data, coord) {
         this.side = side
     }
 
     override fun fromBytes(buf: ByteBuf?) {
         super.fromBytes(buf)
-        side = Direction.fromInt(buf?.readInt() ?: 0)
+        side = Direction.fromInt(buf?.readInt() ?: 0)!!
+        itemStack = ByteBufUtils.readItemStack(buf)
     }
 
     override fun toBytes(buf: ByteBuf?) {

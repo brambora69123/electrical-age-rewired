@@ -7,8 +7,7 @@ import mods.eln.sim.mna.state.State;
 
 public class Transformer extends Bipole {
 
-    public Transformer() {
-    }
+    public Transformer() {}
 
     public CurrentState aCurrentState = new CurrentState();
     public CurrentState bCurrentState = new CurrentState();
@@ -27,24 +26,25 @@ public class Transformer extends Bipole {
         return ratio;
     }
 
-    private double r = MnaConst.highImpedance, rInv = 1 / MnaConst.highImpedance;
-
     @Override
     public void quitSubSystem() {
-        subSystem.states.remove(aCurrentState);
-        subSystem.states.remove(bCurrentState);
+        SubSystem localSubSystem = getLocalSubSystem();
+        if (localSubSystem != null) {
+            localSubSystem.states.remove(aCurrentState);
+            localSubSystem.states.remove(bCurrentState);
+        }
         super.quitSubSystem();
     }
 
     @Override
-    public void addedTo(SubSystem s) {
-        super.addedTo(s);
+    public void addToSubsystem(SubSystem s) {
+        super.addToSubsystem(s);
         s.addState(aCurrentState);
         s.addState(bCurrentState);
     }
 
     @Override
-    public void applyTo(SubSystem s) {
+    public void applyToSubsystem(SubSystem s) {
         s.addToA(bPin, bCurrentState, 1.0);
         s.addToA(bCurrentState, bPin, 1.0);
         s.addToA(bCurrentState, aPin, -ratio);
@@ -59,10 +59,8 @@ public class Transformer extends Bipole {
         s.addToA(bCurrentState, bCurrentState, ratio);
     }
 
-
     @Override
-    public double getCurrent() {
+    public double I {
         return 0;
-
     }
 }

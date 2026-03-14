@@ -3,18 +3,19 @@ package mods.eln.sim.mna.component;
 import mods.eln.sim.mna.RootSystem;
 import mods.eln.sim.mna.SubSystem;
 import mods.eln.sim.mna.misc.IDestructor;
+import mods.eln.sim.mna.misc.IRootSystemPreStepProcess;
 import mods.eln.sim.mna.state.State;
 import mods.eln.sim.mna.state.VoltageState;
+import mods.eln.sim.mna.SubSystem.Thevenin;
 
-public class InterSystemAbstraction implements IAbstractor, IDestructor {
+public class InterSystemAbstraction implements IAbstractor, IDestructor, IRootSystemPreStepProcess {
 
     VoltageState aNewState;
     Resistor aNewResistor;
-    DelayInterSystem2 aNewDelay;
+    VoltageSource aNewDelay;
     VoltageState bNewState;
     Resistor bNewResistor;
-    DelayInterSystem2 bNewDelay;
-    DelayInterSystem2.ThevnaCalculator thevnaCalc;
+    VoltageSource bNewDelay;
 
     RootSystem root;
     Resistor interSystemResistor;
@@ -38,10 +39,10 @@ public class InterSystemAbstraction implements IAbstractor, IDestructor {
 
         aNewState = new VoltageState();
         aNewResistor = new Resistor();
-        aNewDelay = new DelayInterSystem2();
+        aNewDelay = new VoltageSource("aNewDelay");
         bNewState = new VoltageState();
         bNewResistor = new Resistor();
-        bNewDelay = new DelayInterSystem2();
+        bNewDelay = new VoltageSource("bNewDelay");
 
         aNewResistor.connectGhostTo(aState, aNewState);
         aNewDelay.connectTo(aNewState, null);
@@ -62,18 +63,17 @@ public class InterSystemAbstraction implements IAbstractor, IDestructor {
 
         interSystemResistor.abstractedBy = this;
 
-        thevnaCalc = new DelayInterSystem2.ThevnaCalculator(aNewDelay, bNewDelay);
-        root.addProcess(thevnaCalc);
+        root.addProcess(this);
     }
 
     void calibrate() {
-        double u = (aState.state + bState.state) / 2;
-        aNewDelay.setU(u);
-        bNewDelay.setU(u);
+        double voltage = (aState.state + bState.state) / 2;
+        aNewDelay.setVoltage(voltage);
+        bNewDelay.setVoltage(voltage);
 
-        double r = interSystemResistor.getR() / 2;
-        aNewResistor.setR(r);
-        bNewResistor.setR(r);
+        double resistance = interSystemResistor.getResistance() / 2;
+        aNewResistor.setResistance(resistance);
+        bNewResistor.setResistance(resistance);
     }
 
     @Override
@@ -97,10 +97,24 @@ public class InterSystemAbstraction implements IAbstractor, IDestructor {
         bSystem.removeComponent(bNewResistor);
         bSystem.removeState(bNewState);
 
-        root.removeProcess(thevnaCalc);
+        root.removeProcess(this);
 
         interSystemResistor.abstractedBy = null;
 
         aSystem.component.add(interSystemResistor);
+    }
+
+    @Override
+    public void rootSystemPreStepProcess() {
+        Thevenin a = aNewDelay.getSubSystem().getTh(aState,aNewDelay);
+        Thevenin b = bNewDelay.getSubSystem().getTh(bState,bNewDelay);
+
+        double voltage = (a.voltage - b.voltage) * b.resistance / (a.resistance + b.resistance) + b.voltage;
+        if (Double.isNaN(voltage)) {
+            voltage = 0;
+        }
+
+        aNewDelay.setVoltage(voltage);
+        bNewDelay.setVoltage(voltage);
     }
 }

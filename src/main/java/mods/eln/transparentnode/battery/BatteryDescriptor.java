@@ -157,7 +157,7 @@ public class BatteryDescriptor extends TransparentNodeDescriptor {
 
         // Convert old battery absolute charge in Coulomb to to fraction of battery capacity if the capacity is
         // very small and the output voltage is more than a quarter of the nominal voltage.
-        if (battery.Q > 1.5 && battery.getU() > (battery.uNominal / 4)) {
+        if (battery.Q > 1.5 && battery.getVoltage() > (battery.uNominal / 4)) {
             battery.Q /= electricalQ;
         }
     }

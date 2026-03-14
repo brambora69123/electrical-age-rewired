@@ -26,6 +26,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -36,8 +38,8 @@ import java.util.Map;
 
 public class EnergyMeterElement extends SixNodeElement {
 
-    VoltageStateWatchDog voltageWatchDogA = new VoltageStateWatchDog();
-    VoltageStateWatchDog voltageWatchDogB = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchDogA;
+    VoltageStateWatchDog voltageWatchDogB;
     // ResistorCurrentWatchdog currentWatchDog = new ResistorCurrentWatchdog();
 
     public SlowProcess slowProcess = new SlowProcess();
@@ -72,7 +74,9 @@ public class EnergyMeterElement extends SixNodeElement {
 
     public EnergyMeterElement(SixNode sixNode, Direction side, SixNodeDescriptor descriptor) {
         super(sixNode, side, descriptor);
-        shunt.mustUseUltraImpedance();
+
+        voltageWatchDogA = new VoltageStateWatchDog(aLoad);
+        voltageWatchDogB = new VoltageStateWatchDog(bLoad);
 
         electricalLoadList.add(aLoad);
         electricalLoadList.add(bLoad);
@@ -89,8 +93,8 @@ public class EnergyMeterElement extends SixNodeElement {
         slowProcessList.add(voltageWatchDogB);
 
         // currentWatchDog.set(shunt).set(exp);
-        voltageWatchDogA.set(aLoad).set(exp);
-        voltageWatchDogB.set(bLoad).set(exp);
+        voltageWatchDogA.setDestroys(exp);
+        voltageWatchDogB.setDestroys(exp);
         this.descriptor = (EnergyMeterDescriptor) descriptor;
     }
 
@@ -99,14 +103,15 @@ public class EnergyMeterElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return aLoad;
         if (front.inverse() == lrdu) return bLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -121,13 +126,14 @@ public class EnergyMeterElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("Ua:", aLoad.getU()) + Utils.plotVolt("Ub:", bLoad.getU()) + Utils.plotVolt("I:", aLoad.getCurrent());
+        return Utils.plotVolt("Ua:", aLoad.getVoltage()) + Utils.plotVolt("Ub:", bLoad.getVoltage()) + Utils.plotVolt("I:", aLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Power"), Utils.plotPower("", aLoad.getU() * aLoad.getI()));
+        info.put(I18N.tr("Power"), Utils.plotPower("", aLoad.getVoltage() * aLoad.getCurrent()));
         switch (mod) {
             case ModCounter:
                 info.put(I18N.tr("Mode"), I18N.tr("Counter"));
@@ -143,6 +149,7 @@ public class EnergyMeterElement extends SixNodeElement {
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -181,7 +188,7 @@ public class EnergyMeterElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
         reconnect();
     }
@@ -189,21 +196,17 @@ public class EnergyMeterElement extends SixNodeElement {
     public void computeElectricalLoad() {
         ItemStack cable = getInventory().getStackInSlot(EnergyMeterContainer.cableSlotId);
 
-        cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(cable);
+        cableDescriptor = descriptor instanceof ElectricalCableDescriptor ? (ElectricalCableDescriptor) descriptor : null;
         if (cableDescriptor == null) {
             aLoad.highImpedance();
             bLoad.highImpedance();
-
-            voltageWatchDogA.disable();
-            voltageWatchDogB.disable();
-            // currentWatchDog.disable();
         } else {
             cableDescriptor.applyTo(aLoad);
             cableDescriptor.applyTo(bLoad);
 
-            voltageWatchDogA.setUNominalMirror(cableDescriptor.electricalNominalVoltage);
-            voltageWatchDogB.setUNominalMirror(cableDescriptor.electricalNominalVoltage);
-            // currentWatchDog.setIAbsMax(cableDescriptor.electricalMaximalCurrent);
+            voltageWatchDogA.setNominalVoltage(cableDescriptor.electricalNominalVoltage);
+            voltageWatchDogB.setNominalVoltage(cableDescriptor.electricalNominalVoltage);
         }
     }
 
@@ -259,13 +262,14 @@ public class EnergyMeterElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
-        return new EnergyMeterContainer(player, getInventory());
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
+        return new EnergyMeterContainer(player, inventory);
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
 
         try {
@@ -302,7 +306,7 @@ public class EnergyMeterElement extends SixNodeElement {
         @Override
         public void process(double time) {
             timeCounter += time * 72.0;
-            double p = aLoad.getCurrent() * aLoad.getU() * (aLoad.getU() > bLoad.getU() ? 1.0 : -1.0);
+            double p = aLoad.getCurrent() * aLoad.getVoltage() * (aLoad.getVoltage() > bLoad.getVoltage() ? 1.0 : -1.0);
             boolean highImp = false;
             switch (mod) {
                 case ModCounter:
@@ -320,8 +324,8 @@ public class EnergyMeterElement extends SixNodeElement {
                     break;
             }
 
-            if (highImp) shunt.ultraImpedance();
-            else Cable.Companion.applySmallRs(shunt);
+            if (highImp) shunt.highImpedance();
+            else Eln.applySmallRs(shunt);
 
             publishTimeout -= time;
             if (publishTimeout < 0) {

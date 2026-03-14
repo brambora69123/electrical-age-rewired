@@ -12,6 +12,7 @@ import mods.eln.misc.Utils;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
 import mods.eln.node.transparent.TransparentNodeElementRender;
 import mods.eln.node.transparent.TransparentNodeEntity;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -40,12 +41,12 @@ public class ElectricalAntennaRxRender extends TransparentNodeElementRender {
         descriptor.draw();
         GL11.glPopMatrix();
 
-        glCableTransforme(front.getInverse());
+        glCableTransform(front.getInverse());
         descriptor.cable.bindCableTexture();
 
         if (cableRefresh) {
             cableRefresh = false;
-            connectionType = CableRender.connectionType(tileEntity, lrduConnection, front.getInverse());
+            connectionType = CableRender.connectionType(getTileEntity(), lrduConnection, front.getInverse());
         }
 
         for (LRDU lrdu : LRDU.values()) {
@@ -54,7 +55,8 @@ public class ElectricalAntennaRxRender extends TransparentNodeElementRender {
             maskTemp.set(1 << lrdu.toInt());
 
             Direction side = front.getInverse().applyLRDU(lrdu);
-            CableRender.drawCable(getCableRender(side, side.getLRDUGoingTo(front.getInverse())), maskTemp, connectionType);
+            CableRenderDescriptor crd = getCableRenderSide(side, side.getLRDUGoingTo(front.getInverse()));
+            CableRender.drawCable(crd, maskTemp, connectionType, crd.getWidthDiv2() / 2f, false);
         }
     }
 
@@ -66,8 +68,9 @@ public class ElectricalAntennaRxRender extends TransparentNodeElementRender {
         cableRefresh = true;
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(Direction side, LRDU lrdu) {
+    public CableRenderDescriptor getCableRenderSide(Direction side, LRDU lrdu) {
         if (front.getInverse() != side.applyLRDU(lrdu)) return null;
 
         if (side == front.applyLRDU(rot.left())) return descriptor.cable.render;

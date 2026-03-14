@@ -9,11 +9,10 @@ import mods.eln.i18n.I18N
 import mods.eln.i18n.I18N.tr
 import mods.eln.init.Cable
 import mods.eln.misc.*
-import mods.eln.node.Node
+import mods.eln.node.NodeBase
 import mods.eln.node.six.*
 import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
-import mods.eln.sim.ThermalLoad
 import mods.eln.sim.nbt.NbtElectricalGateInput
 import mods.eln.sim.nbt.NbtElectricalGateOutput
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess
@@ -57,29 +56,28 @@ open class LogicGateDescriptor(name: String, obj: Obj3D?, functionName: String, 
         top?.draw()
     }
 
-    // TODO(1.10): Reimplement this...
-//    override fun handleRenderType(item: ItemStack?, type: IItemRenderer.ItemRenderType?): Boolean = true
-//    override fun shouldUseRenderHelper(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
-//                                       helper: IItemRenderer.ItemRendererHelper?): Boolean =
-//        type != IItemRenderer.ItemRenderType.INVENTORY
-//
-//    override fun shouldUseRenderHelperEln(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
-//                                          helper: IItemRenderer.ItemRendererHelper?): Boolean =
-//        type != IItemRenderer.ItemRenderType.INVENTORY
-//
-//    override fun renderItem(type: IItemRenderer.ItemRenderType?, item: ItemStack?, vararg data: Any?) {
-//        if (type == IItemRenderer.ItemRenderType.INVENTORY) {
-//            super.renderItem(type, item, *data)
-//        } else {
-//            GL11.glTranslatef(0.0f, 0.0f, -0.2f)
-//            GL11.glScalef(1.25f, 1.25f, 1.25f)
-//            GL11.glRotatef(-90.0f, 0.0f, 1.0f, 0.0f)
-//            draw()
-//        }
-//    }
+    override fun handleRenderType(item: ItemStack, type: IItemRenderer.ItemRenderType): Boolean = true
+    override fun shouldUseRenderHelper(type: IItemRenderer.ItemRenderType, item: ItemStack,
+                                       helper: IItemRenderer.ItemRendererHelper): Boolean =
+        type != IItemRenderer.ItemRenderType.INVENTORY
 
-    override fun getFrontFromPlace(side: Direction?, player: EntityPlayer?): LRDU? =
-        super.getFrontFromPlace(side, player).left()
+    override fun shouldUseRenderHelperEln(type: IItemRenderer.ItemRenderType?, item: ItemStack?,
+                                          helper: IItemRenderer.ItemRendererHelper?): Boolean =
+        type != IItemRenderer.ItemRenderType.INVENTORY
+
+    override fun renderItem(type: IItemRenderer.ItemRenderType, item: ItemStack, vararg data: Any) {
+        if (type == IItemRenderer.ItemRenderType.INVENTORY) {
+            super.renderItem(type, item, *data)
+        } else {
+            GL11.glTranslatef(0.0f, 0.0f, -0.2f)
+            GL11.glScalef(1.25f, 1.25f, 1.25f)
+            GL11.glRotatef(-90.0f, 0.0f, 1.0f, 0.0f)
+            draw()
+        }
+    }
+
+    override fun getFrontFromPlace(side: Direction, player: EntityPlayer): LRDU? =
+        super.getFrontFromPlace(side, player)!!.left()
 
     override fun setParent(item: Item?, damage: Int) {
         super.setParent(item, damage)
@@ -109,7 +107,7 @@ open class LogicGateElement(node: SixNode, side: Direction, sixNodeDescriptor: S
         electricalLoadList.add(outputPin)
         for (i in 0..descriptor.function.inputCount - 1) {
             inputPins[i] = NbtElectricalGateInput("input$i")
-            electricalLoadList.add(inputPins[i])
+            electricalLoadList.add(inputPins[i]!!)
         }
 
         electricalComponentList.add(outputProcess)
@@ -127,7 +125,7 @@ open class LogicGateElement(node: SixNode, side: Direction, sixNodeDescriptor: S
         })
     }
 
-    override fun getElectricalLoad(lrdu: LRDU?): ElectricalLoad? = when (lrdu) {
+    override fun getElectricalLoad(lrdu: LRDU, mask: Int): ElectricalLoad? = when (lrdu) {
         front -> outputPin
         front.inverse() -> inputPins[0]
         front.left() -> inputPins[1]
@@ -135,15 +133,15 @@ open class LogicGateElement(node: SixNode, side: Direction, sixNodeDescriptor: S
         else -> null
     }
 
-    override fun getConnectionMask(lrdu: LRDU?): Int = when (lrdu) {
-        front -> Node.maskElectricalOutputGate;
-        front.inverse() -> if (inputPins[0] != null) Node.maskElectricalInputGate else 0
-        front.left() -> if (inputPins[1] != null) Node.maskElectricalInputGate else 0
-        front.right() -> if (inputPins[2] != null) Node.maskElectricalInputGate else 0
+    override fun getConnectionMask(lrdu: LRDU): Int = when (lrdu) {
+        front -> NodeBase.maskElectricalOutputGate;
+        front.inverse() -> if (inputPins[0] != null) NodeBase.maskElectricalInputGate else 0
+        front.left() -> if (inputPins[1] != null) NodeBase.maskElectricalInputGate else 0
+        front.right() -> if (inputPins[2] != null) NodeBase.maskElectricalInputGate else 0
         else -> 0
     }
 
-    override fun multiMeterString(): String? {
+    override fun multiMeterString(): String {
         val builder = StringBuilder()
         for (i in 1..3) {
             val pin = inputPins[i - 1]
@@ -152,27 +150,23 @@ open class LogicGateElement(node: SixNode, side: Direction, sixNodeDescriptor: S
                 else if (pin.stateHigh()) "1" else "?").append(", ")
             }
         }
-        builder.append(tr(" O: ")).append(if (outputProcess.u == 50.0) "1" else "0")
+        builder.append(tr(" O: ")).append(if (outputProcess.voltage == 50.0) "1" else "0")
         return builder.toString()
     }
 
     override fun getWaila(): MutableMap<String, String> = function.getWaila(
         inputPins.map { if (it != null && it.connectedComponents.count() > 0) it.normalized else null }.toTypedArray(),
-        outputPin.u / Cable.SVU)
+        outputPin.voltage / Eln.SVU)
 
-    override fun readFromNBT(nbt: NBTTagCompound?) {
+    override fun readFromNBT(nbt: NBTTagCompound) {
         super.readFromNBT(nbt)
         function.readFromNBT(nbt, "function")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?): NBTTagCompound? {
+    override fun writeToNBT(nbt: NBTTagCompound) {
         super.writeToNBT(nbt)
         return function.writeToNBT(nbt, "function")
     }
-
-    override fun getThermalLoad(lrdu: LRDU?): ThermalLoad? = null
-    override fun thermoMeterString(): String? = null
-    override fun initialize() {}
 }
 
 open class LogicGateRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescriptor) :
@@ -181,15 +175,15 @@ open class LogicGateRender(entity: SixNodeEntity, side: Direction, descriptor: S
 
     override fun draw() {
         super.draw()
-        front.glRotateOnX()
+        front!!.glRotateOnX()
         descriptor.draw()
     }
 
-    override fun getCableRender(lrdu: LRDU?): CableRenderDescriptor? = when (lrdu) {
-        front -> Cable.signal.descriptor.render
-        front.inverse() -> if (descriptor.function.inputCount >= 1) Cable.signal.descriptor.render else null
-        front.left() -> if (descriptor.function.inputCount >= 2) Cable.signal.descriptor.render else null
-        front.right() -> if (descriptor.function.inputCount >= 3) Cable.signal.descriptor.render else null
+    override fun getCableRender(lrdu: LRDU): CableRenderDescriptor? = when (lrdu) {
+        front -> Eln.instance.signalCableDescriptor.render
+        front!!.inverse() -> if (descriptor.function.inputCount >= 1) Eln.instance.signalCableDescriptor.render else null
+        front!!.left() -> if (descriptor.function.inputCount >= 2) Eln.instance.signalCableDescriptor.render else null
+        front!!.right() -> if (descriptor.function.inputCount >= 3) Eln.instance.signalCableDescriptor.render else null
         else -> null
     }
 }
@@ -205,9 +199,9 @@ abstract class LogicFunction : INBTTReady {
 
     protected fun Double?.toDigitalString(): String = when {
         this == null -> "-"
-        this >= 0.6 -> I18N.tr("ON")
-        this <= 0.2 -> I18N.tr("OFF")
-        else -> I18N.tr("UNDEF")
+        this >= 0.6 -> tr("ON")
+        this <= 0.2 -> tr("OFF")
+        else -> tr("UNDEF")
     }
 
     private fun Array<Double?>.toDigital(): List<Boolean?> = this.map { it?.toDigital() }
@@ -216,14 +210,12 @@ abstract class LogicFunction : INBTTReady {
     open fun process(inputs: List<Boolean?>): Boolean = false
 
     open fun getWaila(inputs: Array<Double?>, output: Double) = mutableMapOf(
-        Pair("Inputs", (1..inputCount).map { "${AnalogFunction.inputColors[it - 1]}${inputs[it - 1].toDigitalString()}" }.joinToString(" ")),
-        Pair("Output", output.toDigitalString())
+        Pair(tr("Inputs"), (1..inputCount).map { "${AnalogFunction.inputColors[it - 1]}${inputs[it - 1].toDigitalString()}" }.joinToString(" ")),
+        Pair(tr("Output"), output.toDigitalString())
     )
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {}
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        return nbt
-    }
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {}
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {}
 }
 
 class Not : LogicFunction() {
@@ -301,13 +293,12 @@ class SchmittTrigger : LogicFunction() {
         return state
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        state = nbt?.getBoolean(str + "state") ?: false
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        state = nbt.getBoolean(str + "state")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setBoolean(str + "state", state)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setBoolean(str + "state", state)
     }
 }
 
@@ -319,8 +310,13 @@ class Oscillator : LogicFunction() {
     private var ramp = 0.0
     private var state = false
 
+    // 0v = 0.1Hz through 5v = 10Hz
+    private val hertzFunction = LinearFunction(0f, 0.1f, Eln.SVU.toFloat(), (1 / Eln.simulator.callPeriod).toFloat())
+
     override fun process(inputs: Array<Double?>): Boolean {
-        ramp += Math.pow(50.0, (inputs[0] ?: 0.0)) / 50
+        val hertz = hertzFunction.getValue(inputs[0]?: 0.0)
+        val halfPeriod = (1 / hertz) * 0.5
+        ramp += Eln.simulator.callPeriod/halfPeriod
         if (ramp >= 1) {
             ramp = 0.0
             state = !state
@@ -329,19 +325,18 @@ class Oscillator : LogicFunction() {
     }
 
     override fun getWaila(inputs: Array<Double?>, output: Double) = mutableMapOf(
-        Pair("Inputs", "${AnalogFunction.inputColors[0]} ${Utils.plotVolt("", inputs[0] ?: 0.0)}"),
-        Pair("Output", output.toDigitalString())
+        Pair(tr("Inputs"), "${AnalogFunction.inputColors[0]} ${Utils.plotVolt("", inputs[0] ?: 0.0)}"),
+        Pair(tr("Output"), output.toDigitalString())
     )
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        ramp = nbt?.getDouble(str + "ramp") ?: 0.0
-        state = nbt?.getBoolean(str + "state") ?: false
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        ramp = nbt.getDouble(str + "ramp")
+        state = nbt.getBoolean(str + "state")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setDouble(str + "ramp", ramp)
-        nbt?.setBoolean(str + "state", state)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setDouble(str + "ramp", ramp)
+        nbt.setBoolean(str + "state", state)
     }
 }
 
@@ -368,15 +363,14 @@ abstract class TriggeredLogicFunction(private val triggerIndex: Int) : LogicFunc
     open fun onRisingEdge(inputs: List<Boolean?>, state: Boolean): Boolean = state
     open fun onFallingEdge(inputs: List<Boolean?>, state: Boolean): Boolean = state
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?) {
-        trigger = nbt?.getBoolean(str + "trigger") ?: false
-        state = nbt?.getBoolean(str + "state") ?: false
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        trigger = nbt.getBoolean(str + "trigger")
+        state = nbt.getBoolean(str + "state")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setBoolean(str + "trigger", trigger)
-        nbt?.setBoolean(str + "state", state)
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setBoolean(str + "trigger", trigger)
+        nbt.setBoolean(str + "state", state)
     }
 }
 
@@ -413,19 +407,19 @@ class PalElement(node: SixNode, side: Direction, descriptor: SixNodeDescriptor) 
 
     override fun hasGui(): Boolean = true
 
-    override fun networkSerialize(stream: DataOutputStream?) {
+    override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
         try {
-            (function as Pal).truthTable.forEach { stream?.writeBoolean(it) }
+            (function as Pal).truthTable.forEach { stream.writeBoolean(it) }
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
-    override fun networkUnserialize(stream: DataInputStream?) {
+    override fun networkUnserialize(stream: DataInputStream) {
         super.networkUnserialize(stream)
         try {
-            when (stream?.readByte()?.toInt()) {
+            when (stream.readByte().toInt()) {
                 TruthTablePositionClickedEvent -> {
                     val position = stream.readInt()
                     if (position in 0..7) {
@@ -445,15 +439,15 @@ class PalRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeDescr
     LogicGateRender(entity, side, descriptor) {
     val truthTable = Array(8, { false })
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?): GuiScreen? {
+    override fun newGuiDraw(side: Direction, player: EntityPlayer): GuiScreen? {
         return PalGui(this)
     }
 
-    override fun publishUnserialize(stream: DataInputStream?) {
+    override fun publishUnserialize(stream: DataInputStream) {
         super.publishUnserialize(stream)
         try {
             for (i in 0..7) {
-                truthTable[i] = stream?.readBoolean() ?: false
+                truthTable[i] = stream.readBoolean()
             }
         } catch (e: IOException) {
             e.printStackTrace()
@@ -501,19 +495,18 @@ class PalGui(val render: PalRender) : GuiScreenEln() {
 
 class Pal : LogicFunction() {
     override val inputCount = 3
-    override val infos =
+    override val infos: String =
         tr("A Programmable Array Logic (PAL) is a programmable\nlogic device semiconductors used to  implement any logic\nfunction in only one digital circuit. The function is\nstateless, which means that no intermediate state is saved.")
-    val truthTable = Array(8, { false })
+    val truthTable = Array(8) { false }
 
     private operator fun Boolean.times(factor: Int): Int = if (this) factor else 0
 
     private fun Array<Boolean>.toInt(): Int {
-        val value = (0..this.count() - 1).filter { this[it] }.sumBy { 1.shl(it) }
-        return value
+        return (0 until count()).filter { this[it] }.sumOf { 1.shl(it) }
     }
 
     private fun Array<Boolean>.fromInt(value: Int) {
-        for (i in 0..this.count() - 1) {
+        for (i in 0 until this.count()) {
             this[i] = (value and 1.shl(i)) != 0
         }
     }
@@ -523,12 +516,11 @@ class Pal : LogicFunction() {
             (inputs[2] ?: false) * 2 +
             ((inputs[2] ?: false) xor (inputs[1] ?: false)) * 1]
 
-    override fun readFromNBT(nbt: NBTTagCompound?, str: String?){
-        truthTable.fromInt(nbt?.getInteger(str + "truthTable") ?: 0)
+    override fun readFromNBT(nbt: NBTTagCompound, str: String) {
+        truthTable.fromInt(nbt.getInteger(str + "truthTable"))
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?, str: String?): NBTTagCompound? {
-        nbt?.setInteger(str + "truthTable", truthTable.toInt())
-        return nbt
+    override fun writeToNBT(nbt: NBTTagCompound, str: String) {
+        nbt.setInteger(str + "truthTable", truthTable.toInt())
     }
 }

@@ -49,7 +49,7 @@ public class WirelessSignalRepeaterProcess implements IProcess, IWirelessSignalS
     }
 
     @Override
-    public Coordinate getCoordinate() {
+    public Coordinate getCoordonate() {
         return rx.getCoordinate();
     }
 

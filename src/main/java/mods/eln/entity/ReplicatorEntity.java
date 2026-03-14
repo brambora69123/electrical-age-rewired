@@ -130,12 +130,8 @@ public class ReplicatorEntity extends EntityMob {
     @Override
     protected void dropFewItems(boolean par1, int par2) {
         if (!dropList.isEmpty()) {
-            this.entityDropItem(dropList.get(this.rand.nextInt(dropList.size())).copy(), 0.5f);
-        } else {
-            // Default drops if list is empty to prevent crash
-            this.entityDropItem(new ItemStack(Items.IRON_INGOT), 0.5f);
+            this.entityDropItem(dropList.get(new Random().nextInt(dropList.size())).copy(), 0.5f);
         }
-
         if (isSpawnedFromWeather) {
             if (Math.random() < 0.33) {
                 int id = EntityList.getID(ReplicatorEntity.class);

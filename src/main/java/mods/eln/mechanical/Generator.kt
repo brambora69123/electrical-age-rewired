@@ -3,7 +3,7 @@ package mods.eln.mechanical
 import mods.eln.init.Config
 import mods.eln.Eln
 import mods.eln.cable.CableRenderDescriptor
-import mods.eln.init.Cable
+import mods.eln.i18n.I18N.tr
 import mods.eln.misc.*
 import mods.eln.node.NodeBase
 import mods.eln.node.transparent.EntityMetaTag
@@ -38,7 +38,8 @@ class GeneratorDescriptor(
     nominalU: Float,
     powerOutPerDeltaU: Float,
     nominalP: Float,
-    thermalLoadInitializer: ThermalLoadInitializer) :
+    thermalLoadInitializer: ThermalLoadInitializer,
+    val bipolarTerminals: Boolean = false) :
     SimpleShaftDescriptor(name, GeneratorElement::class, GeneratorRender::class, EntityMetaTag.Basic) {
 
     val RtoU = LinearFunction(0f, 0f, nominalRads, nominalU)
@@ -74,12 +75,12 @@ class GeneratorDescriptor(
     ).requireNoNulls()
 
     override fun addInformation(stack: ItemStack, player: EntityPlayer, list: MutableList<String>, par4: Boolean) {
-        list.add("Converts mechanical energy into electricity, or (badly) vice versa.")
-        list.add("Nominal usage ->")
-        list.add(Utils.plotVolt("  Voltage out: ", nominalU.toDouble()))
-        list.add(Utils.plotPower("  Power out: ", nominalP.toDouble()))
-        list.add(Utils.plotRads("  Rads: ", nominalRads.toDouble()))
-        list.add(Utils.plotRads("Max rads:  ", absoluteMaximumShaftSpeed))
+        list.add(tr("Converts mechanical energy into electricity, or (badly) vice versa."))
+        list.add(tr("Nominal usage ->"))
+        list.add(Utils.plotVolt(tr("  Voltage out: "), nominalU.toDouble()))
+        list.add(Utils.plotPower(tr("  Power out: "), nominalP.toDouble()))
+        list.add(Utils.plotRads(tr("  Rads: "), nominalRads.toDouble()))
+        list.add(Utils.plotRads(tr("Max rads:  "), absoluteMaximumShaftSpeed))
     }
 }
 
@@ -137,8 +138,11 @@ class GeneratorRender(entity: TransparentNodeEntity, desc_: TransparentNodeDescr
         }
     }
 
-    override fun getCableRender(side: Direction, lrdu: LRDU): CableRenderDescriptor? {
-        if (lrdu == LRDU.Down && side == front) return Cable.veryHighVoltage.descriptor.render
+    override fun getCableRenderSide(side: Direction, lrdu: LRDU): CableRenderDescriptor? {
+        val f = front ?: return null
+        if (lrdu == LRDU.Down && (side == f || (desc.bipolarTerminals && side == f.back()))) {
+            return Eln.instance.stdCableRender3200V
+        }
         return null
     }
 
@@ -155,19 +159,24 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
     val desc = desc_ as GeneratorDescriptor
 
     internal val inputLoad = NbtElectricalLoad("inputLoad")
+    internal val negativeLoad = NbtElectricalLoad("negativeLoad")
     internal val positiveLoad = NbtElectricalLoad("positiveLoad")
     internal val inputToPositiveResistor = Resistor(inputLoad, positiveLoad)
-    internal val electricalPowerSource = VoltageSource("PowerSource", positiveLoad, null)
+    internal val electricalPowerSource = VoltageSource("PowerSource", positiveLoad, if (desc.bipolarTerminals) negativeLoad else null)
     internal val electricalProcess = GeneratorElectricalProcess()
     internal val shaftProcess = GeneratorShaftProcess()
 
     internal val thermal = NbtThermalLoad("thermal")
     internal val heater: ElectricalLoadHeatThermalLoad
-    internal val thermalLoadWatchDog = ThermalLoadWatchDog()
+    internal val thermalLoadWatchDog = ambientAwareThermalWatchdog(ThermalLoadWatchDog(thermal))
 
     init {
         electricalLoadList.add(positiveLoad)
         electricalLoadList.add(inputLoad)
+        if (desc.bipolarTerminals) {
+            electricalLoadList.add(negativeLoad)
+            desc.cable.applyTo(negativeLoad)
+        }
         electricalComponentList.add(electricalPowerSource)
         electricalComponentList.add(inputToPositiveResistor)
 
@@ -180,7 +189,8 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
         desc.thermalLoadInitializer.applyTo(thermalLoadWatchDog)
         thermal.setAsSlow()
         thermalLoadList.add(thermal)
-        thermalLoadWatchDog.set(thermal).set(WorldExplosion(this).machineExplosion())
+        thermalLoadWatchDog.setDestroys(WorldExplosion(this as ShaftElement).machineExplosion())
+        slowProcessList.add(thermalLoadWatchDog)
 
         heater = ElectricalLoadHeatThermalLoad(inputLoad, thermal)
         thermalFastProcessList.add(heater)
@@ -197,17 +207,17 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
             // Some comments on what math is going on would be great.
             val th = positiveLoad.getSubSystem().getTh(positiveLoad, electricalPowerSource)
             var Ut: Double
-            if (targetU < th.U) {
-                Ut = th.U * 0.999 + targetU * 0.001
+            if (targetU < th.voltage) {
+                Ut = th.voltage * 0.999 + targetU * 0.001
             } else if (th.isHighImpedance()) {
                 Ut = targetU
             } else {
-                val a = 1 / th.R
-                val b = desc.powerOutPerDeltaU - th.U / th.R
+                val a = 1 / th.resistance
+                val b = desc.powerOutPerDeltaU - th.voltage / th.resistance
                 val c = -desc.powerOutPerDeltaU * targetU
                 Ut = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
             }
-            electricalPowerSource.setU(Ut)
+            electricalPowerSource.setVoltage(Ut)
         }
 
         override fun rootSystemPreStepProcess() {
@@ -219,14 +229,16 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
         private var powerFraction = 0.0f
 
         override fun process(time: Double) {
-            val p = electricalPowerSource.p
+            val p = electricalPowerSource.power
             powerFraction = (p / desc.nominalP).toFloat()
             var E = p * time
+            if (E.isNaN())
+                E = 0.0
             if (E < 0)
                 E *= 0.75  // Not a very efficient motor.
             maybePublishE(E / time)
             // The Math.max makes the shaft harder to spin up without an auxilliary power source.
-            E += defaultDrag * Math.max(shaft.rads, 10.0)
+            E += defaultDrag * Math.max(shaft.rads, 1.0)
             shaft.energy -= (E * desc.generationEfficiency)
             thermal.movePowerTo(E * (1 - desc.generationEfficiency))
         }
@@ -255,24 +267,24 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
         if (lrdu != LRDU.Down) return null;
         return when (side) {
             front -> inputLoad
-            front.back() -> inputLoad
+            front.back() -> if (desc.bipolarTerminals) negativeLoad else inputLoad
             else -> null
         }
     }
 
-    override fun getThermalLoad(side: Direction?, lrdu: LRDU?) = thermal
+    override fun getThermalLoad(side: Direction, lrdu: LRDU) = thermal
 
-    override fun getConnectionMask(side: Direction?, lrdu: LRDU?): Int {
+    override fun getConnectionMask(side: Direction, lrdu: LRDU): Int {
         if (lrdu == LRDU.Down && (side == front || side == front.back())) return NodeBase.maskElectricalPower
         return 0
     }
 
-    override fun multiMeterString(side: Direction?) =
-        Utils.plotER(shaft.energy, shaft.rads) + Utils.plotUIP(electricalPowerSource.getU(), electricalPowerSource.getI())
+    override fun multiMeterString(side: Direction) =
+        Utils.plotER(shaft.energy, shaft.rads) + Utils.plotUIP(electricalPowerSource.getVoltage(), electricalPowerSource.getCurrent())
 
-    override fun thermoMeterString(side: Direction?) = Utils.plotCelsius("T", thermal.getT())
+    override fun thermoMeterString(side: Direction): String = plotAmbientCelsius("T", thermal.getTemperature())
 
-    override fun onBlockActivated(entityPlayer: EntityPlayer?, side: Direction?, vx: Float, vy: Float, vz: Float): Boolean {
+    override fun onBlockActivated(player: EntityPlayer, side: Direction, vx: Float, vy: Float, vz: Float): Boolean {
         return false
     }
 
@@ -283,13 +295,17 @@ class GeneratorElement(node: TransparentNode, desc_: TransparentNodeDescriptor) 
 
     override fun getWaila(): Map<String, String> {
         var info = mutableMapOf<String, String>()
-        info.put("Energy", Utils.plotEnergy("", shaft.energy))
-        info.put("Speed", Utils.plotRads("", shaft.rads))
-        if (Config.wailaEasyMode) {
-            info.put("Voltage", Utils.plotVolt("", electricalPowerSource.getU()))
-            info.put("Current", Utils.plotAmpere("", electricalPowerSource.getI()))
-            info.put("Temperature", Utils.plotCelsius("", thermal.t))
+        info.put(tr("Energy"), Utils.plotEnergy("", shaft.energy))
+        info.put(tr("Speed"), Utils.plotRads("", shaft.rads))
+        if (Eln.wailaEasyMode) {
+            info.put(tr("Voltage"), Utils.plotVolt("", electricalPowerSource.getVoltage()))
+            info.put(tr("Current"), Utils.plotAmpere("", electricalPowerSource.getCurrent()))
+            info.put(tr("Temperature"), plotAmbientCelsius("", thermal.temperature))
         }
         return info
+    }
+
+    override fun coordonate(): Coordinate {
+        return node!!.coordinate
     }
 }

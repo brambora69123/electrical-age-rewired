@@ -4,8 +4,8 @@ import com.google.common.cache.CacheLoader
 import mcp.mobius.waila.api.IWailaConfigHandler
 import mcp.mobius.waila.api.IWailaDataAccessor
 import mcp.mobius.waila.api.IWailaDataProvider
+import mcp.mobius.waila.api.SpecialChars
 import mods.eln.misc.Coordinate
-import mods.eln.node.transparent.TransparentNodeEntity
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
@@ -18,8 +18,8 @@ import net.minecraftforge.fml.common.Optional
 @Optional.Interface(iface = "mcp.mobius.waila.api.IWailaDataProvider", modid = "Waila")
 class TransparentNodeWailaProvider : IWailaDataProvider {
     override fun getWailaBody(itemStack: ItemStack?, currenttip: MutableList<String>,
-                              accessor: IWailaDataAccessor, config: IWailaConfigHandler?): MutableList<String> {
-        val coord = Coordinate(accessor.position.x, accessor.position.y, accessor.position.z,
+                              accessor: IWailaDataAccessor, config: IWailaConfigHandler?): MutableList<String>? {
+        val coord = Coordinate(accessor.position.blockX, accessor.position.blockY, accessor.position.blockZ,
             accessor.world)
         try {
             val data = WailaCache.nodes.get(coord)

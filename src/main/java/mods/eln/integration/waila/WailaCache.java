@@ -22,61 +22,66 @@ import java.util.concurrent.TimeUnit;
  */
 public class WailaCache {
 
-    public static LoadingCache<Coordinate, TransparentNodeWailaData> nodes = CacheBuilder.newBuilder()
+    public static LoadingCache<Coordinate, Map<String, String>> nodes = CacheBuilder.newBuilder()
         .maximumSize(20)
         .refreshAfterWrite(2, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<Coordinate, TransparentNodeWailaData>() {
-                public TransparentNodeWailaData load(Coordinate key) throws Exception {
+            cacheLoader(
+                key -> {
                     Eln.elnNetwork.sendToServer(new TransparentNodeRequestPacket(key));
                     return new TransparentNodeWailaData(ItemStack.EMPTY, new HashMap<String, String>());
                 }
-
-                @Override
-                public ListenableFuture<TransparentNodeWailaData> reload(Coordinate key,
-                                                                    TransparentNodeWailaData oldValue) throws Exception {
-                    Eln.elnNetwork.sendToServer(new TransparentNodeRequestPacket(key));
-                    return Futures.immediateFuture(oldValue);
-                }
-            }
+            )
         );
 
     public static LoadingCache<SixNodeCoordinate, SixNodeWailaData> sixNodes = CacheBuilder.newBuilder()
         .maximumSize(20)
         .refreshAfterWrite(2, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<SixNodeCoordinate, SixNodeWailaData>() {
-                public SixNodeWailaData load(SixNodeCoordinate key) throws Exception {
+            cacheLoader(
+                key -> {
                     Eln.elnNetwork.sendToServer(new SixNodeWailaRequestPacket(key.getCoord(), key.getSide()));
                     return new SixNodeWailaData(ItemStack.EMPTY, new HashMap<String, String>());
                 }
-
-                @Override
-                public ListenableFuture<SixNodeWailaData> reload(SixNodeCoordinate key,
-                                                                 SixNodeWailaData oldValue) throws Exception {
-                    Eln.elnNetwork.sendToServer(new SixNodeWailaRequestPacket(key.getCoord(), key.getSide()));
-                    return Futures.immediateFuture(oldValue);
-                }
-            }
+            )
         );
 
     public static LoadingCache<Coordinate, GhostNodeWailaData> ghostNodes = CacheBuilder.newBuilder()
         .maximumSize(20)
         .refreshAfterWrite(10, TimeUnit.SECONDS)
         .build(
-            new CacheLoader<Coordinate, GhostNodeWailaData>() {
-                public GhostNodeWailaData load(Coordinate key) throws Exception {
+            cacheLoader(
+                key -> {
                     Eln.elnNetwork.sendToServer(new GhostNodeWailaRequestPacket(key));
                     return new GhostNodeWailaData(key, ItemStack.EMPTY, GhostNodeWailaResponsePacket.UNKNOWN_TYPE, mods.eln.misc.Direction.XN);
                 }
-
-                @Override
-                public ListenableFuture<GhostNodeWailaData> reload(Coordinate key,
-                                                                   GhostNodeWailaData oldValue) throws Exception {
-                    Eln.elnNetwork.sendToServer(new GhostNodeWailaRequestPacket(key));
-                    return Futures.immediateFuture(oldValue);
-                }
-            }
+            )
         );
 
+    private static <K, V> CacheLoader<K, V> cacheLoader(LoaderFunction<K, V> loader) {
+        return new WailaDelegatingCacheLoader<>(loader);
+    }
+}
+
+interface LoaderFunction<K, V> {
+    V load(K key) throws Exception;
+}
+
+final class WailaDelegatingCacheLoader<K, V> extends CacheLoader<K, V> {
+    private final LoaderFunction<K, V> loader;
+
+    WailaDelegatingCacheLoader(LoaderFunction<K, V> loader) {
+        this.loader = loader;
+    }
+
+    @Override
+    public V load(K key) throws Exception {
+        return loader.load(key);
+    }
+
+    @Override
+    public ListenableFuture<V> reload(K key, V oldValue) throws Exception {
+        loader.load(key);
+        return Futures.immediateFuture(oldValue);
+    }
 }

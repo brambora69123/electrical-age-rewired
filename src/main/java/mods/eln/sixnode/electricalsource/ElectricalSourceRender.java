@@ -2,14 +2,15 @@ package mods.eln.sixnode.electricalsource;
 
 import mods.eln.Eln;
 import mods.eln.cable.CableRenderDescriptor;
-import mods.eln.init.Cable;
-import mods.eln.misc.Direction;
-import mods.eln.misc.LRDU;
+import mods.eln.misc.*;
 import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.*;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -32,39 +33,36 @@ public class ElectricalSourceRender extends SixNodeElementRender {
 
         front.glRotateOnX();
 
-        descriptor.draw(voltage >= 25);
+        descriptor.draw(voltage >= (Eln.SVU/2));
     }
 
     @Override
     public void publishUnserialize(DataInputStream stream) {
         super.publishUnserialize(stream);
         try {
-            Byte b;
-            b = stream.readByte();
-
-            color = (b >> 4) & 0xF;
             voltage = stream.readFloat();
-
             needRedrawCable();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalSourceGui(this);
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
-        if (descriptor.isSignalSource()) return Cable.Companion.getSignal().descriptor.render;
-        if (voltage < Cable.Companion.getLowVoltage().descriptor.electricalMaximalVoltage)
-            return Cable.Companion.getLowVoltage().descriptor.render;
-        if (voltage < Cable.Companion.getMediumVoltage().descriptor.electricalMaximalVoltage)
-            return Cable.Companion.getMediumVoltage().descriptor.render;
-        if (voltage > Cable.Companion.getHighVoltage().descriptor.electricalMaximalVoltage)
-            return Cable.Companion.getHighVoltage().descriptor.render;
-        return Cable.Companion.getVeryHighVoltage().descriptor.render;
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
+        if (descriptor.isSignalSource()) return Eln.instance.signalCableDescriptor.render;
+        if (voltage < Eln.instance.lowVoltageCableDescriptor.electricalMaximalVoltage)
+            return Eln.instance.lowVoltageCableDescriptor.render;
+        if (voltage < Eln.instance.meduimVoltageCableDescriptor.electricalMaximalVoltage)
+            return Eln.instance.meduimVoltageCableDescriptor.render;
+        if (voltage < Eln.instance.highVoltageCableDescriptor.electricalMaximalVoltage)
+            return Eln.instance.highVoltageCableDescriptor.render;
+        return Eln.instance.veryHighVoltageCableDescriptor.render;
     }
 }

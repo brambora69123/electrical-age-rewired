@@ -1,8 +1,8 @@
 package mods.eln.transparentnode.turret;
 
-import mods.eln.fsm.CompositeState;
-import mods.eln.fsm.State;
-import mods.eln.fsm.StateMachine;
+import mods.eln.sim.fsm.CompositeState;
+import mods.eln.sim.fsm.State;
+import mods.eln.sim.fsm.StateMachine;
 import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.EntitySensorFilterDescriptor;
 import mods.eln.misc.Coordinate;
@@ -17,6 +17,9 @@ import net.minecraft.util.math.AxisAlignedBB;
 
 import java.util.List;
 import java.util.Random;
+
+import static scala.Console.println;
+
 
 public class TurretSlowProcess extends StateMachine {
     private static final Random rand = new Random();
@@ -38,7 +41,7 @@ public class TurretSlowProcess extends StateMachine {
 
         @Override
         public State state(double time) {
-            if (element.load.getU() >= element.getDescriptor().getProperties().minimalVoltage *
+            if (element.load.getVoltage() >= element.getDescriptor().getProperties().minimalVoltage *
                 (1.0 + element.getDescriptor().getProperties().minimalVoltageHysteresisFactor)) {
                 return new ActiveState();
             } else {
@@ -67,10 +70,10 @@ public class TurretSlowProcess extends StateMachine {
         @Override
         public State state(double time) {
             super.state(time);
-            if (element.load.getU() < element.getDescriptor().getProperties().minimalVoltage *
+            if (element.load.getVoltage() < element.getDescriptor().getProperties().minimalVoltage *
                 (1.0 - element.getDescriptor().getProperties().minimalVoltageHysteresisFactor))
                 return new WaitState();
-            else if (element.load.getU() > element.getDescriptor().getProperties().maximalVoltage)
+            else if (element.load.getVoltage() > element.getDescriptor().getProperties().maximalVoltage)
                 return new DamageState();
             else
                 return this;
@@ -206,7 +209,11 @@ public class TurretSlowProcess extends StateMachine {
                         }
 
                     if (visible) {
-                        element.play(new SoundCommand("eln:TurretFire").mulVolume(0.4));
+                        if(entity.getHealth()>0) {
+                            element.play(new SoundCommand("eln:TurretFire").mulVolume(0.4));
+                        } else {
+                            element.play(new SoundCommand("eln:TurretKill").mulVolume(0.4));
+                        }
                         return new AimingState(entity);
                     }
                 }
@@ -237,7 +244,7 @@ public class TurretSlowProcess extends StateMachine {
 
         @Override
         public State state(double time) {
-            if (target.isDead) return new SeekingState();
+            if (target.getHealth()<=0) return new SeekingState();
 
             Class filterClass = null;
             ItemStack filterStack = element.getInventory().getStackInSlot(TurretContainer.filterId);
@@ -319,14 +326,17 @@ public class TurretSlowProcess extends StateMachine {
 
         @Override
         public void enter() {
-            if (target != null) target.attackEntityFrom(new DamageSource("Unknown"), 5);
-            element.shoot();
-            element.play(new SoundCommand("eln:LaserGun"));
+            if (target != null) {
+                target.hurtResistantTime = 0;
+                target.attackEntityFrom(new DamageSource("Unknown"), 5);
+                element.shoot();
+                element.play(new SoundCommand("eln:LaserGun"));
+            }
         }
 
         @Override
         public State state(double time) {
-            if (target == null || target.isDead)
+            if (target == null || target.getHealth()<=0)
                 return new SeekingState();
             else
                 return new AimingState(target);
@@ -341,19 +351,19 @@ public class TurretSlowProcess extends StateMachine {
     @Override
     public void process(double time) {
         double MaximalEnergy = element.getDescriptor().getProperties().impulseEnergy;
-        element.energyBuffer += element.powerResistor.getP() * time;
+        element.energyBuffer += element.powerResistor.getPower() * time;
         boolean full = element.energyBuffer > MaximalEnergy;
 
         if (full) {
             element.energyBuffer = MaximalEnergy;
         }
 
-        if (element.coordinate().doesBlockExist())
+        if (element.coordinate().getBlockExist())
             super.process(time);
 
         if (actualPower == 0 || full)
             element.powerResistor.highImpedance();
         else
-            element.powerResistor.setR(element.load.getU() * element.load.getU() / actualPower);
+            element.powerResistor.setResistance(element.load.getVoltage() * element.load.getVoltage() / actualPower);
     }
 }

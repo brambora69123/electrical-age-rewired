@@ -462,6 +462,15 @@ class Eln {
         // =====================================================================
         // Physical constants and configuration
         // =====================================================================
+        const val gateOutputCurrent = 0.100
+        const val LVU = 50.0
+        const val MVU = 200.0
+        const val HVU = 800.0
+        const val VVU = 3200.0
+        const val SVU = 5.0
+        const val SVII = gateOutputCurrent / SVU
+        const val SVUinv = 1.0 / SVU
+
         val batteryVoltageFunctionTable = FunctionTable(
             doubleArrayOf(0.000, 0.9, 1.0, 1.025, 1.04, 1.05, 2.0),
             6.0 / 5.0
@@ -470,6 +479,10 @@ class Eln {
         const val cableHeatingTime = 30.0
         const val cableWarmLimit = 130.0
         const val cableThermalConductionTao = 0.5
+
+        var wirelessTxRange = 64.0
+        var cableThermalSpikeLimiterEnabled = true
+        var cableThermalSpikeLimitFactor = 2.0
 
         val cableThermalLoadInitializer = ThermalLoadInitializer(
             cableWarmLimit, -100.0, cableHeatingTime, cableThermalConductionTao

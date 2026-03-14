@@ -8,6 +8,7 @@ import mods.eln.misc.Utils;
 import mods.eln.node.NodeBase;
 import mods.eln.node.six.SixNode;
 import mods.eln.node.six.SixNodeDescriptor;
+import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElement;
 import mods.eln.node.six.SixNodeElementInventory;
 import mods.eln.sim.ElectricalLoad;
@@ -23,11 +24,12 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Map;
 
 public class HubElement extends SixNodeElement {
 
@@ -48,7 +50,7 @@ public class HubElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         for (int idx = 0; idx < 6; idx++) {
             connectionGrid[idx] = nbt.getBoolean("connectionGrid" + idx);
@@ -70,36 +72,33 @@ public class HubElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
-        if (!inventory.getStackInSlot(HubContainer.cableSlotId + lrdu.toInt()).isEmpty())
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
+        if (inventory.getStackInSlot(HubContainer.cableSlotId + lrdu.toInt()) != null)
             return electricalLoad[lrdu.toInt()];
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
     @Override
     public int getConnectionMask(LRDU lrdu) {
-        if (getElectricalLoad(lrdu) != null)
+        if (getElectricalLoad(lrdu, 0) != null)
             return NodeBase.maskElectricalAll;
 
         return 0;
     }
 
+    @NotNull
     @Override
     public String multiMeterString() {
-        return "";// Utils.plotVolt("U:", electricalLoad.Uc) +
-        // Utils.plotAmpere("I:", electricalLoad.getCurrent());
+        return "";
     }
 
-    @Override
-    public Map<String, String> getWaila() {
-        return null;
-    }
-
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -130,7 +129,7 @@ public class HubElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         super.inventoryChanged();
         sixNode.disconnect();
         setup();
@@ -153,12 +152,11 @@ public class HubElement extends SixNodeElement {
             ElectricalCableDescriptor d = getCableDescriptorFromLrdu(lrdu);
             if (d == null) continue;
 
-            VoltageStateWatchDog watchdog = new VoltageStateWatchDog();
+            VoltageStateWatchDog watchdog = new VoltageStateWatchDog(electricalLoad[lrdu.toInt()]);
             slowProcessList.add(watchdog);
             watchdog
-                .setUNominal(d.electricalNominalVoltage)
-                .set(electricalLoad[lrdu.toInt()])
-                .set(exp);
+                .setNominalVoltage(d.electricalNominalVoltage)
+                .setDestroys(exp);
         }
 
         for (int idx = 0; idx < 6; idx++) {
@@ -167,7 +165,7 @@ public class HubElement extends SixNodeElement {
 
                 if (!inventory.getStackInSlot(HubContainer.cableSlotId + lrdu[0].toInt()).isEmpty() && !inventory.getStackInSlot(HubContainer.cableSlotId + lrdu[1].toInt()).isEmpty()) {
                     Resistor r = new Resistor(electricalLoad[lrdu[0].toInt()], electricalLoad[lrdu[1].toInt()]);
-                    r.setR(getCableDescriptorFromLrdu(lrdu[0]).electricalRs + getCableDescriptorFromLrdu(lrdu[1]).electricalRs);
+                    r.setResistance(getCableDescriptorFromLrdu(lrdu[0]).electricalRs + getCableDescriptorFromLrdu(lrdu[1]).electricalRs);
                     electricalComponentList.add(r);
 
                     //ResistorCurrentWatchdog watchdog = new ResistorCurrentWatchdog();
@@ -185,7 +183,8 @@ public class HubElement extends SixNodeElement {
         ElectricalCableDescriptor cableDescriptor;
         ItemStack cable;
         cable = inventory.getStackInSlot(HubContainer.cableSlotId + lrdu.toInt());
-        cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(cable);
+        cableDescriptor = descriptor instanceof ElectricalCableDescriptor ? (ElectricalCableDescriptor) descriptor : null;
         return cableDescriptor;
     }
 
@@ -213,8 +212,9 @@ public class HubElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new HubContainer(player, inventory);
     }
 

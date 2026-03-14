@@ -12,7 +12,7 @@ public class State {
     private int id = -1;
 
     public double state;
-    SubSystem subSystem;
+    private SubSystem subSystem;
 
     ArrayList<Component> components = new ArrayList<Component>();
 
@@ -20,6 +20,7 @@ public class State {
     boolean mustBeFarFromInterSystem = false;
 
     public IAbstractor abstractedBy;
+    private String owner;
 
     public int getId() {
         return id;
@@ -29,7 +30,7 @@ public class State {
         this.id = id;
     }
 
-    public void addedTo(SubSystem s) {
+    public void setSubsystem(SubSystem s) {
         this.subSystem = s;
     }
 
@@ -55,12 +56,11 @@ public class State {
         return list;
     }
 
-    public void add(Component c) {
+    public void addComponent(Component c) {
         components.add(c);
-        //System.out.println("ADD " + c + " To " +  this);
     }
 
-    public void remove(Component c) {
+    public void removeComponent(Component c) {
         components.remove(c);
     }
 
@@ -96,5 +96,19 @@ public class State {
 
     public boolean isNotSimulated() {
         return subSystem == null && abstractedBy == null;
+    }
+
+    public State setOwner(String owner) {
+        this.owner = owner;
+        return this;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + this.getId() + "," + this.getClass().getSimpleName() + ")";
     }
 }

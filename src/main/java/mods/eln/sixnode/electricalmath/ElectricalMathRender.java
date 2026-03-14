@@ -8,8 +8,11 @@ import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElementInventory;
 import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
+import mods.eln.sound.BeepLoopedSound;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -28,6 +31,11 @@ public class ElectricalMathRender extends SixNodeElementRender {
     public int redstoneRequired;
     public boolean equationIsValid;
 
+    boolean beepActive;
+    float beepPitch = 1f;
+    float beepVolume = 0.5f;
+    BeepLoopedSound beepSound;
+
     float ledTime = 0f;
     boolean[] ledOn = new boolean[8];
 
@@ -40,8 +48,9 @@ public class ElectricalMathRender extends SixNodeElementRender {
         ledOn[4] = true;
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalMathGui(player, inventory, this);
     }
 
@@ -52,6 +61,9 @@ public class ElectricalMathRender extends SixNodeElementRender {
             expression = stream.readUTF();
             redstoneRequired = stream.readInt();
             equationIsValid = stream.readBoolean();
+            beepActive = stream.readBoolean();
+            beepPitch = stream.readFloat();
+            beepVolume = stream.readFloat();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -68,7 +80,7 @@ public class ElectricalMathRender extends SixNodeElementRender {
             pinDistances = descriptor.pinDistance;
         }
 
-        if (UtilsClient.distanceFromClientPlayer(tileEntity) < 15) {
+        if (UtilsClient.distanceFromClientPlayer(getTileEntity()) < 15) {
             GL11.glColor3f(0, 0, 0);
             UtilsClient.drawConnectionPinSixNode(front, pinDistances, 1.8f, 1.35f);
             GL11.glColor3f(1, 0, 0);
@@ -89,6 +101,7 @@ public class ElectricalMathRender extends SixNodeElementRender {
 
     @Override
     public void refresh(float deltaT) {
+        super.refresh(deltaT);
         ledTime += deltaT;
 
         if (ledTime > 0.4) {
@@ -101,16 +114,36 @@ public class ElectricalMathRender extends SixNodeElementRender {
             ledTime = 0;
         }
 
-        if (!Utils.isPlayerAround(tileEntity.getWorld(), coord.getAxisAlignedBB(0)))
+        if (!Utils.isPlayerAround(getTileEntity().getWorldObj(), coord.getAxisAlignedBB(0)))
             interpolator.setTarget(0f);
         else
             interpolator.setTarget(1f);
 
         interpolator.step(deltaT);
+
+        updateBeepSound();
     }
 
+    private void updateBeepSound() {
+        if (beepActive) {
+            if (beepSound == null) {
+                beepSound = new BeepLoopedSound(coord, beepVolume, beepPitch);
+                addLoopedSound(beepSound);
+            } else {
+                beepSound.setActiveState(true);
+                beepSound.setVolume(beepVolume);
+                beepSound.setPitch(beepPitch);
+            }
+        } else if (beepSound != null) {
+            beepSound.setVolume(0f);
+            beepSound.setPitch(0f);
+            beepSound.setActiveState(false);
+        }
+    }
+
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
-        return Cable.Companion.getSignal().descriptor.render;
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
+        return Eln.instance.signalCableDescriptor.render;
     }
 }

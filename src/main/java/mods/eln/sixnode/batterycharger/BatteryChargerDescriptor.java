@@ -10,6 +10,8 @@ import mods.eln.wiki.Data;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
@@ -104,7 +106,7 @@ public class BatteryChargerDescriptor extends SixNodeDescriptor {
         if (!powerOn)
             powerload.highImpedance();
         else
-            powerload.setR(Rp);
+            powerload.setResistance(Rp);
     }
 
     @Override
@@ -115,7 +117,15 @@ public class BatteryChargerDescriptor extends SixNodeDescriptor {
     }
 
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public RealisticEnum addRealismContext(List<String> list) {
+        super.addRealismContext(list);
+        list.add(tr("This battery charger doesn't take into account battery chemistry"));
+        return RealisticEnum.IDEAL;
+    }
+
+    @Nullable
+    @Override
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         return super.getFrontFromPlace(side, player).inverse();
     }
 }

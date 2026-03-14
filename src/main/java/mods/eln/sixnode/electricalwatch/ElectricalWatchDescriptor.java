@@ -7,9 +7,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
+import java.util.List;
 import java.util.Locale;
+
+import static mods.eln.i18n.I18N.tr;
 
 public class ElectricalWatchDescriptor extends SixNodeDescriptor {
 
@@ -47,6 +52,13 @@ public class ElectricalWatchDescriptor extends SixNodeDescriptor {
         }
 
         voltageLevelColor = VoltageLevelColor.Neutral;
+    }
+
+    @Override
+    public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List<String> list, boolean par4) {
+        super.addInformation(itemStack, entityPlayer, list, par4);
+        list.add(tr("Tells the time."));
+        list.add(tr("Requires batteries for operation."));
     }
 
     void draw(float hour, float min, boolean isEnergyAvailable) {
@@ -129,8 +141,9 @@ public class ElectricalWatchDescriptor extends SixNodeDescriptor {
 //        }
 //    }
 
+    @Nullable
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         return super.getFrontFromPlace(side, player).left();
     }
 }

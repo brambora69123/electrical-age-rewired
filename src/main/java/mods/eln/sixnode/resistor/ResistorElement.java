@@ -25,8 +25,9 @@ import mods.eln.sim.process.heater.ResistorHeatThermalLoad;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,7 +42,7 @@ public class ResistorElement extends SixNodeElement {
 
     public NbtElectricalGateInput control;
 
-    ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
+    ThermalLoadWatchDog thermalWatchdog;
     NbtThermalLoad thermalLoad = new NbtThermalLoad("thermalLoad");
     ResistorHeatThermalLoad heater = new ResistorHeatThermalLoad(r, thermalLoad);
     ResistorProcess resistorProcess;
@@ -54,10 +55,12 @@ public class ResistorElement extends SixNodeElement {
         super(SixNode, side, descriptor);
         this.descriptor = (ResistorDescriptor) descriptor;
 
+        thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(thermalLoad).asResistorHeatWatchdog());
+
         electricalLoadList.add(aLoad);
         electricalLoadList.add(bLoad);
-        aLoad.setRs(MnaConst.noImpedance);
-        bLoad.setRs(MnaConst.noImpedance);
+        aLoad.setSerialResistance(MnaConst.noImpedance);
+        bLoad.setSerialResistance(MnaConst.noImpedance);
         electricalComponentList.add(r);
         if (this.descriptor.isRheostat) {
             control = new NbtElectricalGateInput("control");
@@ -73,9 +76,8 @@ public class ResistorElement extends SixNodeElement {
         thermalLoad.set(thermalRs, thermalRp, thermalC);
         slowProcessList.add(thermalWatchdog);
         thermalWatchdog
-            .set(thermalLoad)
-            .setLimit(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
-            .set(new WorldExplosion(this).cableExplosion());
+            .setTemperatureLimits(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
+            .setDestroys(new WorldExplosion(this).cableExplosion());
 
         resistorProcess = new ResistorProcess(this, r, thermalLoad, this.descriptor);
         if (this.descriptor.tempCoef != 0 || this.descriptor.isRheostat) {
@@ -95,15 +97,16 @@ public class ResistorElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (lrdu == front.right()) return aLoad;
         if (lrdu == front.left()) return bLoad;
         if (lrdu == front) return control;
         return null;
     }
 
+    @org.jetbrains.annotations.Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return thermalLoad;
     }
 
@@ -116,28 +119,29 @@ public class ResistorElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        double u = -Math.abs(aLoad.getU() - bLoad.getU());
-        double i = Math.abs(r.getI());
-        return Utils.plotOhm(Utils.plotUIP(u, i), r.getR()) +
+        double u = -Math.abs(aLoad.getVoltage() - bLoad.getVoltage());
+        double i = Math.abs(r.getCurrent());
+        return Utils.plotOhm(Utils.plotUIP(u, i), r.getResistance()) +
             (control != null ? Utils.plotPercent("C", control.getNormalized()) : "");
     }
 
-    @Nullable
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Resistance"), Utils.plotValue(r.getR(), "\u2126"));
-        info.put(I18N.tr("Voltage drop"), Utils.plotVolt("", Math.abs(r.getU())));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Current"), Utils.plotAmpere("", Math.abs(r.getI())));
+        info.put(I18N.tr("Resistance"), Utils.plotValue(r.getResistance(), "\u2126"));
+        info.put(I18N.tr("Voltage drop"), Utils.plotVolt("", Math.abs(r.getVoltage())));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Current"), Utils.plotAmpere("", Math.abs(r.getCurrent())));
 
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
-        return Utils.plotCelsius("T", thermalLoad.Tc);
+        return plotAmbientCelsius("T", thermalLoad.temperatureCelsius);
     }
 
     @Override
@@ -166,8 +170,9 @@ public class ResistorElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ResistorContainer(player, inventory);
     }
 }

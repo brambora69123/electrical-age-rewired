@@ -22,19 +22,18 @@ class GhostNodeWailaResponsePacket(var coord: Coordinate = Coordinate(0, 0, 0, 0
 
     private fun Coordinate.write(buf: ByteBuf?) {
         if (buf != null) {
-            ByteBufUtils.writeVarInt(buf, this.pos.x, 5)
-            ByteBufUtils.writeVarInt(buf, this.pos.y, 5)
-            ByteBufUtils.writeVarInt(buf, this.pos.z, 5)
+            ByteBufUtils.writeVarInt(buf, this.x, 5)
+            ByteBufUtils.writeVarInt(buf, this.y, 5)
+            ByteBufUtils.writeVarInt(buf, this.z, 5)
             ByteBufUtils.writeVarInt(buf, this.dimension, 5)
         }
     }
 
     private fun Coordinate.read(buf: ByteBuf?) {
         if (buf != null) {
-            val x = ByteBufUtils.readVarInt(buf, 5)
-            val y = ByteBufUtils.readVarInt(buf, 5)
-            val z = ByteBufUtils.readVarInt(buf, 5)
-            this.pos.setPos(x, y, z)
+            this.x = ByteBufUtils.readVarInt(buf, 5)
+            this.y = ByteBufUtils.readVarInt(buf, 5)
+            this.z = ByteBufUtils.readVarInt(buf, 5)
             this.dimension = ByteBufUtils.readVarInt(buf, 5)
         }
     }
@@ -44,7 +43,7 @@ class GhostNodeWailaResponsePacket(var coord: Coordinate = Coordinate(0, 0, 0, 0
         realCoord.read(buf)
         itemStack = ByteBufUtils.readItemStack(buf)
         type = buf?.readByte() ?: UNKNOWN_TYPE
-        realSide = Direction.fromInt(buf?.readInt() ?: 0)
+        realSide = Direction.fromInt(buf?.readInt() ?: 0)!!
     }
 
     override fun toBytes(buf: ByteBuf?) {

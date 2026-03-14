@@ -13,9 +13,9 @@ import mods.eln.node.six.SixNodeElement;
 import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateInput;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -48,7 +48,7 @@ public class ElectricalAlarmElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -64,13 +64,14 @@ public class ElectricalAlarmElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return inputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -82,19 +83,21 @@ public class ElectricalAlarmElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", inputGate.getU()) + Utils.plotAmpere("I:", inputGate.getCurrent());
+        return Utils.plotVolt("U:", inputGate.getVoltage()) + Utils.plotAmpere("I:", inputGate.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Engaged"), inputGate.stateHigh() ? I18N.tr("Yes") : I18N.tr("No"));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Input Voltage"), Utils.plotVolt("", inputGate.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Input Voltage"), Utils.plotVolt("", inputGate.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";

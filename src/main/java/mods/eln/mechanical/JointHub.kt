@@ -1,6 +1,7 @@
 package mods.eln.mechanical
 
 import mods.eln.cable.CableRenderDescriptor
+import mods.eln.i18n.I18N.tr
 import mods.eln.misc.*
 import mods.eln.node.transparent.EntityMetaTag
 import mods.eln.node.transparent.TransparentNode
@@ -57,33 +58,22 @@ class JointHubDescriptor(baseName: String, override val obj: Obj3D) : SimpleShaf
         }
     }
 
-    override fun getFrontFromPlace(side: Direction?, entityLiving: EntityLivingBase?): Direction? = Direction.XP
+    override fun getFrontFromPlace(side: Direction, entityLiving: EntityLivingBase?): Direction = Direction.XP
 }
 
 class JointHubElement(node: TransparentNode, desc_: TransparentNodeDescriptor) : SimpleShaftElement(node, desc_) {
     override val shaftMass = 0.5
     private var connectedSides = DirectionSet()
 
-    override fun getElectricalLoad(side: Direction?, lrdu: LRDU?): ElectricalLoad? = null
-
-    override fun getThermalLoad(side: Direction?, lrdu: LRDU?): ThermalLoad? = null
-
-    override fun getConnectionMask(side: Direction?, lrdu: LRDU?): Int = 0
-
-    override fun thermoMeterString(side: Direction?): String? = null
-
     override val shaftConnectivity: Array<Direction>
         get() = arrayOf(Direction.XP, Direction.ZP, Direction.XN, Direction.ZN)
 
-    override fun onBlockActivated(entityPlayer: EntityPlayer?, side: Direction?, vx: Float, vy: Float,
-                                  vz: Float): Boolean = false
-
-    override fun connectedOnSide(direction: Direction) {
+    override fun connectedOnSide(direction: Direction, net: ShaftNetwork) {
         connectedSides.add(direction)
         needPublish()
     }
 
-    override fun disconnectedOnSide(direction: Direction) {
+    override fun disconnectedOnSide(direction: Direction, net: ShaftNetwork?) {
         connectedSides.remove(direction)
         needPublish()
     }
@@ -105,9 +95,13 @@ class JointHubElement(node: TransparentNode, desc_: TransparentNodeDescriptor) :
 
     override fun getWaila(): Map<String, String> {
         var info = mutableMapOf<String, String>()
-        info.put("Speed", Utils.plotRads("", shaft.rads))
-        info.put("Energy", Utils.plotEnergy("", shaft.energy))
+        info.put(tr("Speed"), Utils.plotRads("", shaft.rads))
+        info.put(tr("Energy"), Utils.plotEnergy("", shaft.energy))
         return info
+    }
+
+    override fun coordonate(): Coordinate {
+        return node!!.coordinate
     }
 }
 
@@ -117,8 +111,8 @@ class JointHubRender(entity: TransparentNodeEntity, desc: TransparentNodeDescrip
     val connectedSides = DirectionSet()
 
     override fun draw() {
-        front.glRotateXnRef()
-        desc.draw(angle, front, connectedSides);
+        front!!.glRotateXnRef()
+        desc.draw(angle, front!!, connectedSides);
     }
 
     override fun networkUnserialize(stream: DataInputStream) {

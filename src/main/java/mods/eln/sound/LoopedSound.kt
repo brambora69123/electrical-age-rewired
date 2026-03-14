@@ -1,7 +1,8 @@
 package mods.eln.sound
 
 import mods.eln.misc.Coordinate
-import net.minecraft.client.audio.*
+import net.minecraft.client.audio.ISound
+import net.minecraft.client.audio.ITickableSound
 import net.minecraft.util.ResourceLocation
 import net.minecraft.util.SoundCategory
 

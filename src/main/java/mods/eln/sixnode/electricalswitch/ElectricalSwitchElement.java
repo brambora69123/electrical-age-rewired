@@ -15,6 +15,7 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
 import mods.eln.sim.mna.component.ResistorSwitch;
+import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
@@ -22,6 +23,8 @@ import mods.eln.sound.SoundCommand;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -35,8 +38,8 @@ public class ElectricalSwitchElement extends SixNodeElement {
     public NbtElectricalLoad bLoad = new NbtElectricalLoad("bLoad");
     public ResistorSwitch switchResistor = new ResistorSwitch("switchRes", aLoad, bLoad);
 
-    VoltageStateWatchDog voltageWatchDogA = new VoltageStateWatchDog();
-    VoltageStateWatchDog voltageWatchDogB = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchDogA = new VoltageStateWatchDog(aLoad);
+    VoltageStateWatchDog voltageWatchDogB = new VoltageStateWatchDog(bLoad);
 //	ResistorCurrentWatchdog currentWatchDog = new ResistorCurrentWatchdog();
 
     boolean switchState = false;
@@ -44,7 +47,6 @@ public class ElectricalSwitchElement extends SixNodeElement {
     public ElectricalSwitchElement(SixNode sixNode, Direction side, SixNodeDescriptor descriptor) {
         super(sixNode, side, descriptor);
 
-        switchResistor.mustUseUltraImpedance();
         electricalLoadList.add(aLoad);
         electricalLoadList.add(bLoad);
         electricalComponentList.add(switchResistor);
@@ -60,8 +62,8 @@ public class ElectricalSwitchElement extends SixNodeElement {
         slowProcessList.add(voltageWatchDogB);
 
         //currentWatchDog.set(switchResistor).setIAbsMax(this.descriptor.maximalPower/this.descriptor.nominalVoltage).set(exp);
-        voltageWatchDogA.set(aLoad).setUNominalMirror(this.descriptor.nominalVoltage).set(exp);
-        voltageWatchDogB.set(bLoad).setUNominalMirror(this.descriptor.nominalVoltage).set(exp);
+        voltageWatchDogA.setNominalVoltage(this.descriptor.nominalVoltage).setDestroys(exp);
+        voltageWatchDogB.setNominalVoltage(this.descriptor.nominalVoltage).setDestroys(exp);
     }
 
     public static boolean canBePlacedOnSide(Direction side, int type) {
@@ -69,7 +71,7 @@ public class ElectricalSwitchElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -85,14 +87,15 @@ public class ElectricalSwitchElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return aLoad;
         if (front.inverse() == lrdu) return bLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         //return thermalLoad;
         return null;
     }
@@ -107,20 +110,24 @@ public class ElectricalSwitchElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("Ua:", aLoad.getU()) + Utils.plotVolt("Ub:", bLoad.getU()) + Utils.plotAmpere("I:", aLoad.getCurrent());
+        return Utils.plotVolt("Ua:", aLoad.getVoltage()) + Utils.plotVolt("Ub:", bLoad.getVoltage()) + Utils.plotAmpere("I:", aLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Position"), switchState ? I18N.tr("Closed") : I18N.tr("Open"));
         info.put(I18N.tr("Current"), Utils.plotAmpere("", aLoad.getCurrent()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getU()) + Utils.plotVolt(" ", bLoad.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getVoltage()) + Utils.plotVolt(" ", bLoad.getVoltage()));
         }
+        info.put(I18N.tr("Subsystem Matrix Size"), Utils.renderSubSystemWaila(switchResistor.getSubSystem()));
+
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         //return Utils.plotCelsius("T:",thermalLoad.Tc);
@@ -132,8 +139,8 @@ public class ElectricalSwitchElement extends SixNodeElement {
         super.networkSerialize(stream);
         try {
             stream.writeBoolean(switchState);
-            stream.writeShort((short) (aLoad.getU() * NodeBase.networkSerializeUFactor));
-            stream.writeShort((short) (bLoad.getU() * NodeBase.networkSerializeUFactor));
+            stream.writeShort((short) (aLoad.getVoltage() * NodeBase.networkSerializeUFactor));
+            stream.writeShort((short) (bLoad.getVoltage() * NodeBase.networkSerializeUFactor));
             stream.writeShort((short) (aLoad.getCurrent() * NodeBase.networkSerializeIFactor));
             //stream.writeShort((short)(thermalLoad.Tc * NodeBase.networkSerializeTFactor));
             stream.writeShort(0);
@@ -155,7 +162,8 @@ public class ElectricalSwitchElement extends SixNodeElement {
         descriptor.applyTo(aLoad);
         descriptor.applyTo(bLoad);
 
-        switchResistor.setR(descriptor.electricalRs);
+        switchResistor.setResistance(descriptor.electricalRs);
+        if (descriptor.signalSwitch) switchResistor.setOffResistance(MnaConst.ultraImpedance);
 
         setSwitchState(switchState);
     }

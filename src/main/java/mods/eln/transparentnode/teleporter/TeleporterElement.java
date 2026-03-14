@@ -23,8 +23,9 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.AxisAlignedBB;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -57,13 +58,13 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         teleporterList.add(this);
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(powerLoad).setUNominal(this.descriptor.cable.electricalNominalVoltage).set(exp));
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.cable.electricalNominalVoltage).setDestroys(exp));
 
     }
 
-    private VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(powerLoad);
 
-    private Coordinate lightCoordinate;
+    Coordinate lightCoordinate;
 
     @Override
     public ElectricalLoad getElectricalLoad(Direction side, LRDU lrdu) {
@@ -71,8 +72,9 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         return powerLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         return null;
     }
@@ -85,14 +87,16 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         return NodeBase.maskElectricalPower;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
 
         return null;
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
 
         return null;
     }
@@ -109,7 +113,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
 
         powerResistor.highImpedance();
 
-        for (Coordinate c : descriptor.getPowerCoordinate(node.coordinate.world())) {
+        for (Coordinate c : descriptor.getPowerCoordonate(node.coordinate.world())) {
             TeleporterPowerNode n = new TeleporterPowerNode();
             n.setElement(this);
             c.applyTransformation(front, node.coordinate);
@@ -121,8 +125,8 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         lightCoordinate = new Coordinate(this.descriptor.lightCoordinate);
         lightCoordinate.applyTransformation(front, node.coordinate);
 
-        descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
-        descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
+        descriptor.ghostDoorClose.newRotate(front).eraseGeo(node.coordinate);
+        descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
 
         connect();
     }
@@ -152,7 +156,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side,
+    public boolean onBlockActivated(EntityPlayer player, Direction side,
                                     float vx, float vy, float vz) {
 
         return false;
@@ -219,6 +223,12 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                     doorState = true;
                     processRatio = 0;
                     break;
+                case StateClose:
+                    descriptor.ghostDoorOpen.newRotate(front).eraseGeo(node.coordinate);
+                    break;
+                case StateOpen:
+                    descriptor.ghostDoorClose.newRotate(front).eraseGeo(node.coordinate);
+                    break;
                 default:
                     break;
             }
@@ -229,20 +239,15 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                 case StateClose:
                     descriptor.ghostDoorOpen.newRotate(front).erase(node.coordinate, descriptor.ghostDoorOpen.getUuid());
                     doorState = false;
-                    descriptor.ghostDoorClose.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorClose.getUuid());
+                    descriptor.ghostDoorClose.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
                     break;
                 case StateOpen:
                     descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
                     doorState = true;
-                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
-                    break;
-                case StateIdle:
-                    descriptor.ghostDoorClose.newRotate(front).erase(node.coordinate, descriptor.ghostDoorClose.getUuid());
-                    doorState = true;
-                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.ghostDoorOpen.getUuid());
+                    descriptor.ghostDoorOpen.newRotate(front).plot(node.coordinate, node.coordinate, descriptor.getGhostGroupUuid());
                     break;
                 case StateCharge:
-                    powerResistor.setR(Math.pow(descriptor.cable.electricalNominalVoltage, 2) / powerCharge);
+                    powerResistor.setResistance(Math.pow(descriptor.cable.electricalNominalVoltage, 2) / powerCharge);
                     publisher.reconfigure(0.4, 0);
                     break;
                 case StateReserved:
@@ -261,7 +266,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
     @Override
     public boolean reservate() {
         if (state != StateIdle) return false;
-        if (powerLoad.getU() < descriptor.cable.electricalNominalVoltage * 0.8) return false;
+        if (powerLoad.getVoltage() < descriptor.cable.electricalNominalVoltage * 0.8) return false;
 
         setState(StateReserved);
         imMaster = false;
@@ -309,8 +314,8 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                 if (target == null) {
                     energyTarget = 0;
                 } else {
-                    Coordinate c = getTeleportCoordinate();
-                    double distance = getTeleportCoordinate().trueDistanceTo(target.getTeleportCoordinate());
+                    Coordinate c = getTeleportCoordonate();
+                    double distance = getTeleportCoordonate().trueDistanceTo(target.getTeleportCoordonate());
                     AxisAlignedBB bb = descriptor.getBB(node.coordinate, front);
                     int playerCount = c.world().getEntitiesWithinAABB(EntityPlayer.class, bb).size();
                     int itemCount = c.world().getEntitiesWithinAABB(EntityItem.class, bb).size();
@@ -327,6 +332,8 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
 
             if (++blinkCounter >= 9) {
                 blinkCounter = 0;
+                if ((powerLoad.getVoltage() / descriptor.cable.electricalNominalVoltage - 0.5) * 3 > Math.random())
+                    LightBlockEntity.addLight(lightCoordinate, 12, 11);
             }
             switch (state) {
                 case StateReserved:
@@ -356,7 +363,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                             sendIdToAllClient(eventMultipleoTargetFind);
                             break;
                         }
-                        if (powerLoad.getU() < descriptor.cable.electricalNominalVoltage * 0.8) {
+                        if (powerLoad.getVoltage() < descriptor.cable.electricalNominalVoltage * 0.8) {
                             break;
                         }
                         ITeleporter target = getTarget(targetNameCopy);
@@ -422,7 +429,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                         setState(StateOpen);
                         break;
                     }
-                    if (powerLoad.getU() < descriptor.cable.electricalNominalVoltage * 0.8) {
+                    if (powerLoad.getVoltage() < descriptor.cable.electricalNominalVoltage * 0.8) {
                         sendIdToAllClient(eventInstablePowerSupply);
                         AxisAlignedBB bb = descriptor.getBB(node.coordinate, front);
                         List list = node.coordinate.world().getEntitiesWithinAABB(Entity.class, bb);
@@ -447,8 +454,21 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                         setState(StateOpen);
                     } else {
                         ITeleporter target = getTarget(targetNameCopy);
-                        Coordinate c = getTeleportCoordinate();
-                        energyHit += powerResistor.getP() * time;
+                        Coordinate c = getTeleportCoordonate();
+                        // double distance = getTeleportCoordonate().trueDistanceTo(c);
+                        // AxisAlignedBB bb = descriptor.getBB(node.coordonate, front);
+                        // int playerCount = c.world().getEntitiesWithinAABB(EntityPlayer.class, bb).size();
+                        // int itemCount = c.world().getEntitiesWithinAABB(EntityItem.class, bb).size();
+                        // int petCount = c.world().getEntitiesWithinAABB(EntityLivingBase.class, bb).size() - playerCount;
+                        // // Object o = c.world().getEntitiesWithinAABB(EntityItem.class,bb);
+                        // energyTarget = 10000 +
+                        // 40000 * playerCount +
+                        // 5000 * petCount +
+                        // 5000 * itemCount;
+                        //
+                        // energyTarget *= 1.0 + Math.pow(distance / 250.0, 0.5);
+
+                        energyHit += powerResistor.getPower() * time;
                         processRatio = (float) (energyHit / energyTarget);
 
                         if (energyHit >= energyTarget) {
@@ -505,7 +525,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
     private int getTargetCount(String str) {
         int count = 0;
         for (ITeleporter t : teleporterList) {
-            if (t.getName().equals(str) && node.coordinate.getDimension() == t.getTeleportCoordinate().getDimension()) {
+            if (t.getName().equals(str) && node.coordinate.dimension == t.getTeleportCoordonate().dimension) {
                 count++;
             }
         }
@@ -515,7 +535,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
     private ITeleporter getTarget(String str) {
         ITeleporter target = null;
         for (ITeleporter t : teleporterList) {
-            if (t.getName().equals(str) && node.coordinate.getDimension() == t.getTeleportCoordinate().getDimension()) {
+            if (t.getName().equals(str) && node.coordinate.dimension == t.getTeleportCoordonate().dimension) {
                 if (target != null) return null;
                 target = t;
             }
@@ -584,7 +604,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
                 (doorState ? 0x1 : 0x0)
             );
             stream.writeFloat(processRatio);
-            stream.writeFloat((float) powerLoad.getU());
+            stream.writeFloat((float) powerLoad.getVoltage());
             stream.writeFloat((float) energyHit);
             stream.writeFloat((float) energyTarget);
             // stream.writeFloat((float) energyHit);
@@ -598,8 +618,9 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
     }
 
     @Override
-    public Coordinate getTeleportCoordinate() {
-        return descriptor.getTeleportCoordinate(front, node.coordinate);
+    public Coordinate getTeleportCoordonate() {
+
+        return descriptor.getTeleportCoordonate(front, node.coordinate);
     }
 
     @Override
@@ -608,6 +629,7 @@ public class TeleporterElement extends TransparentNodeElement implements ITelepo
         return name;
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();

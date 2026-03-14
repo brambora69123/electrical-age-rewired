@@ -8,6 +8,7 @@ import mods.eln.misc.Obj3D.Obj3DPart;
 import mods.eln.misc.Utils;
 import mods.eln.misc.VoltageLevelColor;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
+import mods.eln.environment.BiomeClimateService;
 import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.PhysicalConstant;
 import mods.eln.sim.ThermalLoad;
@@ -22,6 +23,7 @@ import static mods.eln.i18n.I18N.tr;
 
 public class TurbineDescriptor extends TransparentNodeDescriptor {
     final CableRenderDescriptor eRender;
+    private static final double REFERENCE_AMBIENT_KELVIN = PhysicalConstant.zeroCelsiusInKelvin + BiomeClimateService.fallbackAmbientTemperatureCelsius();
 
     public TurbineDescriptor(String name, String modelName, CableRenderDescriptor eRender,
                              FunctionTable TtoU, FunctionTable PoutToPin, double nominalDeltaT, double nominalU,
@@ -29,7 +31,7 @@ public class TurbineDescriptor extends TransparentNodeDescriptor {
                              double thermalC, double DeltaTForInput,
                              double powerOutPerDeltaU, String soundFile) {
         super(name, TurbineElement.class, TurbineRender.class);
-        double nominalEff = Math.abs(1 - (0 + PhysicalConstant.Tref) / (nominalDeltaT + PhysicalConstant.Tref));
+        double nominalEff = Math.abs(1 - (REFERENCE_AMBIENT_KELVIN) / (nominalDeltaT + REFERENCE_AMBIENT_KELVIN));
         this.TtoU = TtoU;
         this.PoutToPin = PoutToPin;
         this.nominalDeltaT = nominalDeltaT;
@@ -65,7 +67,7 @@ public class TurbineDescriptor extends TransparentNodeDescriptor {
     public final String soundFile;
 
     public void applyTo(ThermalLoad load) {
-        load.C = thermalC;
+        load.heatCapacity = thermalC;
         load.Rp = thermalRp;
         load.Rs = thermalRs;
     }
@@ -79,7 +81,7 @@ public class TurbineDescriptor extends TransparentNodeDescriptor {
     }
 
     public void applyTo(ElectricalLoad load) {
-        load.setRs(electricalRs);
+        load.setSerialResistance(electricalRs);
     }
 
     void draw() {

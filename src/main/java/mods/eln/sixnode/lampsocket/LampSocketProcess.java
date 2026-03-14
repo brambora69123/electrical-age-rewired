@@ -62,8 +62,8 @@ public class LampSocketProcess implements IProcess, INBTTReady {
     }
 
     private double getEffectiveLampVoltage(LampDescriptor lampDescriptor) {
-        double resistorVoltage = Math.abs(lamp.lampResistor.getU());
-        double loadVoltage = Math.abs(lamp.positiveLoad.getU());
+        double resistorVoltage = Math.abs(lamp.lampResistor.getVoltage());
+        double loadVoltage = Math.abs(lamp.positiveLoad.getVoltage());
 
         // In the broken 1.12 path the node voltage can be correct while the one-ended resistor
         // still reports 0V. Prefer the physically larger reading instead of letting the lamp stay dark.
@@ -75,7 +75,7 @@ public class LampSocketProcess implements IProcess, INBTTReady {
 
     private double getEffectiveLampPower(LampDescriptor lampDescriptor, double effectiveVoltage) {
         double resistorPower = lamp.lampResistor.getP();
-        double inferredPower = effectiveVoltage * effectiveVoltage / lampDescriptor.getR();
+        double inferredPower = effectiveVoltage * effectiveVoltage / lampDescriptor.getResistance();
 
         if (!Double.isFinite(resistorPower) || resistorPower < 0) {
             return inferredPower;
@@ -100,13 +100,13 @@ public class LampSocketProcess implements IProcess, INBTTReady {
             lamp.setIsConnectedToLampSupply(false);
             oldLampSupply = null;
         } else {
-            Coordinate myCoord = lamp.sixNode.coordinate;
+            Coordinate mpos.getY() = lamp.sixNode.coordinate;
             LampSupplyElement.PowerSupplyChannelHandle best = null;
             float bestDistance = 10000;
             List<LampSupplyElement.PowerSupplyChannelHandle> list = LampSupplyElement.channelMap.get(lamp.channel);
             if (list != null) {
                 for (LampSupplyElement.PowerSupplyChannelHandle s : list) {
-                    float distance = (float) s.element.sixNode.coordinate.trueDistanceTo(myCoord);
+                    float distance = (float) s.element.sixNode.coordinate.trueDistanceTo(mpos.getY());
                     if (distance < bestDistance && distance <= s.element.getRange()) {
                         bestDistance = distance;
                         best = s;
@@ -115,7 +115,7 @@ public class LampSocketProcess implements IProcess, INBTTReady {
             }
             if (best != null && best.element.getChannelState(best.id)) {
                 if (lampDescriptor != null) {
-                    best.element.addToRp(lampDescriptor.getR());
+                    best.element.addToRp(lampDescriptor.getResistance());
                 }
                 lamp.positiveLoad.state = best.element.powerLoad.state;
                 oldLampSupply = best.element;
@@ -133,7 +133,7 @@ public class LampSocketProcess implements IProcess, INBTTReady {
                 if (randTarget > Math.random()) {
                     boolean exit = false;
                     Vec3d vv = new Vec3d(1, 0, 0);
-                    Vec3d vp = new Vec3d(myCoord().pos.getX() + 0.5, myCoord().pos.getY() + 0.5, myCoord().pos.getZ() + 0.5);
+                    Vec3d vp = new Vec3d(mpos.getY()().pos.getX() + 0.5, mpos.getY()().pos.getY() + 0.5, mpos.getY()().pos.getZ() + 0.5);
 
                     // TODO(1.10): I may have swapped these two.
                     vv = vv.rotatePitch((float) (alphaZ * Math.PI / 180.0));
@@ -143,7 +143,7 @@ public class LampSocketProcess implements IProcess, INBTTReady {
                     vv = lamp.front.rotateOnXnLeft(vv);
                     vv = lamp.side.rotateFromXN(vv);
 
-                    Coordinate c = new Coordinate(myCoord());
+                    Coordinate c = new Coordinate(mpos.getY()());
 
                     for (int idx = 0; idx < lamp.socketDescriptor.range + light; idx++) {
                         // newCoord.move(lamp.side.getInverse());
@@ -319,7 +319,7 @@ public class LampSocketProcess implements IProcess, INBTTReady {
         }
     }
 
-    Coordinate myCoord() {
+    Coordinate mpos.getY()() {
         return lamp.sixNode.coordinate;
     }
 

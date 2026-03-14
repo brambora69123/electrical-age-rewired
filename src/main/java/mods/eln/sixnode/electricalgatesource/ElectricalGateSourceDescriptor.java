@@ -2,6 +2,7 @@ package mods.eln.sixnode.electricalgatesource;
 
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
+import mods.eln.misc.RealisticEnum;
 import mods.eln.misc.VoltageLevelColor;
 import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.wiki.Data;
@@ -9,6 +10,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
@@ -18,12 +21,16 @@ import static mods.eln.i18n.I18N.tr;
 
 public class ElectricalGateSourceDescriptor extends SixNodeDescriptor {
 
+    // onOffOnly: if true, is a button. Otherwise, it's a signal trimmer.
     public boolean onOffOnly;
 
+    // autoReset: if true, this button will press and release. Otherwise, it will act like a latch
     public boolean autoReset = false;
+
 
     enum ObjType {Pot, Button}
 
+    // objType is often null... IDEA flags leverTx as unused as well.
     ObjType objType;
     float leverTx;
     ElectricalGateSourceRenderObj render;
@@ -40,7 +47,15 @@ public class ElectricalGateSourceDescriptor extends SixNodeDescriptor {
     @Override
     public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List list, boolean par4) {
         super.addInformation(itemStack, entityPlayer, list, par4);
-        Collections.addAll(list, tr("Provides configurable signal\nvoltage.").split("\n"));
+        if (!onOffOnly) {
+            Collections.addAll(list, tr("Provides configurable signal\nvoltage.").split("\n"));
+        }else{
+            if (autoReset) {
+                Collections.addAll(list, tr("Acts like a\npush button.").split("\n"));
+            } else {
+                Collections.addAll(list, tr("Acts like a\ntoggle switch.").split("\n"));
+            }
+        }
     }
 
     public void setWithAutoReset() {
@@ -84,8 +99,9 @@ public class ElectricalGateSourceDescriptor extends SixNodeDescriptor {
 //        }
 //    }
 
+    @Nullable
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         return super.getFrontFromPlace(side, player).inverse();
     }
 }

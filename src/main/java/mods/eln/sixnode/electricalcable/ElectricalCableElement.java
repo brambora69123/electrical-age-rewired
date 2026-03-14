@@ -24,6 +24,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -38,8 +40,8 @@ public class ElectricalCableElement extends SixNodeElement {
     NbtThermalLoad thermalLoad = new NbtThermalLoad("thermalLoad");
 
     ElectricalLoadHeatThermalLoad heater = new ElectricalLoadHeatThermalLoad(electricalLoad, thermalLoad);
-    ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
-    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    ThermalLoadWatchDog thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(thermalLoad));
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(electricalLoad);
 
     int color;
     int colorCare;
@@ -47,6 +49,7 @@ public class ElectricalCableElement extends SixNodeElement {
     public ElectricalCableElement(SixNode sixNode, Direction side, SixNodeDescriptor descriptor) {
         super(sixNode, side, descriptor);
         this.descriptor = (ElectricalCableDescriptor) descriptor;
+        heater.limitTemperatureRate(this.descriptor.thermalSelfHeatingRateLimit);
         color = 0;
         colorCare = 1;
         electricalLoad.setCanBeSimplifiedByLine(true);
@@ -58,22 +61,20 @@ public class ElectricalCableElement extends SixNodeElement {
             thermalLoad.setAsSlow();
             slowProcessList.add(thermalWatchdog);
             thermalWatchdog
-                .set(thermalLoad)
-                .setLimit(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
-                .set(new WorldExplosion(this).cableExplosion());
+                .setTemperatureLimits(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
+                .setDestroys(new WorldExplosion(this).cableExplosion());
         }
 
         slowProcessList.add(voltageWatchdog);
         voltageWatchdog
-            .set(electricalLoad)
-            .setUMaxMin(this.descriptor.electricalNominalVoltage)
-            .set(new WorldExplosion(this).cableExplosion());
+            .setNominalVoltage(this.descriptor.electricalNominalVoltage)
+            .setDestroys(new WorldExplosion(this).cableExplosion());
 
 
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte b = nbt.getByte("color");
         color = b & 0xF;
@@ -87,13 +88,15 @@ public class ElectricalCableElement extends SixNodeElement {
         return nbt;
     }
 
+    @Nullable
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(@NotNull LRDU lrdu, int mask) {
         return electricalLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         if (!descriptor.signalWire)
             return thermalLoad;
         else
@@ -101,39 +104,40 @@ public class ElectricalCableElement extends SixNodeElement {
     }
 
     @Override
-    public int getConnectionMask(LRDU lrdu) {
+    public int getConnectionMask(@NotNull LRDU lrdu) {
         return descriptor.getNodeMask() /*+ NodeBase.maskElectricalWire*/ + (color << NodeBase.maskColorShift) + (colorCare << NodeBase.maskColorCareShift);
     }
 
     @Override
     public String multiMeterString() {
         if (!descriptor.signalWire)
-            return Utils.plotUIP(electricalLoad.getU(), electricalLoad.getI());
+            return Utils.plotUIP(electricalLoad.getVoltage(), electricalLoad.getCurrent()) + " " + Utils.plotPower("Cable Power Loss", electricalLoad.getCurrent() * electricalLoad.getCurrent() * electricalLoad.getSerialResistance());
         else
-            return Utils.plotSignal(electricalLoad.getU(), electricalLoad.getI());
+            return Utils.plotSignal(electricalLoad.getVoltage());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-
         if (descriptor.signalWire) {
-            info.put(I18N.tr("Signal Voltage"), Utils.plotVolt("", electricalLoad.getU()));
+            info.put(I18N.tr("Signal Voltage"), Utils.plotVolt("", electricalLoad.getVoltage()));
         } else {
-            info.put(I18N.tr("Current"), Utils.plotAmpere("", electricalLoad.getI()));
-            info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.getT()));
-            if (Config.INSTANCE.getWailaEasyMode()) {
-                info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalLoad.getU()));
+            info.put(I18N.tr("Current"), Utils.plotAmpere("", electricalLoad.getCurrent()));
+            info.put(I18N.tr("Temperature"), plotAmbientCelsius("", thermalLoad.getTemperature()));
+            if (Eln.wailaEasyMode) {
+                info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalLoad.getVoltage()));
             }
         }
-
+        info.put(I18N.tr("Subsystem Matrix Size"), Utils.renderSubSystemWaila(electricalLoad.getSubSystem()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         if (!descriptor.signalWire)
-            return Utils.plotCelsius("T", thermalLoad.Tc);
+            return plotAmbientCelsius("T", thermalLoad.temperatureCelsius);
         else
             return null;
     }
@@ -169,11 +173,11 @@ public class ElectricalCableElement extends SixNodeElement {
             colorCare = colorCare ^ 1;
             Utils.sendMessage(entityPlayer, "Wire color care " + colorCare);
             sixNode.reconnect();
-        } else if (currentItemStack != null) {
+        } else if (currentItemStack != null && !currentItemStack.isEmpty()) {
             Item item = currentItemStack.getItem();
 
-            GenericItemUsingDamageDescriptor gen = BrushDescriptor.getDescriptor(currentItemStack);
-            if (gen != null && gen instanceof BrushDescriptor) {
+            GenericItemUsingDamageDescriptor gen = GenericItemUsingDamageDescriptor.getDescriptor(currentItemStack);
+            if (gen instanceof BrushDescriptor) {
                 BrushDescriptor brush = (BrushDescriptor) gen;
                 int brushColor = brush.getColor(currentItemStack);
                 if (brushColor != color && brush.use(currentItemStack, entityPlayer)) {

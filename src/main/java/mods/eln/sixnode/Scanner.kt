@@ -7,7 +7,9 @@ import mods.eln.init.Cable
 import mods.eln.misc.*
 import mods.eln.node.NodeBase
 import mods.eln.node.six.*
+import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
+import mods.eln.sim.ThermalLoad
 import mods.eln.sim.nbt.NbtElectricalGateOutput
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess
 import net.minecraft.entity.player.EntityPlayer
@@ -16,10 +18,13 @@ import net.minecraft.inventory.ISidedInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.EnumFacing
-import net.minecraftforge.fluids.capability.IFluidHandler
+import net.minecraftforge.common.util.EnumFacing
+import net.minecraftforge.fluids.IFluidHandler
+import java.lang.reflect.Array
+import java.lang.reflect.Method
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.util.*
 
 /**
  * A comparator-alike. It doesn't "compare" anything, though.
@@ -42,6 +47,7 @@ class ScannerDescriptor(name: String, obj: Obj3D) : SixNodeDescriptor(name, Scan
         super.addInformation(itemStack, entityPlayer, list, par4)
         list.add(tr("Scans blocks to produce signals."))
         list.add(tr("- For tanks, outputs fill percentage."))
+        // This string sucks. I can't use the normal Java method to fix this problem. TODO: fix this so that it is readable on windowed games.
         list.add(tr("- For inventories, outputs either total fill or fraction of slots with any items."))
         list.add(tr("Right-click to change mode."))
         list.add(tr("Otherwise behaves as a vanilla comparator."))
@@ -65,7 +71,7 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
 
     val updater = IProcess {
         val appliedLRDU = side.applyLRDU(front)
-        val scannedCoord = Coordinate(coordinate).apply {
+        val scannedCoord = Coordinate(coordinate!!).apply {
             move(appliedLRDU)
         }
         val targetSide: EnumFacing = appliedLRDU.inverse.toForge()
@@ -88,33 +94,32 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
     }
 
     private fun scanBlock(scannedCoord: Coordinate, targetSide: EnumFacing): Double {
-        val state = scannedCoord.blockState
+        val block = scannedCoord.block
         return when {
-            state.hasComparatorInputOverride() -> state.getComparatorInputOverride(scannedCoord.world(), scannedCoord.pos) / 15.0
-            state.isFullCube -> 1.0
-            state.isOpaqueCube -> 0.8
-            state.isBlockNormalCube -> 0.6
-            state.isNormalCube -> 0.4
-            state.isTranslucent -> 0.2
-            else -> 0.0
+            block.hasComparatorInputOverride() ->
+                block.getComparatorInputOverride(scannedCoord.world(), scannedCoord.x, scannedCoord.y, scannedCoord.z, targetSide.ordinal) / 15.0
+            block.isOpaqueCube -> 1.0
+            block.isAir(scannedCoord.world(), scannedCoord.x, scannedCoord.y, scannedCoord.z) -> 0.0
+            else -> 1.0/3.0
         }
     }
 
     private fun scanTileEntity(te: TileEntity, targetSide: EnumFacing): Double? {
-        when (te) {
-            is IFluidHandler -> {
-                val info = te.tankProperties
-                return info.sumByDouble {
-                    (it.contents?.amount ?: 0).toDouble() / it.capacity
-                } / info.size
-            }
-            is ISidedInventory -> {
-                var sum = 0
-                var limit = 0
-                val slots = te.getSlotsForFace(targetSide)
-                when (mode) {
-                    ScanMode.SIMPLE -> slots.forEach {
-                        sum += te.getStackInSlot(it)?.count ?: 0
+        if (te is IFluidHandler) {
+            val info = te.getTankInfo(targetSide)?.filter { it.capacity > 0 } ?: return 0.0
+            if (info.isEmpty()) return 0.0
+            return info.sumOf {
+                (it.fluid?.amount ?: 0).toDouble() / it.capacity
+            } / info.size
+        } else if (hbmFluidUserClass?.isInstance(te) == true) {
+            return scanHbmFluidUser(te)
+        } else if (te is ISidedInventory) {
+            var sum = 0
+            var limit = 0
+            val slots = te.getAccessibleSlotsFromSide(targetSide.ordinal)
+            when (mode) {
+                ScanMode.SIMPLE -> slots.forEach {
+                        sum += te.getStackInSlot(it)?.getCount() ?: 0
                         limit += te.inventoryStackLimit
                     }
 
@@ -125,11 +130,12 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
                 }
                 return sum.toDouble() / limit
             }
-            is IInventory -> {
-                val sum = when (mode) {
-                    ScanMode.SIMPLE -> (0 until te.sizeInventory).sumBy {
-                        te.getStackInSlot(it)?.count ?: 0
-                    }.toDouble()
+            return sum.toDouble() / limit
+        } else if (te is IInventory) {
+            val sum = when (mode) {
+                ScanMode.SIMPLE -> (0..te.sizeInventory - 1).sumOf {
+                    te.getStackInSlot(it)?.getCount() ?: 0
+                }.toDouble()
 
                     ScanMode.SLOTS -> (0 until te.sizeInventory).count {
                         (te.getStackInSlot(it)?.count ?: 0) > 0
@@ -141,7 +147,46 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
         }
     }
 
-    override fun onBlockActivated(entityPlayer: EntityPlayer?, side: Direction?, vx: Float, vy: Float, vz: Float): Boolean {
+    private fun scanHbmFluidUser(te: TileEntity): Double? {
+        val method = hbmGetAllTanksMethod ?: return null
+        val tanks = try {
+            method.invoke(te)
+        } catch (_: Exception) {
+            return null
+        } ?: return 0.0
+
+        val tankCount = Array.getLength(tanks)
+        if (tankCount == 0) return 0.0
+
+        var sum = 0.0
+        var count = 0
+        for (idx in 0 until tankCount) {
+            val tank = Array.get(tanks, idx) ?: continue
+            val (fillMethod, maxFillMethod) = hbmTankMethodCache.getOrPut(tank.javaClass) {
+                val fill = tank.javaClass.getMethod("getFill")
+                val max = tank.javaClass.getMethod("getMaxFill")
+                fill to max
+            }
+            val maxFill = (maxFillMethod.invoke(tank) as? Number)?.toDouble() ?: continue
+            if (maxFill <= 0.0) continue
+            val fill = (fillMethod.invoke(tank) as? Number)?.toDouble() ?: 0.0
+            sum += fill / maxFill
+            count++
+        }
+        return if (count == 0) 0.0 else sum / count
+    }
+
+    companion object {
+        private val hbmFluidUserClass: Class<*>? by lazy {
+            runCatching { Class.forName("api.hbm.fluidmk2.IFluidUserMK2") }.getOrNull()
+        }
+        private val hbmGetAllTanksMethod: Method? by lazy {
+            hbmFluidUserClass?.getMethod("getAllTanks")
+        }
+        private val hbmTankMethodCache = mutableMapOf<Class<*>, Pair<Method, Method>>()
+    }
+
+    override fun onBlockActivated(entityPlayer: EntityPlayer, side: Direction, vx: Float, vy: Float, vz: Float): Boolean {
         if (onBlockActivatedRotate(entityPlayer)) return true
         if (entityPlayer.isHoldingMeter()) return false
         mode = when (mode) {
@@ -152,8 +197,8 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
         return true
     }
 
-    override fun getElectricalLoad(lrdu: LRDU?) = output
-    override fun getThermalLoad(lrdu: LRDU?) = null
+    override fun getElectricalLoad(lrdu: LRDU, mask: Int): ElectricalLoad? = output
+    override fun getThermalLoad(lrdu: LRDU, mask: Int): ThermalLoad? = null
 
     override fun getConnectionMask(lrdu: LRDU) = when (lrdu) {
         front.inverse() -> NodeBase.maskElectricalOutputGate
@@ -161,10 +206,11 @@ class ScannerElement(sixNode: SixNode, side: Direction, descriptor: SixNodeDescr
     }
 
     override fun multiMeterString(): String {
-        return "Mode: ${tr(mode.name.lowercase().capitalize())}, Value: ${Utils.plotPercent("", outputProcess.outputNormalized)}"
+        return "Mode: ${tr(mode.name.lowercase()
+            .replaceFirstChar { it.titlecase(Locale.getDefault()) })}, Value: ${Utils.plotPercent("", outputProcess.outputNormalized)}"
     }
 
-    override fun thermoMeterString() = ""
+    override fun thermoMeterString(): String = ""
 
     override fun initialize() {
     }
@@ -193,7 +239,7 @@ class ScannerRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeD
 
     override fun draw() {
         super.draw()
-        front.glRotateOnX()
+        front!!.glRotateOnX()
         desc.draw(mode)
     }
 
@@ -202,5 +248,5 @@ class ScannerRender(entity: SixNodeEntity, side: Direction, descriptor: SixNodeD
         mode = ScanMode.fromByte(stream.readByte())!!
     }
 
-    override fun getCableRender(lrdu: LRDU?): CableRenderDescriptor = Cable.signal.descriptor.render
+    override fun getCableRender(lrdu: LRDU): CableRenderDescriptor? = Eln.instance.signalCableDescriptor.render
 }

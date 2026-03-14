@@ -9,6 +9,9 @@ import mods.eln.node.six.SixNodeEntity;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -43,7 +46,7 @@ public class ElectricalBreakerRender extends SixNodeElementRender {
         super.draw();
 
         front.glRotateOnX();
-        descriptor.draw(interpol.get(), UtilsClient.distanceFromClientPlayer(tileEntity));
+        descriptor.draw(interpol.get(), UtilsClient.distanceFromClientPlayer(getTileEntity()));
     }
 
     @Override
@@ -52,8 +55,9 @@ public class ElectricalBreakerRender extends SixNodeElementRender {
         interpol.step(deltaT);
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
         return cableRender;
     }
 
@@ -66,12 +70,16 @@ public class ElectricalBreakerRender extends SixNodeElementRender {
             uMax = stream.readFloat();
             uMin = stream.readFloat();
 
-            ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(Utils.unserialiseItemStack(stream), ElectricalCableDescriptor.class);
-
-            if (desc == null)
+            ItemStack itemStack = Utils.unserialiseItemStack(stream);
+            if (itemStack != null) {
+                ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(itemStack, ElectricalCableDescriptor.class);
+                if (desc == null)
+                    cableRender = null;
+                else
+                    cableRender = desc.render;
+            } else {
                 cableRender = null;
-            else
-                cableRender = desc.render;
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -129,8 +137,9 @@ public class ElectricalBreakerRender extends SixNodeElementRender {
         }
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalBreakerGui(player, inventory, this);
     }
 }

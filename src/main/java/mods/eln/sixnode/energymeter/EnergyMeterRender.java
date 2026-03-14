@@ -14,6 +14,8 @@ import mods.eln.sixnode.energymeter.EnergyMeterElement.Mod;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -62,7 +64,7 @@ public class EnergyMeterRender extends SixNodeElementRender {
 
         descriptor.draw(energyStack / Math.pow(10, energyUnit * 3 - 1), timerCouter / (timeUnit == 0 ? 360 : 8640),
             energyUnit, timeUnit,
-            UtilsClient.distanceFromClientPlayer(tileEntity) < 20);
+            UtilsClient.distanceFromClientPlayer(getTileEntity()) < 20);
 
         GL11.glPopMatrix();
 
@@ -91,8 +93,9 @@ public class EnergyMeterRender extends SixNodeElementRender {
         serverPowerIdTimer += deltaT;
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
         return cableRender;
     }
 
@@ -106,23 +109,27 @@ public class EnergyMeterRender extends SixNodeElementRender {
             mod = Mod.valueOf(stream.readUTF());
             timerCouter = stream.readDouble();
             // energyStack = stream.readDouble();
-            ItemStack stack = Utils.unserialiseItemStack(stream);
-            inventory.setInventorySlotContents(EnergyMeterContainer.cableSlotId, stack);
-            ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(stack, ElectricalCableDescriptor.class);
-
+            ItemStack itemStack = Utils.unserialiseItemStack(stream);
             energyUnit = stream.readByte();
             timeUnit = stream.readByte();
-            if (desc == null)
+            if (itemStack != null) {
+                ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(itemStack, ElectricalCableDescriptor.class);
+                if (desc == null)
+                    cableRender = null;
+                else
+                    cableRender = desc.render;
+            } else {
                 cableRender = null;
-            else
-                cableRender = desc.render;
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new EnergyMeterGui(player, inventory, this);
     }
 

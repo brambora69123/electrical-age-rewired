@@ -1,10 +1,10 @@
 package mods.eln.transparentnode.powerinductor;
 
 import mods.eln.Eln;
-import mods.eln.init.Cable;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.FerromagneticCoreDescriptor;
 import mods.eln.misc.Obj3D;
-import mods.eln.misc.series.ISerie;
+import mods.eln.misc.IFunction;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
 import mods.eln.sim.mna.misc.MnaConst;
 import net.minecraft.inventory.IInventory;
@@ -17,7 +17,7 @@ public class PowerInductorDescriptor extends TransparentNodeDescriptor {
     public PowerInductorDescriptor(
         String name,
         Obj3D obj,
-        ISerie serie
+        IFunction serie
 
     ) {
         super(name, PowerInductorElement.class, PowerInductorRender.class);
@@ -29,7 +29,7 @@ public class PowerInductorDescriptor extends TransparentNodeDescriptor {
 
     }
 
-    ISerie serie;
+    IFunction serie;
 
     public double getlValue(int cableCount) {
         if (cableCount == 0) return 0;
@@ -45,7 +45,9 @@ public class PowerInductorDescriptor extends TransparentNodeDescriptor {
         ItemStack core = inventory.getStackInSlot(PowerInductorContainer.coreId);
 
         if (core == null) return MnaConst.highImpedance;
-        FerromagneticCoreDescriptor coreDescriptor = (FerromagneticCoreDescriptor) FerromagneticCoreDescriptor.getDescriptor(core);
+        FerromagneticCoreDescriptor coreDescriptor = (FerromagneticCoreDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+            core, FerromagneticCoreDescriptor.class);
+        if (coreDescriptor == null) return MnaConst.highImpedance;
 
         double coreFactor = coreDescriptor.cableMultiplicator;
 

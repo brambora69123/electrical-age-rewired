@@ -2,8 +2,6 @@ package mods.eln.packets
 
 import io.netty.buffer.ByteBuf
 import mods.eln.misc.Coordinate
-import net.minecraftforge.fml.common.network.ByteBufUtils
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 
 /**
  * Created by Gregory Maddra on 2016-06-27.
@@ -29,9 +27,9 @@ open class TransparentNodeRequestPacket : IMessage {
     }
 
     override fun toBytes(buf: ByteBuf?) {
-        ByteBufUtils.writeVarInt(buf, coord.pos.x, 5)
-        ByteBufUtils.writeVarInt(buf, coord.pos.y, 5)
-        ByteBufUtils.writeVarInt(buf, coord.pos.z, 5)
+        ByteBufUtils.writeVarInt(buf, coord.x, 5)
+        ByteBufUtils.writeVarInt(buf, coord.y, 5)
+        ByteBufUtils.writeVarInt(buf, coord.z, 5)
         ByteBufUtils.writeVarInt(buf, coord.dimension, 5)
     }
 }

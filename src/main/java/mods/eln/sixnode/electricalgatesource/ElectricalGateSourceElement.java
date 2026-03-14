@@ -19,6 +19,8 @@ import mods.eln.sound.SoundCommand;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -75,7 +77,7 @@ public class ElectricalGateSourceElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -89,13 +91,14 @@ public class ElectricalGateSourceElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return outputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -107,16 +110,26 @@ public class ElectricalGateSourceElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotUIP(outputGate.getU(), outputGate.getCurrent());
+        return Utils.plotUIP(outputGate.getVoltage(), outputGate.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getU()));
+        if (descriptor.onOffOnly && !descriptor.autoReset) {
+            boolean isOn = outputGateProcess.getOutputOnOff();
+            if (isOn) {
+                info.put(I18N.tr("State"), "§a" + I18N.tr("On"));
+            }else{
+                info.put(I18N.tr("State"), "§c" + I18N.tr("Off"));
+            }
+        }
+        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getVoltage()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -127,7 +140,7 @@ public class ElectricalGateSourceElement extends SixNodeElement {
         super.networkSerialize(stream);
         try {
             stream.writeByte(front.toInt() << 4);
-            stream.writeFloat((float) outputGateProcess.getU());
+            stream.writeFloat((float) outputGateProcess.getVoltage());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -140,7 +153,7 @@ public class ElectricalGateSourceElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
     }
 
@@ -171,7 +184,7 @@ public class ElectricalGateSourceElement extends SixNodeElement {
         try {
             switch (stream.readByte()) {
                 case setVoltagerId:
-                    outputGateProcess.setU(stream.readFloat());
+                    outputGateProcess.setVoltage(stream.readFloat());
                     needPublish();
                     break;
             }

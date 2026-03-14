@@ -1,5 +1,8 @@
 package mods.eln.packets
 
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
+import mods.eln.Eln
 import mods.eln.misc.Utils
 import mods.eln.node.NodeManager
 import mods.eln.node.transparent.TransparentNode
@@ -12,16 +15,17 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
  */
 class TransparentNodeRequestPacketHandler : IMessageHandler<TransparentNodeRequestPacket, TransparentNodeResponsePacket> {
     override fun onMessage(message: TransparentNodeRequestPacket?, ctx: MessageContext?): TransparentNodeResponsePacket? {
-        val c = message!!.coord
-        val node = NodeManager.instance.getNodeFromCoordinate(c) as? TransparentNode
+        var c = message!!.coord
+        val ghostElem = Eln.ghostManager.getGhost(c)
+        if(ghostElem != null) c = ghostElem.observatorCoordonate!!
+        val node = NodeManager.instance!!.getNodeFromCoordonate(c) as? TransparentNode
         var stringMap: Map<String, String> = emptyMap()
         var stack = ItemStack.EMPTY
         if (node != null) {
             try {
-                stringMap = node.element.waila
-                stack = node.element.dropItemStack ?: ItemStack.EMPTY
+                stringMap = node.element!!.getWaila()
             } catch (e: NullPointerException) {
-                Utils.print("Attempted to get WAILA info for an invalid node!")
+                Utils.println("Attempted to get WAILA info for an invalid node!")
                 e.printStackTrace()
                 return null
             }

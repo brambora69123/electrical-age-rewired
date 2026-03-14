@@ -24,6 +24,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -103,8 +105,9 @@ public class SolarPanelElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -121,26 +124,28 @@ public class SolarPanelElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(positiveLoad.getU() - negativeLoad.getU(), positiveLoad.getCurrent());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(positiveLoad.getVoltage() - negativeLoad.getVoltage(), positiveLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return "";
     }
 
     @Override
     public void initialize() {
-        powerSource.setUmax(this.descriptor.electricalUmax);
-        powerSource.setImax(this.descriptor.electricalPmax / this.descriptor.electricalUmax * 1.5);
+        powerSource.setMaximumVoltage(this.descriptor.electricalUmax);
+        powerSource.setMaximumCurrent(this.descriptor.electricalPmax / this.descriptor.electricalUmax * 1.5);
 
         descriptor.applyTo(positiveLoad);
         descriptor.applyTo(negativeLoad);
 
         if (descriptor.groundCoordinate != null) {
-            GhostPowerNode n = new GhostPowerNode(node.coordinate, front, descriptor.groundCoordinate, negativeLoad);
+            GhostPowerNode n = new GhostPowerNode(node.coordinate, front, descriptor.groundCoordinate, negativeLoad, NodeBase.maskElectricalPower);
             n.initialize();
             groundNode = n;
         }
@@ -156,8 +161,8 @@ public class SolarPanelElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
-        return descriptor.canRotate && inventory.take(entityPlayer.getHeldItemMainhand(), this, true, false);
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
+        return descriptor.canRotate && inventory.take(player.getCurrentEquippedItem(), this, true, false);
     }
 
     @Override
@@ -224,19 +229,21 @@ public class SolarPanelElement extends TransparentNodeElement {
         return descriptor.canRotate;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new SolarPanelContainer(node, player, inventory.getInventory());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Sun angle"), Utils.plotValue(((slowProcess.getSolarAlpha()) * (180 / Math.PI)) - 90, "\u00B0"));
         info.put(I18N.tr("Panel angle"), Utils.plotValue((panelAlpha * (180 / Math.PI)) - 90, "\u00B0"));
         info.put(I18N.tr("Producing energy"), (slowProcess.getSolarLight() != 0 ? "Yes" : "No"));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Produced power"), Utils.plotPower("", powerSource.getP()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Produced power"), Utils.plotPower("", powerSource.getPower()));
         }
         return info;
     }

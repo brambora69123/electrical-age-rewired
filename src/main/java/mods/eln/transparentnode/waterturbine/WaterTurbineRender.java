@@ -11,6 +11,8 @@ import mods.eln.node.transparent.TransparentNodeEntity;
 import mods.eln.sound.SoundCommand;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -75,8 +77,9 @@ public class WaterTurbineRender extends TransparentNodeElementRender {
     private float water;
     private float powerFactor;
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
 
         return new WaterTurbineGuiDraw(player, inventory, this);
     }
@@ -98,11 +101,11 @@ public class WaterTurbineRender extends TransparentNodeElementRender {
             e.printStackTrace();
         }
 
-        waterCoord = this.descriptor.getWaterCoordinate(tileEntity.getWorld());
-        waterCoord.setWorld(tileEntity.getWorld());
+        waterCoord = this.descriptor.getWaterCoordonate(getTileEntity().getWorldObj());
+        waterCoord.setWorld(getTileEntity().getWorldObj());
         waterCoord.applyTransformation(front, coordinate());
         waterCoordRight = new Coordinate(waterCoord);
-        waterCoordRight.setWorld(tileEntity.getWorld());
+        waterCoordRight.setWorld(getTileEntity().getWorldObj());
         waterCoordRight.move(front.right());
     }
 }

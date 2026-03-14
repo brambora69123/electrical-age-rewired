@@ -1,5 +1,11 @@
 package mods.eln.generic;
 
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.common.registry.LanguageRegistry;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import mods.eln.Eln;
+import mods.eln.misc.RealisticEnum;
 import mods.eln.misc.UtilsClient;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
@@ -17,31 +23,42 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import java.util.Map;
 
 public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDescriptor> extends Item implements IGenericItemUsingDamage {
     public Hashtable<Integer, Descriptor> subItemList = new Hashtable<Integer, Descriptor>();
     ArrayList<Integer> orderList = new ArrayList<Integer>();
+    private final Map<Integer, CreativeTabs> creativeTabByGroup = new HashMap<Integer, CreativeTabs>();
 
     Descriptor defaultElement = null;
 
     public GenericItemUsingDamage() {
         super();
         setHasSubtypes(true);
+        CreativeTabPopulator.register(this);
     }
 
+    public void setDefaultElement(Descriptor descriptor) {
+        defaultElement = descriptor;
+    }
+
+    @SuppressWarnings("deprecation")
     public void addWithoutRegistry(int damage, Descriptor descriptor) {
         subItemList.put(damage, descriptor);
         descriptor.setParent(this, damage);
+        applyDefaultTab(damage, descriptor);
     }
 
+    @SuppressWarnings("deprecation")
     public void addElement(int damage, Descriptor descriptor) {
         subItemList.put(damage, descriptor);
         orderList.add(damage);
         descriptor.setParent(this, damage);
+        applyDefaultTab(damage, descriptor);
+        GameRegistry.registerCustomItemStack(descriptor.name, descriptor.newItemStack(1));
     }
 
     public Descriptor getDescriptor(int damage) {
@@ -66,10 +83,32 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
     }
 
     @Override
-    public String getTranslationKey(ItemStack par1ItemStack) {
+	@SideOnly(Side.CLIENT)
+	public int getIconFromDamage(int damage) {
+	return getDescriptor(damage).getIconId();
+
+	}
+	@Override
+	public String getTextureFile () {
+	return CommonProxy.ITEMS_PNG;
+	}
+	@Override
+	public String getItemNameIS(ItemStack itemstack) {
+	return getItemName() + "." + getDescriptor(itemstack).name;
+	}
+
+	/*
+	@Override
+	public String getUnlocalizedNameInefficiently(ItemStack par1ItemStack) {
+		return "trololol";
+	}
+	*/
+
+    @Override
+    public String getUnlocalizedName(ItemStack par1ItemStack) {
         Descriptor desc = getDescriptor(par1ItemStack);
-        if (desc != null && desc.name != null) {
-            return "item." + desc.name.toLowerCase().replaceAll("\\s+", "_");
+        if (desc != null) {
+            return desc.name.replaceAll("\\s+", "_");
         } else {
             return "item.unknown_item";
         }
@@ -82,8 +121,11 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
 
         for (int id : orderList) {
             Descriptor descriptor = subItemList.get(id);
-            if (descriptor != null) {
-                descriptor.getSubItems(items);
+            if (descriptor == null || descriptor.isHidden()) continue;
+            CreativeTabs descriptorTab = descriptor.getCreativeTab();
+            if (descriptorTab == null) descriptorTab = Eln.creativeTabOther;
+            if (tabs == null || tabs == descriptorTab || tabs == CreativeTabs.tabAllSearch) {
+                descriptor.getSubItems(list);
             }
         }
     }
@@ -97,8 +139,10 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
         Descriptor desc = getDescriptor(itemStack);
         if (desc == null) return;
         List listFromDescriptor = new ArrayList();
+        List realismData = new ArrayList();
         desc.addInformation(itemStack, entityPlayer, listFromDescriptor, par4);
-        UtilsClient.showItemTooltip(listFromDescriptor, list);
+        RealisticEnum realism = desc.addRealismContext(realismData);
+        UtilsClient.showItemTooltip(listFromDescriptor, realismData, realism, list);
     }
 
     /**
@@ -172,5 +216,17 @@ public class GenericItemUsingDamage<Descriptor extends GenericItemUsingDamageDes
         if (d == null)
             return super.onDroppedByPlayer(item, player);
         return d.onDroppedByPlayer(item, player);
+    }
+
+    private void applyDefaultTab(int damage, Descriptor descriptor) {
+        if (descriptor.getCreativeTab() != null) return;
+        CreativeTabs tab = creativeTabByGroup.get(damage >> 6);
+        if (tab != null) {
+            descriptor.setCreativeTab(tab);
+        }
+    }
+
+    public void setCreativeTabForGroup(int group, CreativeTabs tab) {
+        creativeTabByGroup.put(group, tab);
     }
 }

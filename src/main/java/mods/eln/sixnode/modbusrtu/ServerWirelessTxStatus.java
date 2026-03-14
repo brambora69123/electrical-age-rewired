@@ -1,7 +1,6 @@
 package mods.eln.sixnode.modbusrtu;
 
 import mods.eln.Eln;
-import mods.eln.init.Config;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Utils;
 import mods.eln.sixnode.wirelesssignal.IWirelessSignalTx;

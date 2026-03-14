@@ -35,7 +35,7 @@ class GhostNodeWailaProvider(private val transparentNodeProvider: TransparentNod
         override fun getRenderingPosition() = accessor.renderingPosition
         override fun getNBTData() = accessor.nbtData
         override fun getTileEntity() = accessor.tileEntity
-        override fun getWorld() = coord.world()
+        override fun getWorld(): World = accessor.world
         override fun getBlock() = accessor.block
         override fun getNBTInteger(tag: NBTTagCompound?, keyname: String?) = accessor.getNBTInteger(tag, keyname)
         override fun getBlockState(): IBlockState {
@@ -51,7 +51,7 @@ class GhostNodeWailaProvider(private val transparentNodeProvider: TransparentNod
     }
 
     private fun getGhostData(accessor: IWailaDataAccessor): GhostNodeWailaData? {
-        val coord = Coordinate(accessor.position.x, accessor.position.y, accessor.position.z,
+        val coord = Coordinate(accessor.position.blockX, accessor.position.blockY, accessor.position.blockZ,
             accessor.world)
         var ghostData: GhostNodeWailaData? = null
         try {

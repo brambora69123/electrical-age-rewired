@@ -1,6 +1,6 @@
 package mods.eln.transparentnode.heatfurnace;
 
-import mods.eln.generic.GenericItemUsingDamage;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.ThermalIsolatorElement;
 import mods.eln.misc.INBTTReady;
 import mods.eln.misc.Utils;
@@ -27,15 +27,15 @@ public class HeatFurnaceInventoryProcess implements IProcess, INBTTReady {
         ItemStack isolatorChamberStack = furnace.inventory.getStackInSlot(HeatFurnaceContainer.isolatorId);
 
         double isolationFactor = 1;
-        if (isolatorChamberStack != null && !isolatorChamberStack.isEmpty()) {
-            ThermalIsolatorElement isolatorDescriptor = (ThermalIsolatorElement) ThermalIsolatorElement.getDescriptor(isolatorChamberStack);
-            if (isolatorDescriptor != null && furnace.thermalLoad.Tc > isolatorDescriptor.getTmax()) {
+        if (isolatorChamberStack != null) {
+            ThermalIsolatorElement iso = (ThermalIsolatorElement) GenericItemUsingDamageDescriptor.getDescriptor(
+                isolatorChamberStack, ThermalIsolatorElement.class);
+            if (iso == null) {
+                isolationFactor = 1;
+            } else if (furnace.thermalLoad.temperatureCelsius > iso.getTmax()) {
                 furnace.inventory.decrStackSize(HeatFurnaceContainer.isolatorId, 1);
-            } else if (isolatorChamberStack.getItem() instanceof GenericItemUsingDamage) {
-                ThermalIsolatorElement iso = (ThermalIsolatorElement) ((GenericItemUsingDamage) isolatorChamberStack.getItem()).getDescriptor(isolatorChamberStack);
-                if (iso != null) {
-                    isolationFactor = iso.getConductionFactor();
-                }
+            } else {
+                isolationFactor = iso.getConductionFactor();
             }
         }
         furnace.thermalLoad.setRp(furnace.descriptor.thermal.Rp / isolationFactor);
@@ -55,8 +55,9 @@ public class HeatFurnaceInventoryProcess implements IProcess, INBTTReady {
                     if (furnace.furnaceProcess.combustibleEnergy + combustibleBuffer < furnace.furnaceProcess.nominalCombustibleEnergy) {
                         combustibleBuffer += itemEnergy;
                         furnace.inventory.decrStackSize(HeatFurnaceContainer.combustibleId, 1);
-                        if (combustibleStack.getItem().getTranslationKey().toLowerCase().contains("bucket")) {
-                            furnace.inventory.setInventorySlotContents(HeatFurnaceContainer.combustibleId, new ItemStack(Items.BUCKET));
+                        if (combustibleStack.getItem().getUnlocalizedName().toLowerCase().contains("bucket")) {
+                            furnace.inventory.setInventorySlotContents(HeatFurnaceContainer.combustibleId, new ItemStack(Items.bucket));
+                            furnace.inventory.markDirty();
                         }
                     }
                 }

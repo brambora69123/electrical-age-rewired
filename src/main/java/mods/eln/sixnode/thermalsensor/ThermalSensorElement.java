@@ -2,9 +2,8 @@ package mods.eln.sixnode.thermalsensor;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Cable;
-import mods.eln.init.Config;
-import mods.eln.init.Items;
+import mods.eln.item.ConfigCopyToolDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
@@ -19,13 +18,17 @@ import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.nbt.NbtThermalLoad;
+import mods.eln.sixnode.currentcable.CurrentCableDescriptor;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
+import mods.eln.sixnode.electricaldatalogger.DataLogs;
 import mods.eln.sixnode.thermalcable.ThermalCableDescriptor;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -33,7 +36,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ThermalSensorElement extends SixNodeElement {
+public class ThermalSensorElement extends SixNodeElement implements IConfigurable {
 
     public ThermalSensorDescriptor descriptor;
     public NbtThermalLoad thermalLoad = new NbtThermalLoad("thermalLoad");
@@ -46,7 +49,7 @@ public class ThermalSensorElement extends SixNodeElement {
 
     static final byte powerType = 0, temperatureType = 1;
     int typeOfSensor = temperatureType;
-    float lowValue = 0, highValue = 50;
+    float lowValue = 0, highValue = (float) Eln.SVU;
 
     public static final byte setTypeOfSensorId = 1;
     public static final byte setValueId = 2;
@@ -62,7 +65,7 @@ public class ThermalSensorElement extends SixNodeElement {
 
         if (this.descriptor.temperatureOnly) {
             inventory = (new AutoAcceptInventoryProxy(new SixNodeElementInventory(1, 64, this)))
-                .acceptIfEmpty(0, ThermalCableDescriptor.class, ElectricalCableDescriptor.class);
+                .acceptIfEmpty(0, ThermalCableDescriptor.class, ElectricalCableDescriptor.class, CurrentCableDescriptor.class);
         } else {
             inventory = (new AutoAcceptInventoryProxy(new SixNodeElementInventory(1, 64, this)))
                 .acceptIfEmpty(0, ThermalCableDescriptor.class);
@@ -81,7 +84,7 @@ public class ThermalSensorElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -101,14 +104,15 @@ public class ThermalSensorElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return outputGate;
 
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         if (!descriptor.temperatureOnly) {
             if (!getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId).isEmpty()) {
                 if (front.left() == lrdu) return thermalLoad;
@@ -144,14 +148,15 @@ public class ThermalSensorElement extends SixNodeElement {
         return "";
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getU()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getVoltage()));
+        if (Eln.wailaEasyMode) {
             switch (typeOfSensor) {
                 case temperatureType:
-                    info.put(I18N.tr("Measured temperature"), Utils.plotCelsius("", thermalLoad.getT()));
+                    info.put(I18N.tr("Measured temperature"), plotAmbientCelsius("", thermalLoad.getTemperature()));
                     break;
 
                 case powerType:
@@ -162,9 +167,10 @@ public class ThermalSensorElement extends SixNodeElement {
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
-        return Utils.plotCelsius("T :", thermalLoad.Tc);
+        return plotAmbientCelsius("T :", thermalLoad.temperatureCelsius);
     }
 
     @Override
@@ -187,7 +193,7 @@ public class ThermalSensorElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         sixNode.disconnect();
         computeElectricalLoad();
         sixNode.connect();
@@ -198,12 +204,17 @@ public class ThermalSensorElement extends SixNodeElement {
 
         SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(cable);
         if (descriptor == null) return;
-        if (descriptor.getClass() == ThermalCableDescriptor.class) {
-            ThermalCableDescriptor cableDescriptor = (ThermalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        if (descriptor instanceof ThermalCableDescriptor) {
+            ThermalCableDescriptor cableDescriptor = (ThermalCableDescriptor) descriptor;
             cableDescriptor.setThermalLoad(thermalLoad);
             thermalLoad.setAsFast();
-        } else if (descriptor.getClass() == ElectricalCableDescriptor.class) {
-            ElectricalCableDescriptor cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        } else if (descriptor instanceof ElectricalCableDescriptor) {
+            ElectricalCableDescriptor cableDescriptor = (ElectricalCableDescriptor) descriptor;
+            cableDescriptor.applyTo(thermalLoad);
+            thermalLoad.Rp = 1000000000.0;
+            thermalLoad.setAsSlow();
+        } else if (descriptor instanceof CurrentCableDescriptor) {
+            CurrentCableDescriptor cableDescriptor = (CurrentCableDescriptor) descriptor;
             cableDescriptor.applyTo(thermalLoad);
             thermalLoad.Rp = 1000000000.0;
             thermalLoad.setAsSlow();
@@ -214,12 +225,12 @@ public class ThermalSensorElement extends SixNodeElement {
 
     boolean isItemThermalCable() {
         SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId));
-        return descriptor != null && descriptor.getClass() == ThermalCableDescriptor.class;
+        return descriptor instanceof ThermalCableDescriptor;
     }
 
     boolean isItemElectricalCable() {
         SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(getInventory().getStackInSlot(ThermalSensorContainer.cableSlotId));
-        return descriptor != null && descriptor.getClass() == ElectricalCableDescriptor.class;
+        return descriptor instanceof ElectricalCableDescriptor || descriptor instanceof CurrentCableDescriptor;
     }
 
     @Override
@@ -265,8 +276,44 @@ public class ThermalSensorElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ThermalSensorContainer(player, inventory.getInventory(), descriptor.temperatureOnly);
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("min"))
+            lowValue = compound.getFloat("min");
+        if(compound.hasKey("max"))
+            highValue = compound.getFloat("max");
+        if(compound.hasKey("unit")) {
+            switch(compound.getByte("unit")) {
+                case DataLogs.powerType:
+                    typeOfSensor = powerType;
+                    break;
+                case DataLogs.celsiusType:
+                    typeOfSensor = temperatureType;
+                    break;
+            }
+        }
+        ConfigCopyToolDescriptor.readCableType(compound, getInventory(), 0, invoker);
+        reconnect();
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        compound.setFloat("min", lowValue);
+        compound.setFloat("max", highValue);
+        switch(typeOfSensor) {
+            case powerType:
+                compound.setByte("unit", DataLogs.powerType);
+                break;
+            case temperatureType:
+                compound.setByte("unit", DataLogs.celsiusType);
+                break;
+        }
+        ConfigCopyToolDescriptor.writeCableType(compound, getInventory().getStackInSlot(0));
     }
 }

@@ -111,12 +111,12 @@ public class TransformerElement extends TransparentNodeElement {
     @Override
     public String multiMeterString(Direction side) {
         if (side == front.left())
-            return Utils.plotVolt("UP+:", primaryLoad.getU()) + Utils.plotAmpere("IP+:", -primaryLoad.getCurrent());
+            return Utils.plotVolt("UP+:", primaryLoad.getVoltage()) + Utils.plotAmpere("IP+:", -primaryLoad.getCurrent());
         if (side == front.right())
-            return Utils.plotVolt("US+:", secondaryLoad.getU()) + Utils.plotAmpere("IS+:", -secondaryLoad.getCurrent());
+            return Utils.plotVolt("US+:", secondaryLoad.getVoltage()) + Utils.plotAmpere("IS+:", -secondaryLoad.getCurrent());
 
-        return Utils.plotVolt("UP+:", primaryLoad.getU()) + Utils.plotAmpere("IP+:", transformer.aCurrentState.state)
-            + Utils.plotVolt("  US+:", secondaryLoad.getU()) + Utils.plotAmpere("IS+:", transformer.bCurrentState.state);
+        return Utils.plotVolt("UP+:", primaryLoad.getVoltage()) + Utils.plotAmpere("IP+:", transformer.aCurrentState.state)
+            + Utils.plotVolt("  US+:", secondaryLoad.getVoltage()) + Utils.plotAmpere("IS+:", transformer.bCurrentState.state);
 
     }
 
@@ -280,8 +280,8 @@ public class TransformerElement extends TransparentNodeElement {
 
             float load = 0f;
             if (primaryMaxCurrent != 0 && secondaryMaxCurrent != 0) {
-                load = Utils.limit((float) Math.max(primaryLoad.getI() / primaryMaxCurrent,
-                    secondaryLoad.getI() / secondaryMaxCurrent), 0f, 1f);
+                load = Utils.limit((float) Math.max(primaryLoad.getCurrent() / primaryMaxCurrent,
+                    secondaryLoad.getCurrent() / secondaryMaxCurrent), 0f, 1f);
             }
             stream.writeFloat(load);
             stream.writeBoolean(casingStack != null && !casingStack.isEmpty());
@@ -316,8 +316,8 @@ public class TransformerElement extends TransparentNodeElement {
             if (core != null) {
                 info.put(I18N.tr("Core factor"), Utils.plotValue(core.cableMultiplicator));
             }
-            info.put("Voltages", "\u00A7a" + Utils.plotVolt("", primaryLoad.getU()) + " " +
-                "\u00A7e" + Utils.plotVolt("", secondaryLoad.getU()));
+            info.put("Voltages", "\u00A7a" + Utils.plotVolt("", primaryLoad.getVoltage()) + " " +
+                "\u00A7e" + Utils.plotVolt("", secondaryLoad.getVoltage()));
         }
         return info;
     }

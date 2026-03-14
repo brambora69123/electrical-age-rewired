@@ -4,11 +4,13 @@ import mods.eln.cable.CableRenderDescriptor
 import mods.eln.gui.*
 import mods.eln.i18n.I18N.tr
 import mods.eln.misc.*
-import mods.eln.node.Node
+import mods.eln.node.NodeBase
 import mods.eln.node.NodePeriodicPublishProcess
 import mods.eln.node.published
 import mods.eln.node.six.*
+import mods.eln.sim.ElectricalLoad
 import mods.eln.sim.IProcess
+import mods.eln.sim.ThermalLoad
 import mods.eln.sim.mna.component.ResistorSwitch
 import mods.eln.sim.nbt.NbtElectricalLoad
 import mods.eln.sim.process.destruct.VoltageStateWatchDog
@@ -70,17 +72,17 @@ class EmergencyLampDescriptor(name: String, val cable: ElectricalCableDescriptor
         }
     }
 
-    override fun getFrontFromPlace(side: Direction?, player: EntityPlayer?)
-        = super.getFrontFromPlace(side, player).inverse()
+    override fun getFrontFromPlace(side: Direction, player: EntityPlayer)
+        = super.getFrontFromPlace(side, player)!!.inverse()
 
     override fun addInformation(itemStack: ItemStack?, entityPlayer: EntityPlayer?, list: MutableList<String>,
                                 par4: Boolean) {
         with(list) {
-            add("As long as power is provided, the internal battery")
-            add("is charged and the lamp is off. On a power failure,")
-            add("the lamp turns on and runs on batteries.")
-            add(Utils.plotVolt("Nominal voltage:", cable.electricalNominalVoltage))
-            add(Utils.plotEnergy("Battery capacity:", batteryCapacity))
+            add(tr("As long as power is provided, the internal battery"))
+            add(tr("is charged and the lamp is off. On a power failure,"))
+            add(tr("the lamp turns on and runs on batteries."))
+            add(Utils.plotVolt(tr("Nominal voltage:"), cable.electricalNominalVoltage))
+            add(Utils.plotEnergy(tr("Battery capacity:"), batteryCapacity))
         }
     }
 }
@@ -112,7 +114,7 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
             var closestDistance = 10000f
 
             LampSupplyElement.channelMap[channel]?.forEach {
-                val distance = it.element.sixNode.coordinate.trueDistanceTo(sixNode.coordinate).toFloat()
+                val distance = it.element.sixNode!!.coordinate.trueDistanceTo(sixNode.coordinate).toFloat()
                 if (distance < closestDistance && distance <= it.element.range) {
                     closestDistance = distance
                     closestPowerSupply = it
@@ -122,7 +124,7 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
             if (closestPowerSupply != null) {
                 isConnectedToLampSupply = true
                 if (closestPowerSupply!!.element.getChannelState(closestPowerSupply!!.id)) {
-                    closestPowerSupply!!.element.addToRp(chargingResistor.r)
+                    closestPowerSupply!!.element.addToRp(chargingResistor.resistance)
                     load.state = closestPowerSupply!!.element.powerLoad.state
                 } else {
                     load.state = 0.0
@@ -133,16 +135,17 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
             }
         }
 
-        if (chargingResistor.u > 0.5 * desc.cable.electricalNominalVoltage) {
+        if (chargingResistor.voltage > 0.5 * desc.cable.electricalNominalVoltage) {
             on = false
             if (charge < desc.batteryCapacity) {
-                chargingResistor.state = true
-                charge = Math.min(charge + chargingResistor.p * deltaT, desc.batteryCapacity)
+                // Use setter to update resistance along with the state.
+                chargingResistor.setState(true)
+                charge = Math.min(charge + chargingResistor.power * deltaT, desc.batteryCapacity)
             } else {
-                chargingResistor .state = false
+                chargingResistor.setState(false)
             }
         } else {
-            chargingResistor.state = false
+            chargingResistor.setState(false)
             if (charge > 0) {
                 on = true
                 charge = Math.max(charge - desc.consumption * deltaT, 0.0)
@@ -153,40 +156,40 @@ class EmergencyLampElement(sixNode: SixNode, side: Direction, descriptor: SixNod
     }
 
     override fun initialize() {
-        chargingResistor.r =
+        chargingResistor.resistance =
             desc.cable.electricalNominalVoltage * desc.cable.electricalNominalVoltage / desc.chargePower
         desc.cable.applyTo(load)
 
         electricalLoadList.add(load)
         electricalComponentList.add(chargingResistor)
         slowProcessList.add(process)
-        slowProcessList.add(NodePeriodicPublishProcess(sixNode, 2.0, 0.5))
-        slowProcessList.add(VoltageStateWatchDog().set(load).setUNominal(desc.cable.electricalNominalVoltage)
-            .set(WorldExplosion(this).cableExplosion()))
+        slowProcessList.add(NodePeriodicPublishProcess(sixNode!!, 2.0, 0.5))
+        slowProcessList.add(VoltageStateWatchDog(load).setNominalVoltage(desc.cable.electricalNominalVoltage)
+            .setDestroys(WorldExplosion(this).cableExplosion()))
     }
 
     override fun getConnectionMask(lrdu: LRDU) = when {
-        poweredByCable && side == Direction.YP -> Node.maskElectricalPower
-        poweredByCable && (lrdu == front.left() || lrdu == front.right()) -> Node.maskElectricalPower
+        poweredByCable && side == Direction.YP -> NodeBase.maskElectricalPower
+        poweredByCable && (lrdu == front.left() || lrdu == front.right()) -> NodeBase.maskElectricalPower
         else -> 0
     }
 
-    override fun getElectricalLoad(lrdu: LRDU) = load
-    override fun getThermalLoad(lrdu: LRDU) = null
+    override fun getElectricalLoad(lrdu: LRDU, mask: Int): ElectricalLoad = load
+    override fun getThermalLoad(lrdu: LRDU, mask: Int): ThermalLoad? = null
     override fun multiMeterString() = buildString {
-        append(Utils.plotVolt("U:", load.u))
-        append(Utils.plotAmpere("I:", load.i))
+        append(Utils.plotVolt("U:", load.voltage))
+        append(Utils.plotAmpere("I:", load.current))
         append(Utils.plotPercent("Charge:", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity))
     }
-    override fun thermoMeterString() = ""
+    override fun thermoMeterString(): String = ""
     override fun getWaila() = mapOf(
-        "State" to when {
-            on -> "On"
-            chargingResistor.state -> "Charging..."
-            charge <= 0.0 -> "Batteries empty"
-            else -> "Fully charged"
+        tr("State") to when {
+            on -> tr("On")
+            chargingResistor.state -> tr("Charging...")
+            charge <= 0.0 -> tr("Batteries empty")
+            else -> tr("Fully charged")
         },
-        "Charge" to Utils.plotPercent("", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity)
+        tr("Charge") to Utils.plotPercent("", charge / (sixNodeElementDescriptor as EmergencyLampDescriptor).batteryCapacity)
     )
 
     override fun networkSerialize(stream: DataOutputStream) {
@@ -238,7 +241,7 @@ class EmergencyLampRender(entity: SixNodeEntity, side: Direction, descriptor: Si
 
     override fun draw() {
         super.draw()
-        front.glRotateOnX()
+        front!!.glRotateOnX()
         desc.draw(side == Direction.YP, on, front == LRDU.Up)
     }
 
@@ -251,11 +254,11 @@ class EmergencyLampRender(entity: SixNodeEntity, side: Direction, descriptor: Si
         isConnectedToLampSupply = stream.readBoolean()
     }
 
-    override fun newGuiDraw(side: Direction?, player: EntityPlayer?) = EmergencyLampGui(this)
+    override fun newGuiDraw(side: Direction, player: EntityPlayer) = EmergencyLampGui(this)
 
-    override fun getCableRender(lrdu: LRDU?): CableRenderDescriptor? = if (poweredByCable) when {
+    override fun getCableRender(lrdu: LRDU): CableRenderDescriptor? = if (poweredByCable) when {
         side == Direction.YP -> desc.cable.render
-        lrdu == front.left() || lrdu == front.right() -> desc.cable.render
+        lrdu == front!!.left() || lrdu == front!!.right() -> desc.cable.render
         else -> null
     } else null
 }

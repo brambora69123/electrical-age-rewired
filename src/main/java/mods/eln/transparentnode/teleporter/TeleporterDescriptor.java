@@ -1,15 +1,19 @@
 package mods.eln.transparentnode.teleporter;
 
 import mods.eln.ghost.GhostGroup;
+import mods.eln.i18n.I18N;
 import mods.eln.misc.*;
 import mods.eln.misc.Obj3D.Obj3DPart;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import mods.eln.wiki.Data;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+
+import java.util.List;
 
 public class TeleporterDescriptor extends TransparentNodeDescriptor {
 
@@ -72,23 +76,28 @@ public class TeleporterDescriptor extends TransparentNodeDescriptor {
         voltageLevelColor = VoltageLevelColor.fromCable(cable);
     }
 
-    GhostGroup ghostDoorOpen, ghostDoorClose;
+    @Override
+    public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List<String> list, boolean par4) {
+        super.addInformation(itemStack, entityPlayer, list, par4);
+        list.add(I18N.tr("It's experimental!"));
+    }
 
-    private int areaH;
-    private Coordinate areaCoordinate;
-    Coordinate lightCoordinate;
+    public GhostGroup ghostDoorOpen, ghostDoorClose;
 
-    AxisAlignedBB getBB(Coordinate c, Direction front) {
+    int areaH;
+    public Coordinate areaCoordinate, lightCoordinate;
+
+    public AxisAlignedBB getBB(Coordinate c, Direction front) {
         Coordinate temp = new Coordinate(areaCoordinate);
-        temp.setDimension(c.getDimension());
+        temp.setDimension(c.dimension);
         temp.applyTransformation(front, c);
 
         return new AxisAlignedBB(temp.pos);
     }
 
-    Coordinate getTeleportCoordinate(Direction front, Coordinate c) {
+    public Coordinate getTeleportCoordonate(Direction front, Coordinate c) {
         Coordinate temp = new Coordinate(areaCoordinate);
-        temp.setDimension(c.getDimension());
+        temp.setDimension(c.dimension);
         temp.applyTransformation(front, c);
 
         return temp;
@@ -111,13 +120,13 @@ public class TeleporterDescriptor extends TransparentNodeDescriptor {
         if (door_out != null) door_out.draw();
     }
 
-    private Coordinate[] powerCoordinate;
+    Coordinate[] powerCoordinate;
 
-    Coordinate[] getPowerCoordinate(World w) {
+    public Coordinate[] getPowerCoordonate(World w) {
         Coordinate[] temp = new Coordinate[powerCoordinate.length];
         for (int idx = 0; idx < temp.length; idx++) {
             temp[idx] = new Coordinate(powerCoordinate[idx]);
-            temp[idx].setDimension(w.provider.getDimension());
+            temp[idx].setDimension(w.provider.dimensionId);
         }
         return temp;
     }

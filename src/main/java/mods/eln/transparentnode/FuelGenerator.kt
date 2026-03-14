@@ -111,8 +111,8 @@ class FuelGeneratorElement(transparentNode: TransparentNode, descriptor_: Transp
     internal var positiveLoad = NbtElectricalLoad("positiveLoad")
     internal var powerSource = PowerSource("powerSource", positiveLoad)
     internal var slowProcess = FuelGeneratorSlowProcess(this)
-    internal var descriptor = descriptor_ as FuelGeneratorDescriptor
-    internal val fuels = FuelRegistry.fluidListToFluids(descriptor.fuels)
+    override var descriptor = descriptor_ as FuelGeneratorDescriptor
+    internal val fuels = FuelRegistry.fluidListToFluids(descriptor.fuels).map { it.id }
     internal var tankLevel = 0.0
     internal var tankFluid = FluidRegistry.getFluid("lava")
     internal var on by published(false)
@@ -143,88 +143,86 @@ class FuelGeneratorElement(transparentNode: TransparentNode, descriptor_: Transp
         else -> 0
     }
 
-    override fun multiMeterString(side: Direction) = Utils.plotVolt("U+:", positiveLoad.u) +
+    override fun multiMeterString(side: Direction) = Utils.plotVolt("U+:", positiveLoad.voltage) +
         Utils.plotAmpere("I+:", positiveLoad.current) +
         Utils.plotPercent("Fuel level:", tankLevel)
 
 
-    override fun thermoMeterString(side: Direction): String? = null
+    override fun thermoMeterString(side: Direction): String = ""
 
     override fun initialize() {
         descriptor.cable.applyTo(positiveLoad)
-        powerSource.setUmax(descriptor.maxVoltage)
-        powerSource.setImax(descriptor.nominalPower * 5 / descriptor.maxVoltage)
+        powerSource.setMaximumVoltage(descriptor.maxVoltage)
+        powerSource.setMaximumCurrent(descriptor.nominalPower * 5 / descriptor.maxVoltage)
         connect()
     }
 
     override fun networkSerialize(stream: DataOutputStream) {
         super.networkSerialize(stream)
-        node.lrduCubeMask.getTranslate(Direction.YN).serialize(stream)
+        node!!.lrduCubeMask.getTranslate(Direction.YN).serialize(stream)
         stream.writeBoolean(on)
-        stream.writeFloat((positiveLoad.u / descriptor.maxVoltage).toFloat())
+        stream.writeFloat((positiveLoad.voltage / descriptor.maxVoltage).toFloat())
     }
 
-    // TODO(1.10): Filling with fuel
-    override fun onBlockActivated(player: EntityPlayer?, side: Direction?, vx: Float, vy: Float, vz: Float): Boolean {
-//        if (!(player?.world?.isRemote ?: true)) {
-//            val bucket = player?.heldItemMainhand
-//            if (FluidContainerRegistry.isBucket(bucket) && FluidContainerRegistry.isFilledContainer(bucket)) {
-//                val deltaLevel = 1.0 / FuelGeneratorDescriptor.TankCapacityInBuckets;
-//                if (tankLevel <= 1.0 - deltaLevel) {
-//                    val fluidStack = FluidContainerRegistry.getFluidForFilledItem(bucket)
-//                    if (fluidStack != null && (fluidStack.fluidID == tankFluid || tankLevel <= 0.0) &&
-//                        fluidStack.fluidID in fuels) {
-//                        tankFluid = fluidStack.fluidID
-//                        tankLevel += deltaLevel
-//                        if (player != null && !player.capabilities.isCreativeMode) {
-//                            val emptyBucket = FluidContainerRegistry.drainFluidContainer(bucket);
-//                            val slot = player.inventory.currentItem
-//                            player.inventory.setInventorySlotContents(slot, emptyBucket)
-//                        }
-//
-//                        return true;
-//                    }
-//                }
-//            } else {
-//                if (Items.multiMeterElement.checkSameItemStack(player?.currentEquippedItem) ||
-//                    Items.thermometerElement.checkSameItemStack(player?.currentEquippedItem) ||
-//                    Items.allMeterElement.checkSameItemStack(player?.currentEquippedItem)) {
-//                    return false
-//                }
-//
-//                if (on) {
-//                    on = false
-//                } else {
-//                    if (tankLevel > 0) {
-//                        on = true
-//                        voltageGracePeriod = FuelGeneratorDescriptor.VoltageStabilizationGracePeriod
-//                    }
-//                }
-//                return true
-//            }
-//        }
+    override fun onBlockActivated(player: EntityPlayer, side: Direction, vx: Float, vy: Float, vz: Float): Boolean {
+        if (player.world()?.isRemote == false) {
+            val bucket = player.currentEquippedItem
+            if (FluidContainerRegistry.isBucket(bucket) && FluidContainerRegistry.isFilledContainer(bucket)) {
+                val deltaLevel = 1.0 / FuelGeneratorDescriptor.TankCapacityInBuckets;
+                if (tankLevel <= 1.0 - deltaLevel) {
+                    val fluidStack = FluidContainerRegistry.getFluidForFilledItem(bucket)
+                    if (fluidStack != null && (fluidStack.fluidID == tankFluid || tankLevel <= 0.0) &&
+                        fluidStack.fluidID in fuels) {
+                        tankFluid = fluidStack.fluidID
+                        tankLevel += deltaLevel
+                        if (!player.capabilities.isCreativeMode) {
+                            val emptyBucket = FluidContainerRegistry.drainFluidContainer(bucket);
+                            val slot = player.inventory.currentItem
+                            player.inventory.setInventorySlotContents(slot, emptyBucket)
+                        }
+
+                        return true;
+                    }
+                }
+            } else {
+                if (Eln.multiMeterElement.checkSameItemStack(player.currentEquippedItem) ||
+                    Eln.thermometerElement.checkSameItemStack(player.currentEquippedItem) ||
+                    Eln.allMeterElement.checkSameItemStack(player.currentEquippedItem)) {
+                    return false
+                }
+
+                if (on) {
+                    on = false
+                } else {
+                    if (tankLevel > 0) {
+                        on = true
+                        voltageGracePeriod = FuelGeneratorDescriptor.VoltageStabilizationGracePeriod
+                    }
+                }
+                return true
+            }
+        }
 
         return false
     }
 
-    override fun readFromNBT(nbt: NBTTagCompound?) {
+    override fun readFromNBT(nbt: NBTTagCompound) {
         super.readFromNBT(nbt)
-        tankLevel = nbt?.getDouble("tankLevel") ?: 0.0
-        on = nbt?.getBoolean("on") ?: false
+        tankLevel = nbt.getDouble("tankLevel")
+        on = nbt.getBoolean("on")
     }
 
-    override fun writeToNBT(nbt: NBTTagCompound?): NBTTagCompound? {
+    override fun writeToNBT(nbt: NBTTagCompound) {
         super.writeToNBT(nbt)
-        nbt?.setDouble("tankLevel", tankLevel)
-        nbt?.setBoolean("on", on)
-        return nbt;
+        nbt.setDouble("tankLevel", tankLevel)
+        nbt.setBoolean("on", on)
     }
 
     override fun getWaila(): Map<String, String> = mutableMapOf(
-        Pair(I18N.tr("State"), if (on) I18N.tr("ON") else I18N.tr("OFF")),
-        Pair(I18N.tr("Fuel level"), Utils.plotPercent("", tankLevel)),
-        Pair(I18N.tr("Generated power"), Utils.plotPower("", powerSource.effectiveP)),
-        Pair(I18N.tr("Voltage"), Utils.plotVolt("", powerSource.u))
+        Pair(tr("State"), if (on) tr("ON") else tr("OFF")),
+        Pair(tr("Fuel level"), Utils.plotPercent("", tankLevel)),
+        Pair(tr("Generated power"), Utils.plotPower("", powerSource.effectivePower)),
+        Pair(tr("Voltage"), Utils.plotVolt("", powerSource.voltage))
     )
 }
 
@@ -247,7 +245,7 @@ class FuelGeneratorRender(tileEntity: TransparentNodeEntity, descriptor: Transpa
 
     override fun draw() {
         renderPreProcess = drawCable(Direction.YN, descriptor.cableRenderDescriptor, eConn, renderPreProcess)
-        front.glRotateZnRef()
+        front!!.glRotateZnRef()
         descriptor.draw(on)
     }
 
@@ -274,7 +272,7 @@ class FuelGeneratorRender(tileEntity: TransparentNodeEntity, descriptor: Transpa
 class FuelGeneratorSlowProcess(internal val generator: FuelGeneratorElement) : IProcess {
     override fun process(time: Double) {
         if (generator.on) {
-            val power = Math.max(generator.powerSource.effectiveP,
+            val power = Math.max(generator.powerSource.effectivePower,
                 generator.descriptor.nominalPower * FuelGeneratorDescriptor.MinimalLoadFractionOfNominalPower)
             generator.tankLevel = Math.max(0.0, generator.tankLevel - time *
                 FuelGeneratorDescriptor.efficiencyFactorVsLoadFactor(power / generator.descriptor.nominalPower) *
@@ -286,16 +284,16 @@ class FuelGeneratorSlowProcess(internal val generator: FuelGeneratorElement) : I
 
             if (generator.voltageGracePeriod > 0) {
                 generator.voltageGracePeriod -= time;
-            } else if (generator.positiveLoad.u <
+            } else if (generator.positiveLoad.voltage <
                 FuelGeneratorDescriptor.GeneratorBailOutVoltageRatio * generator.descriptor.maxVoltage) {
                 generator.on = false;
             }
         }
 
         if (generator.on) {
-            generator.powerSource.p = generator.descriptor.nominalPower
+            generator.powerSource.power = generator.descriptor.nominalPower
         } else {
-            generator.powerSource.p = 0.0
+            generator.powerSource.power = 0.0
         }
     }
 }

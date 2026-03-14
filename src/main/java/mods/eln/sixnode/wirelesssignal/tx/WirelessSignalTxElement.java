@@ -2,6 +2,7 @@ package mods.eln.sixnode.wirelesssignal.tx;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -17,8 +18,10 @@ import mods.eln.sim.nbt.NbtElectricalGateInput;
 import mods.eln.sixnode.wirelesssignal.IWirelessSignalTx;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -26,7 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class WirelessSignalTxElement extends SixNodeElement implements IWirelessSignalTx {
+public class WirelessSignalTxElement extends SixNodeElement implements IWirelessSignalTx, IConfigurable {
 
     public static final HashMap<String, ArrayList<IWirelessSignalTx>> channelMap = new HashMap<String, ArrayList<IWirelessSignalTx>>();
 
@@ -100,13 +103,14 @@ public class WirelessSignalTxElement extends SixNodeElement implements IWireless
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return inputGate;
         return null;
     }
 
+    @org.jetbrains.annotations.Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -121,15 +125,16 @@ public class WirelessSignalTxElement extends SixNodeElement implements IWireless
         return inputGate.plot("Input gate");
     }
 
-    @Nullable
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Channel"), channel);
-        info.put(I18N.tr("Input voltage"), Utils.plotVolt("", inputGate.getU()));
+        info.put(I18N.tr("Input voltage"), Utils.plotVolt("", inputGate.getVoltage()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
@@ -163,7 +168,7 @@ public class WirelessSignalTxElement extends SixNodeElement implements IWireless
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         channelRemove(this);
 
         super.readFromNBT(nbt);
@@ -223,5 +228,25 @@ public class WirelessSignalTxElement extends SixNodeElement implements IWireless
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("wirelessChannels")) {
+            String newChannel = compound.getTagList("wirelessChannels", 8).getStringTagAt(0);
+            if(newChannel != null && newChannel != "") {
+                channelRemove(this);
+                channel = newChannel;
+                channelRegister(this);
+                needPublish();
+            }
+        }
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        NBTTagList list = new NBTTagList();
+        list.appendTag(new NBTTagString(channel));
+        compound.setTag("wirelessChannels", list);
     }
 }

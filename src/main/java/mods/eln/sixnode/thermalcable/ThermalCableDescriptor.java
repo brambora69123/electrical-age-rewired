@@ -2,6 +2,7 @@ package mods.eln.sixnode.thermalcable;
 
 import mods.eln.Eln;
 import mods.eln.cable.CableRenderDescriptor;
+import mods.eln.misc.RealisticEnum;
 import mods.eln.misc.Utils;
 import mods.eln.misc.VoltageLevelColor;
 import mods.eln.node.six.SixNodeDescriptor;
@@ -95,18 +96,26 @@ public class ThermalCableDescriptor extends SixNodeDescriptor {
     public void setThermalLoad(ThermalLoad thermalLoad) {
         thermalLoad.Rp = thermalRp;
         thermalLoad.Rs = thermalRs;
-        thermalLoad.C = thermalC;
+        thermalLoad.heatCapacity = thermalC;
     }
 
     @Override
     public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List list, boolean par4) {
         super.addInformation(itemStack, entityPlayer, list, par4);
 
-        list.add(tr("Max. temperature: %s°C", Utils.plotValue(thermalWarmLimit)));
-        list.add(tr("Serial resistance: %sK/W", Utils.plotValue(thermalRs * 2)));
-        list.add(tr("Parallel resistance: %sK/W", Utils.plotValue(thermalRp)));
+        list.add(tr("Max. temperature: %1$°C", Utils.plotValue(thermalWarmLimit)));
+        list.add(tr("Min. temperature: %1$°C", Utils.plotValue(thermalCoolLimit)));
+        list.add(tr("Serial resistance: %1$K/W", Utils.plotValue(thermalRs * 2)));
+        list.add(tr("Parallel resistance: %1$K/W", Utils.plotValue(thermalRp)));
         list.add("");
-        Collections.addAll(list, tr("Low serialized resistance\n => High conductivity.").split("\n"));
-        Collections.addAll(list, tr("High parallel resistance\n => Low power dissipation.").split("\n"));
+        Collections.addAll(list, tr("Low serial resistance\n -> High conductivity.").split("\n"));
+        Collections.addAll(list, tr("High parallel resistance\n -> Low power dissipation.").split("\n"));
+    }
+
+    @Override
+    public RealisticEnum addRealismContext(List<String> list) {
+        super.addRealismContext(list);
+        list.add(tr("The thermal simulator doesn't properly manage heat"));
+        return RealisticEnum.UNREALISTIC;
     }
 }

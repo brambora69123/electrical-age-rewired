@@ -12,6 +12,8 @@ import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -36,7 +38,7 @@ public class WirelessSignalSourceRender extends SixNodeElementRender {
     @Override
     public void draw() {
         super.draw();
-        descriptor.draw(interpolator.get(), UtilsClient.distanceFromClientPlayer(this.tileEntity), tileEntity);
+        descriptor.draw(interpolator.get(), UtilsClient.distanceFromClientPlayer(this.getTileEntity()), getTileEntity());
     }
 
     @Override
@@ -45,13 +47,15 @@ public class WirelessSignalSourceRender extends SixNodeElementRender {
         interpolator.step(deltaT);
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
-        return Cable.Companion.getSignal().descriptor.render;
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
+        return Eln.instance.signalCableDescriptor.render;
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new WirelessSignalSourceGui(this);
     }
 

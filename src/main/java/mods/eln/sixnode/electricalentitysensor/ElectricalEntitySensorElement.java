@@ -20,6 +20,8 @@ import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -51,13 +53,14 @@ public class ElectricalEntitySensorElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu.left()) return outputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -69,19 +72,21 @@ public class ElectricalEntitySensorElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", outputGate.getU()) + Utils.plotAmpere("I:", outputGate.getCurrent());
+        return Utils.plotVolt("U:", outputGate.getVoltage()) + Utils.plotAmpere("I:", outputGate.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Entity present"), slowProcess.state ? I18N.tr("Yes") : I18N.tr("No"));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Output voltage"), Utils.plotVolt("", outputGate.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -110,13 +115,14 @@ public class ElectricalEntitySensorElement extends SixNodeElement {
             return null;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalEntitySensorContainer(player, inventory.getInventory());
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         super.inventoryChanged();
         needPublish();
     }

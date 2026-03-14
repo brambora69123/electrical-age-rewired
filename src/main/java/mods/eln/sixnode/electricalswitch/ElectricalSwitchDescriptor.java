@@ -15,6 +15,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
@@ -106,12 +108,12 @@ public class ElectricalSwitchDescriptor extends SixNodeDescriptor {
     }
 
     public void applyTo(ElectricalLoad load) {
-        load.setRs(electricalRs);
+        load.setSerialResistance(electricalRs);
     }
 
     public void applyTo(Resistor resistor, boolean state) {
         if (state) {
-            resistor.setR(electricalRs);
+            resistor.setResistance(electricalRs);
         } else {
             resistor.highImpedance();
         }
@@ -203,8 +205,9 @@ public class ElectricalSwitchDescriptor extends SixNodeDescriptor {
         Collections.addAll(list, tr("Can break an electrical circuit\ninterrupting the current.").split("\n"));
     }
 
+    @Nullable
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         if (signalSwitch) {
             return super.getFrontFromPlace(side, player);
         } else {

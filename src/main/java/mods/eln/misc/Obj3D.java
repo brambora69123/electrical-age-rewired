@@ -1,6 +1,6 @@
 package mods.eln.misc;
 
-import net.minecraftforge.fml.common.FMLLog;
+import mods.eln.Eln;
 import net.minecraft.util.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
@@ -107,7 +107,7 @@ public class Obj3D {
                 GL11.glNormal3f(f.normal.x, f.normal.y, f.normal.z);
                 for (int idx = 0; idx < mode; idx++) {
                     if (f.uv[idx] != null)
-                        GL11.glTexCoord2f(f.uv[idx].u + offsetX, f.uv[idx].v + offsetY);
+                        GL11.glTepos.getX()2f(f.uv[idx].u + offsetX, f.uv[idx].v + offsetY);
                     GL11.glVertex3f(f.vertex[idx].x, f.vertex[idx].y, f.vertex[idx].z);
                 }
             }
@@ -561,8 +561,8 @@ public class Obj3D {
                             }, refresh, refresh);
                         }
                     } else {
-                        FMLLog.warning("Invalid syntax in EA model text file %ss on line %sd: %ss",
-                            txtPath, lineNumber, line);
+                        Eln.logger.warn(String.format("Invalid syntax in EA model text file %1$s on line %2$d: %3$s",
+                            txtPath, lineNumber, line));
                     }
                 }
             }

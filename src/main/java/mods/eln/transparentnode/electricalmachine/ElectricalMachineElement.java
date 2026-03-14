@@ -2,7 +2,8 @@ package mods.eln.transparentnode.electricalmachine;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
+import mods.eln.item.ConfigCopyToolDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.item.MachineBoosterDescriptor;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -27,12 +28,14 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ElectricalMachineElement extends TransparentNodeElement implements ElectricalStackMachineProcessObserver {
+public class ElectricalMachineElement extends TransparentNodeElement implements ElectricalStackMachineProcessObserver, IConfigurable {
     private final TransparentNodeElementInventory inventory;
     AutoAcceptInventoryProxy booterAccepter;
 
@@ -48,7 +51,7 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
     public final int outSlotId = 0;
     private int boosterSlotId = 1;
 
-    private final VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    private final VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(electricalLoad);
 
     public ElectricalMachineElement(TransparentNode transparentNode, TransparentNodeDescriptor descriptor) {
         super(transparentNode, descriptor);
@@ -71,7 +74,7 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
         slowProcessList.add(new NodePeriodicPublishProcess(transparentNode, 2, 1));
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(electricalLoad).setUNominal(this.descriptor.nominalU).set(exp));
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.nominalU).setDestroys(exp));
     }
 
     @Override
@@ -84,8 +87,9 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalMachineContainer(this.node, player, inventory, descriptor);
     }
 
@@ -94,8 +98,9 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
         return electricalLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -106,13 +111,15 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
         return NodeBase.maskElectricalPower;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(electricalLoad.getU(), electricalLoad.getCurrent());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(electricalLoad.getVoltage(), electricalLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return null;//Utils.plotCelsius("T", thermalLoad.Tc);
     }
 
@@ -141,14 +148,14 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
-        return booterAccepter.take(entityPlayer.getHeldItemMainhand(), this, false, true);
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
+        return booterAccepter.take(player.getCurrentEquippedItem(), this, false, true);
     }
 
     public void networkSerialize(java.io.DataOutputStream stream) {
         super.networkSerialize(stream);
-        double fPower = electricalResistor.getP() / descriptor.nominalP;
-        if (electricalResistor.getP() < 11) fPower = 0.0;
+        double fPower = electricalResistor.getPower() / descriptor.nominalP;
+        if (electricalResistor.getPower() < 11) fPower = 0.0;
         if (fPower > 1.9) fPower = 1.9;
         try {
             stream.writeByte((int) (fPower * 64));
@@ -157,7 +164,7 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
             stream.writeFloat((float) slowRefreshProcess.processState());
             stream.writeFloat((float) slowRefreshProcess.processStatePerSecond());
             node.lrduCubeMask.getTranslate(front.down()).serialize(stream);
-            stream.writeFloat((float) (electricalLoad.getU() / descriptor.nominalU));
+            stream.writeFloat((float) (electricalLoad.getVoltage() / descriptor.nominalU));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -183,14 +190,28 @@ public class ElectricalMachineElement extends TransparentNodeElement implements 
             play(descriptor.endSound);
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Power consumption"), Utils.plotPower("", slowRefreshProcess.getPower()));
-        info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalLoad.getU()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Power provided"), Utils.plotPower("", electricalLoad.getI() * electricalLoad.getU()));
+        info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalLoad.getVoltage()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Power provided"), Utils.plotPower("", electricalLoad.getCurrent() * electricalLoad.getVoltage()));
         }
         return info;
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(ConfigCopyToolDescriptor.readGenDescriptor(compound, "booster", inventory, descriptor.outStackCount + 1, invoker)) {
+            inventoryChange(inventory);
+            needPublish();
+        }
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        ConfigCopyToolDescriptor.writeGenDescriptor(compound, "booster", inventory.getStackInSlot(descriptor.outStackCount + 1));
     }
 }

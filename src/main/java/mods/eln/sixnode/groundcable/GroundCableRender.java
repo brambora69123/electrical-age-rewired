@@ -13,6 +13,8 @@ import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -54,12 +56,17 @@ public class GroundCableRender extends SixNodeElementRender {
             color = (b >> 4) & 0xF;
 
             ItemStack cableStack = Utils.unserialiseItemStack(stream);
-            ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack, ElectricalCableDescriptor.class);
+            if (cableStack != null) {
+                ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack, ElectricalCableDescriptor.class);
 
-            if (desc == null)
-                cableRender = Cable.Companion.getLowVoltage().descriptor.render;
-            else
-                cableRender = desc.render;
+                if (desc == null)
+                    cableRender = Eln.instance.lowVoltageCableDescriptor.render;
+                else
+                    cableRender = desc.render;
+            } else {
+                cableRender = Eln.instance.lowVoltageCableDescriptor.render;
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -69,8 +76,9 @@ public class GroundCableRender extends SixNodeElementRender {
         return cableRender;
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new GroundCableGui(player, inventory, this);
     }
 }

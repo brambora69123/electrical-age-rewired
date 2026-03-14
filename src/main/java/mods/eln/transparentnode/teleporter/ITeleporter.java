@@ -3,7 +3,7 @@ package mods.eln.transparentnode.teleporter;
 import mods.eln.misc.Coordinate;
 
 public interface ITeleporter {
-    public Coordinate getTeleportCoordinate();
+    public Coordinate getTeleportCoordonate();
 
     public String getName();
 

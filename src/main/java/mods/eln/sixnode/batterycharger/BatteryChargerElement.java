@@ -19,7 +19,6 @@ import mods.eln.sim.IProcess;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
 import mods.eln.sim.nbt.NbtElectricalLoad;
-import mods.eln.sim.process.destruct.ResistorPowerWatchdog;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
 import net.minecraft.entity.player.EntityPlayer;
@@ -27,6 +26,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -49,8 +50,7 @@ public class BatteryChargerElement extends SixNodeElement {
         .acceptIfEmpty(3, IItemEnergyBattery.class)
         .acceptIfIncrement(4, 5, MachineBoosterDescriptor.class);
 
-    VoltageStateWatchDog voltageWatchDog = new VoltageStateWatchDog();
-    ResistorPowerWatchdog powerWatchDog = new ResistorPowerWatchdog();
+    VoltageStateWatchDog voltageWatchDog = new VoltageStateWatchDog(powerLoad);
 
     public String channel = "Default channel";
 
@@ -70,8 +70,9 @@ public class BatteryChargerElement extends SixNodeElement {
             return null;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new BatteryChargerContainer(player, inventory.getInventory());
     }
 
@@ -84,18 +85,18 @@ public class BatteryChargerElement extends SixNodeElement {
         slowProcessList.add(slowProcess);
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchDog.set(powerLoad).setUNominal(this.descriptor.nominalVoltage).set(exp));
-        //slowProcessList.add(powerWatchDog.set(powerResistor).setPmax(this.descriptor.nominalPower * 3).set(exp));
+        slowProcessList.add(voltageWatchDog.setNominalVoltage(this.descriptor.nominalVoltage).setDestroys(exp));
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return powerLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -107,20 +108,22 @@ public class BatteryChargerElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotUIP(powerLoad.getU(), powerLoad.getCurrent());
+        return Utils.plotUIP(powerLoad.getVoltage(), powerLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Charge Current"), Utils.plotAmpere("", powerLoad.getCurrent()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Voltage"), Utils.plotVolt("", powerLoad.getU()));
-            info.put(I18N.tr("Power"), Utils.plotPower("", powerLoad.getI() * powerLoad.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Voltage"), Utils.plotVolt("", powerLoad.getVoltage()));
+            info.put(I18N.tr("Power"), Utils.plotPower("", powerLoad.getCurrent() * powerLoad.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
@@ -132,7 +135,7 @@ public class BatteryChargerElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         super.inventoryChanged();
         //needPublish();
         invChanged = true;
@@ -156,7 +159,7 @@ public class BatteryChargerElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         powerOn = nbt.getBoolean("powerOn");
         slowProcess.energyCounter = nbt.getDouble("energyCounter");
@@ -188,7 +191,7 @@ public class BatteryChargerElement extends SixNodeElement {
         super.networkSerialize(stream);
         try {
             stream.writeBoolean(powerOn);
-            stream.writeFloat((float) powerLoad.getU());
+            stream.writeFloat((float) powerLoad.getVoltage());
             Utils.serialiseItemStack(stream, getInventory().getStackInSlot(0));
             Utils.serialiseItemStack(stream, getInventory().getStackInSlot(1));
             Utils.serialiseItemStack(stream, getInventory().getStackInSlot(2));
@@ -222,7 +225,7 @@ public class BatteryChargerElement extends SixNodeElement {
                 double boost = Math.pow(1.25, booster.getCount());
                 double eff = Math.pow(0.9, booster.getCount());
 
-                energyCounter += powerResistor.getP() * time * eff;
+                energyCounter += powerResistor.getPower() * time * eff;
 
                 for (int idx = 0; idx < 4; idx++) {
                     ItemStack stack = getInventory().getStackInSlot(idx);
@@ -238,7 +241,7 @@ public class BatteryChargerElement extends SixNodeElement {
                 if (energyCounter < descriptor.nominalPower * time * 2 * boost) {
                     //double target = descriptor.nominalPower * time * 2;
                     double power = Math.min(descriptor.nominalPower * boost, (descriptor.nominalPower * time * 2 * boost - energyCounter) / time);
-                    powerResistor.setR(Math.max(powerLoad.getU() * powerLoad.getU() / power, descriptor.Rp / boost));
+                    powerResistor.setResistance(Math.max(powerLoad.getVoltage() * powerLoad.getVoltage() / power, descriptor.Rp / boost));
                 } else {
                     descriptor.setRp(powerResistor, false);
                 }

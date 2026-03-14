@@ -1,5 +1,6 @@
 package mods.eln.sixnode.electricalfiredetector;
 
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.electricalitem.BatteryItem;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.RcInterpolator;
@@ -30,7 +31,7 @@ public class ElectricalFireDetectorSlowProcess implements IProcess {
 
     double getBatteryLevel() {
         ItemStack batteryStack = element.getInventory().getStackInSlot(ElectricalWatchContainer.batteryId);
-        BatteryItem battery = (BatteryItem) BatteryItem.getDescriptor(batteryStack);
+        BatteryItem battery = (BatteryItem) GenericItemUsingDamageDescriptor.getDescriptor(batteryStack, BatteryItem.class);
         if (battery != null) {
             return battery.getEnergy(batteryStack) / battery.getEnergyMax(batteryStack);
         } else {
@@ -42,7 +43,7 @@ public class ElectricalFireDetectorSlowProcess implements IProcess {
     public void process(double time) {
         if (element.descriptor.batteryPowered) {
             ItemStack batteryStack = element.getInventory().getStackInSlot(ElectricalFireDetectorContainer.Companion.getBatteryId());
-            BatteryItem battery = (BatteryItem) BatteryItem.getDescriptor(batteryStack);
+            BatteryItem battery = (BatteryItem) GenericItemUsingDamageDescriptor.getDescriptor(batteryStack, BatteryItem.class);
             double energy;
             if (battery == null || (energy = battery.getEnergy(batteryStack)) < element.descriptor.PowerComsumption * time * 4) {
                 boolean changed = element.powered;
@@ -103,9 +104,8 @@ public class ElectricalFireDetectorSlowProcess implements IProcess {
                             fireDetected = true;
 
                             Coordinate coord = element.getCoordinate();
-                            List<Block> blockList = Utils.traceRay(coord.world(), coord.pos.getX() + 0.5, coord.pos.getY() + 0.5, coord.pos.getZ() + 0.5,
-                                detectionBBCenter.pos.getX() + dx + 0.5, detectionBBCenter.pos.getY() + dy + 0.5, detectionBBCenter.pos.getZ() + dz + 0.5);
-
+                            List<Block> blockList = Utils.traceRay(coord.world(), coord.x + 0.5, coord.y + 0.5, coord.z + 0.5,
+                                detectionBBCenter.x + dx + 0.5, detectionBBCenter.y + dy + 0.5, detectionBBCenter.z + dz + 0.5);
 
                             for (Block b : blockList)
                                 if (b.isOpaqueCube(b.getBlockState().getBaseState())) {

@@ -4,13 +4,10 @@ import mods.eln.integration.waila.SixNodeCoordinate
 import mods.eln.integration.waila.SixNodeWailaData
 import mods.eln.integration.waila.WailaCache
 import mods.eln.misc.Coordinate
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
 class SixNodeWailaResponsePacketHandler : IMessageHandler<SixNodeWailaResponsePacket, IMessage> {
 
-    private fun Coordinate.isNull() = this.pos.x == 0 && this.pos.y == 0 && this.pos.z == 0 && this.dimension == 0
+    private fun Coordinate.isNull() = this.x == 0 && this.y == 0 && this.z == 0 && this.dimension == 0
 
     override fun onMessage(message: SixNodeWailaResponsePacket, ctx: MessageContext?): IMessage? {
         if (!message.coord.isNull()) {

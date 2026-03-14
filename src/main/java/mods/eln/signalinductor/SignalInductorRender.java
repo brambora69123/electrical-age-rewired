@@ -21,7 +21,7 @@ public class SignalInductorRender extends SixNodeElementRender {
         GL11.glLineWidth(10);
         GL11.glBegin(GL11.GL_LINES);
 
-        GL11.glTexCoord2f(0.0f, 0.0f);
+        GL11.glTepos.getX()2f(0.0f, 0.0f);
         GL11.glNormal3f(0.0f, 1.0f, 0.0f);
 
         if (connectedSide.down()) {
