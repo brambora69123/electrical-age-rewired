@@ -28,7 +28,7 @@ public abstract class ItemMovingHelper {
         int now = 0;
         ItemStack stack = dst.getStackInSlot(dstSlot);
         if(stack != null) {
-            now = stack.stackSize;
+            now = stack.getCount();
         }
         Utils.println(String.format("IMH.m: now %d, desired %d", now, desired));
         if(now < desired) {
@@ -37,10 +37,10 @@ public abstract class ItemMovingHelper {
                 ItemStack invStack = src.getStackInSlot(idx);
                 if(invStack == null) continue;
                 if(!acceptsStack(invStack)) continue;
-                int move = Math.min(invStack.stackSize, diff);
+                int move = Math.min(invStack.getCount(), diff);
                 diff -= move;
-                invStack.stackSize -= move;
-                if(invStack.stackSize == 0) {
+                invStack.getCount() -= move;
+                if(invStack.getCount() == 0) {
                     invStack = null;
                 }
                 src.setInventorySlotContents(idx, invStack);

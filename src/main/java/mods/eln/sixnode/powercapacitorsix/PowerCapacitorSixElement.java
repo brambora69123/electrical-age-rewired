@@ -98,7 +98,7 @@ public class PowerCapacitorSixElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U", Math.abs(capacitor.getU())) + Utils.plotAmpere("I", capacitor.getCurrent());
+        return Utils.plotVolt("U", Math.abs(capacitor.getVoltage())) + Utils.plotAmpere("I", capacitor.getCurrent());
     }
 
     @Nullable
@@ -108,7 +108,7 @@ public class PowerCapacitorSixElement extends SixNodeElement {
         info.put(I18N.tr("Capacity"), Utils.plotValue(capacitor.getC(), "F"));
         info.put(I18N.tr("Charge"), Utils.plotEnergy("", capacitor.getE()));
         if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Voltage drop"), Utils.plotVolt("", Math.abs(capacitor.getU())));
+            info.put(I18N.tr("Voltage drop"), Utils.plotVolt("", Math.abs(capacitor.getVoltage())));
             info.put(I18N.tr("Current"), Utils.plotAmpere("", Math.abs(capacitor.getCurrent())));
 
         }

@@ -107,7 +107,7 @@ public class Obj3D {
                 GL11.glNormal3f(f.normal.x, f.normal.y, f.normal.z);
                 for (int idx = 0; idx < mode; idx++) {
                     if (f.uv[idx] != null)
-                        GL11.glTexCoord2f(f.uv[idx].u + offsetX, f.uv[idx].v + offsetY);
+                        GL11.glTepos.getX()2f(f.uv[idx].u + offsetX, f.uv[idx].v + offsetY);
                     GL11.glVertex3f(f.vertex[idx].x, f.vertex[idx].y, f.vertex[idx].z);
                 }
             }

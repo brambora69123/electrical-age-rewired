@@ -23,12 +23,12 @@ public class Resistor extends Bipole {
         return resistanceInverse;
     }
 
-    public double getResistance() {
+    public double R {
         return resistance;
     }
 
     public double getPower() {
-        return getVoltage() * getCurrent();
+        return U * I;
     }
 
     public Resistor setResistance(double resistance) {
@@ -66,7 +66,7 @@ public class Resistor extends Bipole {
     }
 
     @Override
-    public double getCurrent() {
-        return getVoltage() * resistanceInverse;
+    public double I {
+        return U * resistanceInverse;
     }
 }

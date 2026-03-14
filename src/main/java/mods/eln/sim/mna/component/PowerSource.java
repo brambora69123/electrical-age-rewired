@@ -64,7 +64,7 @@ public class PowerSource extends VoltageSource implements IRootSystemPreStepProc
     }
 
     public double getEffectivePower() {
-        return getVoltage() * getCurrent();
+        return U * I;
     }
 
     @Override

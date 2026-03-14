@@ -11,6 +11,6 @@ public class NbtElectricalGateOutput extends NbtElectricalLoad {
     }
 
     public String plot(String str) {
-        return Utils.plotSignal(getVoltage());
+        return Utils.plotSignal(U);
     }
 }

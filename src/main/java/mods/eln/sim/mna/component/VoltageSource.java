@@ -29,7 +29,7 @@ public class VoltageSource extends Bipole implements ISubSystemProcessI, INBTTRe
         return this;
     }
 
-    public double getVoltage() {
+    public double U {
         return voltage;
     }
 
@@ -64,7 +64,7 @@ public class VoltageSource extends Bipole implements ISubSystemProcessI, INBTTRe
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return -getCurrentState().state;
     }
 
@@ -88,6 +88,6 @@ public class VoltageSource extends Bipole implements ISubSystemProcessI, INBTTRe
     }
 
     public double getPower() {
-        return getVoltage() * getCurrent();
+        return U * I;
     }
 }

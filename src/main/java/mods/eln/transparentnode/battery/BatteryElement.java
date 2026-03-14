@@ -148,7 +148,7 @@ public class BatteryElement extends TransparentNodeElement {
     public String multiMeterString(Direction side) {
         //	if (side == front)return  Utils.plotVolt("U+", positiveLoad.Uc );
         //	if (side == front.back() && ! grounded)return  Utils.plotVolt("U-", negativeLoad.Uc );
-        return Utils.plotVolt("Ubat:", batteryProcess.getU()) + Utils.plotAmpere("Current Output:", batteryProcess.getDischargeCurrent());
+        return Utils.plotVolt("Ubat:", batteryProcess.getVoltage()) + Utils.plotAmpere("Current Output:", batteryProcess.getDischargeCurrent());
     }
 
     @Override
@@ -160,7 +160,7 @@ public class BatteryElement extends TransparentNodeElement {
     public void networkSerialize(DataOutputStream stream) {
         super.networkSerialize(stream);
         try {
-            double U = batteryProcess.getU();//(positiveLoad.Uc - negativeLoad.Uc);
+            double U = batteryProcess.getVoltage();//(positiveLoad.Uc - negativeLoad.Uc);
             stream.writeFloat((float) (U * batteryProcess.getDischargeCurrent()));
             stream.writeFloat((float) batteryProcess.getEnergy());
             stream.writeShort((short) (batteryProcess.life * 1000));
@@ -269,7 +269,7 @@ public class BatteryElement extends TransparentNodeElement {
         wailaList.put(I18N.tr("Energy"), Utils.plotEnergy("", batteryProcess.getEnergy()));
         wailaList.put(I18N.tr("Life"), Utils.plotPercent("", batteryProcess.life));
         if (Config.INSTANCE.getWailaEasyMode()) {
-            wailaList.put(I18N.tr("Voltage"), Utils.plotVolt("", batteryProcess.getU()));
+            wailaList.put(I18N.tr("Voltage"), Utils.plotVolt("", batteryProcess.getVoltage()));
             wailaList.put(I18N.tr("Current"), Utils.plotAmpere("", batteryProcess.getDischargeCurrent()));
         }
         return wailaList;

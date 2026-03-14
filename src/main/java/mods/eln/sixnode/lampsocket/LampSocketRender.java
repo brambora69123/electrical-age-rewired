@@ -88,7 +88,7 @@ public class LampSocketRender extends SixNodeElementRender {
 
             entityTimout -= dt;
             if (entityTimout < 0) {
-                entityList = getTileEntity().getWorldObj().getEntitiesWithinAABB(Entity.class, new Coordinate(getTileEntity().xCoord, getTileEntity().yCoord - 2, getTileEntity().zCoord, getTileEntity().getWorldObj()).getAxisAlignedBB(2));
+                entityList = getTileEntity().getWorldObj().getEntitiesWithinAABB(Entity.class, new Coordinate(getTileEntity().pos.getX(), getTileEntity().pos.getY() - 2, getTileEntity().pos.getZ(), getTileEntity().getWorldObj()).getAxisAlignedBB(2));
                 entityTimout = 0.1f;
             }
 
@@ -106,7 +106,7 @@ public class LampSocketRender extends SixNodeElementRender {
                 pertuVy += e.motionZ * eFactor * dt;
             }
 
-            if (getTileEntity().getWorldObj().getSavedLightValue(EnumSkyBlock.Sky, getTileEntity().xCoord, getTileEntity().yCoord, getTileEntity().zCoord) > 3) {
+            if (getTileEntity().getWorldObj().getSavedLightValue(EnumSkyBlock.Sky, getTileEntity().pos.getX(), getTileEntity().pos.getY(), getTileEntity().pos.getZ()) > 3) {
                 float weather = (float) UtilsClient.getWeather(getTileEntity().getWorldObj()) * 0.9f + 0.1f;
 
                 // TODO: Reduce swinging of lamps to some degree?
@@ -263,12 +263,12 @@ public class LampSocketRender extends SixNodeElementRender {
     public AxisAlignedBB getRenderBoundingBox(SixNodeEntity tileEntity) {
         if (!descriptor.extendedRenderBounds) return null;
         return AxisAlignedBB.getBoundingBox(
-            tileEntity.xCoord - 1.0,
-            tileEntity.yCoord,
-            tileEntity.zCoord - 1.0,
-            tileEntity.xCoord + 2.0,
-            tileEntity.yCoord + 4.0,
-            tileEntity.zCoord + 2.0
+            tileEntity.pos.getX() - 1.0,
+            tileEntity.pos.getY(),
+            tileEntity.pos.getZ() - 1.0,
+            tileEntity.pos.getX() + 2.0,
+            tileEntity.pos.getY() + 4.0,
+            tileEntity.pos.getZ() + 2.0
         );
     }
 }

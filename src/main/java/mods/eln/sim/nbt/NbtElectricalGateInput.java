@@ -12,19 +12,19 @@ public class NbtElectricalGateInput extends NbtElectricalLoad {
     }
 
     public String plot(String str) {
-        return Utils.plotSignal(getVoltage());
+        return Utils.plotSignal(U);
     }
 
     public boolean stateHigh() {
-        return getVoltage() > Eln.SVU * 0.6;
+        return U > Eln.SVU * 0.6;
     }
 
     public boolean stateLow() {
-        return getVoltage() < Eln.SVU * 0.2;
+        return U < Eln.SVU * 0.2;
     }
 
     public double getNormalized() {
-        double norm = getVoltage() * Eln.SVUinv;
+        double norm = U * Eln.SVUinv;
         if (norm < 0.0) norm = 0.0;
         if (norm > 1.0) norm = 1.0;
         return norm;

@@ -92,7 +92,7 @@ public class NbtElectricalGateOutputProcess extends Capacitor implements INBTTRe
         voltage = value;
     }
 
-    public double getVoltage() {
+    public double U {
         return voltage;
     }
 }

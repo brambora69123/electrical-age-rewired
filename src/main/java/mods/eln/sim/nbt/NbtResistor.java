@@ -21,6 +21,6 @@ public class NbtResistor extends Resistor implements INBTTReady {
 
     @Override
     public void writeToNBT(NBTTagCompound nbt, String str) {
-        nbt.setDouble(str + "R", getResistance());
+        nbt.setDouble(str + "R", R);
     }
 }

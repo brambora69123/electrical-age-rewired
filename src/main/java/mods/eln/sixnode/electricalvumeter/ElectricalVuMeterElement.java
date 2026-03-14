@@ -72,7 +72,7 @@ public class ElectricalVuMeterElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", inputGate.getU()) + Utils.plotAmpere("I:", inputGate.getCurrent());
+        return Utils.plotVolt("U:", inputGate.getVoltage()) + Utils.plotAmpere("I:", inputGate.getCurrent());
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ElectricalVuMeterElement extends SixNodeElement {
         super.networkSerialize(stream);
         try {
             stream.writeByte(front.toInt() << 4);
-            stream.writeFloat((float) (inputGate.getU() / Cable.SVU));
+            stream.writeFloat((float) (inputGate.getVoltage() / Cable.SVU));
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -60,7 +60,7 @@ public class Transformer extends Bipole {
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return 0;
     }
 }

@@ -2,7 +2,7 @@ package mods.eln.sim.mna.state;
 
 public class VoltageState extends State {
 
-    public double getVoltage() {
+    public double U {
         return state;
     }
 

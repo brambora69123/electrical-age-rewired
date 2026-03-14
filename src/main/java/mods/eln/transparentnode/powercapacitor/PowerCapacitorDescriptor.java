@@ -56,7 +56,7 @@ public class PowerCapacitorDescriptor extends TransparentNodeDescriptor {
             return 10000;
         else {
             DielectricItem desc = (DielectricItem) GenericItemUsingDamageDescriptor.getDescriptor(diel, DielectricItem.class);
-            return desc == null ? 10000 : desc.uNominal * diel.stackSize;
+            return desc == null ? 10000 : desc.uNominal * diel.getCount();
         }
     }
 

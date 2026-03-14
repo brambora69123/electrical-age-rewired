@@ -46,7 +46,7 @@ public class SolarPannelSlowProcess implements IProcess {
 
         Coordinate coordinate = solarPannel.node.coordinate;
         Vec3 v = Utils.getVec05(coordinate);
-        double x = v.xCoord + solarPannel.descriptor.solarOffsetX, y = v.yCoord + solarPannel.descriptor.solarOffsetY, z = v.zCoord + solarPannel.descriptor.solarOffsetZ;
+        double x = v.pos.getX() + solarPannel.descriptor.solarOffsetX, y = v.pos.getY() + solarPannel.descriptor.solarOffsetY, z = v.pos.getZ() + solarPannel.descriptor.solarOffsetZ;
 
 
         double lightAlpha = solarPannel.panelAlpha - solarAlpha;

@@ -53,13 +53,13 @@ public class DataLogsPrintDescriptor extends GenericItemUsingDamageDescriptor {
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0.0f, 0.0f);
+        GL11.glTepos.getX()2f(0.0f, 0.0f);
         GL11.glVertex2f(-margin, -margin);
-        GL11.glTexCoord2f(0.0f, 1.0f);
+        GL11.glTepos.getX()2f(0.0f, 1.0f);
         GL11.glVertex2f(-margin, 1.1f + margin);
-        GL11.glTexCoord2f(1.0f, 1.0f);
+        GL11.glTepos.getX()2f(1.0f, 1.0f);
         GL11.glVertex2f(1.3f + margin, 1.1f + margin);
-        GL11.glTexCoord2f(1.0f, 0.0f);
+        GL11.glTepos.getX()2f(1.0f, 0.0f);
         GL11.glVertex2f(1.3f + margin,  -margin);
         GL11.glEnd();
 

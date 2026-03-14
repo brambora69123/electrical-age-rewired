@@ -103,8 +103,8 @@ public class ThermalDissipatorPassiveElement extends TransparentNodeElement {
         }
         if (stack.getItem() == Item.getItemFromBlock(Blocks.ice)) {
             thermalLoad.temperatureCelsius *= 0.2;
-            if (stack.stackSize != 0)
-                stack.stackSize--;
+            if (stack.getCount() != 0)
+                stack.getCount()--;
             else
                 player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             return true;

@@ -194,9 +194,9 @@ public class AutoMinerRender extends TransparentNodeElementRender {
                         camAlpha = (float) (Math.PI / 2);
                         break;
                 }
-                render.generate(this.getTileEntity().getWorldObj(), getTileEntity().xCoord + 0.5,
-                    getTileEntity().yCoord + 0.5 - (Math.max(0, pipeLength - 5)),
-                    getTileEntity().zCoord + 0.5, -(float) (Math.PI * 1 / 2) + camAlpha, -(float) (Math.PI / 2));
+                render.generate(this.getTileEntity().getWorldObj(), getTileEntity().pos.getX() + 0.5,
+                    getTileEntity().pos.getY() + 0.5 - (Math.max(0, pipeLength - 5)),
+                    getTileEntity().pos.getZ() + 0.5, -(float) (Math.PI * 1 / 2) + camAlpha, -(float) (Math.PI / 2));
             }
         }
 

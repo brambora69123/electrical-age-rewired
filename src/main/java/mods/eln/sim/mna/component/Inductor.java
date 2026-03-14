@@ -26,7 +26,7 @@ public class Inductor extends Bipole implements ISubSystemProcessI, INBTTReady {
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return currentState.state;
     }
 
@@ -46,7 +46,7 @@ public class Inductor extends Bipole implements ISubSystemProcessI, INBTTReady {
      * @return Energy, in joules
      */
     public double getEnergy() {
-        final double current = getCurrent();
+        final double current = I;
         return current * current * inductance / 2;
     }
 

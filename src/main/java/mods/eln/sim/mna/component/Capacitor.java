@@ -16,7 +16,7 @@ public class Capacitor extends Bipole implements ISubSystemProcessI {
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return 0;
     }
 
@@ -64,7 +64,7 @@ public class Capacitor extends Bipole implements ISubSystemProcessI {
      * @return energy, in joules
      */
     public double getEnergy() {
-        double voltage = getVoltage();
+        double voltage = U;
         return voltage * voltage * coulombs / 2;
     }
 

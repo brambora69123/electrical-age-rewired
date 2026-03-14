@@ -43,7 +43,7 @@ public class ElectricalAntennaTxElement extends TransparentNodeElement {
 
     ElectricalAntennaTxDescriptor descriptor;
 
-    Coordinate rxCoord = null;
+    Coordinate rpos.getX() = null;
     ElectricalAntennaRxElement rxElement = null;
     double powerEfficency = 0.0;
 
@@ -67,18 +67,18 @@ public class ElectricalAntennaTxElement extends TransparentNodeElement {
         ElectricalAntennaRxElement rx = getRxElement();
 
         if (rx != null) rx.rxDisconnect();
-        rxCoord = null;
+        rpos.getX() = null;
         rxElement = null;
     }
 
     ElectricalAntennaRxElement getRxElement() {
-        if (rxCoord == null) return null;
+        if (rpos.getX() == null) return null;
         if (rxElement == null) {
-            NodeBase node = NodeManager.instance.getNodeFromCoordinate(rxCoord);
+            NodeBase node = NodeManager.instance.getNodeFromCoordinate(rpos.getX());
             if (node != null && node instanceof TransparentNode && ((TransparentNode) node).element instanceof ElectricalAntennaRxElement)
                 rxElement = (ElectricalAntennaRxElement) ((TransparentNode) node).element;
             else {
-                rxCoord = null;
+                rpos.getX() = null;
                 Utils.println("ASSERT ElectricalAntennaRxElement getRxElement()");
             }
         }
@@ -152,9 +152,9 @@ public class ElectricalAntennaTxElement extends TransparentNodeElement {
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
-        if (nbt.getBoolean("rxCoordValid")) {
-            rxCoord = new Coordinate();
-            rxCoord.readFromNBT(nbt, "rxCoord");
+        if (nbt.getBoolean("rpos.getX()Valid")) {
+            rpos.getX() = new Coordinate();
+            rpos.getX().readFromNBT(nbt, "rpos.getX()");
         }
         rot = LRDU.readFromNBT(nbt, "rot");
         placeBoot = false;
@@ -163,11 +163,11 @@ public class ElectricalAntennaTxElement extends TransparentNodeElement {
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        if (rxCoord == null)
-            nbt.setBoolean("rxCoordValid", false);
+        if (rpos.getX() == null)
+            nbt.setBoolean("rpos.getX()Valid", false);
         else {
-            nbt.setBoolean("rxCoordValid", true);
-            rxCoord.writeToNBT(nbt, "rxCoord");
+            nbt.setBoolean("rpos.getX()Valid", true);
+            rpos.getX().writeToNBT(nbt, "rpos.getX()");
         }
         return rot.writeToNBT(nbt, "rot");
     }

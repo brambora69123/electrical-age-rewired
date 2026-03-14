@@ -34,13 +34,13 @@ public abstract class RegulatorProcess implements IProcess, INBTTReady {
         I /= workingPoint;
         D /= workingPoint;
 
-        if (!boot && (this.P != P || this.I != I || this.D != D || type != RegulatorType.Analog)) {
+        if (!boot && (this.P != P || this.getCurrent() != I || this.D != D || type != RegulatorType.Analog)) {
             errorIntegrated = 0;
             hitLast = getHit();
         }
 
         this.P = P;
-        this.I = I;
+        this.getCurrent() = I;
         this.D = D;
 
         type = RegulatorType.Analog;

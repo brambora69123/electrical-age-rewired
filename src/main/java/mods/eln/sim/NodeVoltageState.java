@@ -15,13 +15,13 @@ public class NodeVoltageState extends VoltageState implements INBTTReady {
 
     public void readFromNBT(NBTTagCompound nbttagcompound, String str) {
         setVoltage(nbttagcompound.getFloat(str + name + "Uc"));
-        if (Double.isNaN(getVoltage())) setVoltage(0);
-        if (getVoltage() == Float.NEGATIVE_INFINITY) setVoltage(0);
-        if (getVoltage() == Float.POSITIVE_INFINITY) setVoltage(0);
+        if (Double.isNaN(U)) setVoltage(0);
+        if (U == Float.NEGATIVE_INFINITY) setVoltage(0);
+        if (U == Float.POSITIVE_INFINITY) setVoltage(0);
     }
 
     @Override
     public void writeToNBT(NBTTagCompound nbttagcompound, String str) {
-        nbttagcompound.setFloat(str + name + "Uc", (float) getVoltage());
+        nbttagcompound.setFloat(str + name + "Uc", (float) U);
     }
 }

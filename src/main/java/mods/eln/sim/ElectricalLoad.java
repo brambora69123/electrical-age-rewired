@@ -35,7 +35,7 @@ public class ElectricalLoad extends VoltageStateLineReady {
         setSerialResistance(MnaConst.highImpedance);
     }
 
-    public double getCurrent() {
+    public double I {
         double current = 0;
         for (Component c : getConnectedComponents()) {
             if (c instanceof Bipole && (!(c instanceof Line)))

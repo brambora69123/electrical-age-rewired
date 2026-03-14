@@ -23,7 +23,7 @@ public class CurrentSource extends Bipole implements ISubSystemProcessI, INBTTRe
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return current;
     }
 

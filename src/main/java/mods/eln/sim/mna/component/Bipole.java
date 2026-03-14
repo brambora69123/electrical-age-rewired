@@ -43,9 +43,9 @@ public abstract class Bipole extends Component {
         return new State[]{aPin, bPin};
     }
 
-    public abstract double getCurrent();
+    public abstract double I;
 
-    public double getVoltage() {
+    public double U {
         return (aPin == null ? 0 : aPin.state) - (bPin == null ? 0 : bPin.state);
     }
 

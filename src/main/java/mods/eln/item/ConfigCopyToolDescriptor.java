@@ -89,8 +89,8 @@ public class ConfigCopyToolDescriptor extends GenericItemUsingDamageDescriptor {
 
     public static void writeCableType(NBTTagCompound compound, String name, ItemStack stack) {
         if(stack != null) {
-            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.stackSize);
-            compound.setInteger(name + "Amt", stack.stackSize);
+            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.getCount());
+            compound.setInteger(name + "Amt", stack.getCount());
         }
         GenericItemBlockUsingDamageDescriptor desc = GenericItemBlockUsingDamageDescriptor.getDescriptor(stack);
         if(desc != null) {
@@ -144,8 +144,8 @@ public class ConfigCopyToolDescriptor extends GenericItemUsingDamageDescriptor {
 
     public static void writeGenDescriptor(NBTTagCompound compound, String name, ItemStack stack) {
         if(stack != null) {
-            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.stackSize);
-            compound.setInteger(name + "Amt", stack.stackSize);
+            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.getCount());
+            compound.setInteger(name + "Amt", stack.getCount());
         }
         GenericItemUsingDamageDescriptor desc = GenericItemUsingDamageDescriptor.getDescriptor(stack);
         if(desc != null) {
@@ -203,9 +203,9 @@ public class ConfigCopyToolDescriptor extends GenericItemUsingDamageDescriptor {
             compound.setInteger(name + "Amt", 0);
         } else {
             Eln.logger.info("CCT Copy: " + name + " " + Item.getIdFromItem(stack.getItem()));
-            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.stackSize);
+            Eln.logger.info("CCT Copy: " + name + "Amt: " + stack.getCount());
             compound.setInteger(name, Item.getIdFromItem(stack.getItem()));
-            compound.setInteger(name + "Amt", stack.stackSize);
+            compound.setInteger(name + "Amt", stack.getCount());
         }
     }
 }

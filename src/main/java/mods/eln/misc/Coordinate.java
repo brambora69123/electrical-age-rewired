@@ -22,6 +22,22 @@ public class Coordinate implements INBTTReady {
     private int dimension = 0;
     private World w = null;
 
+    public int getX() { return pos.getX(); }
+    public int getY() { return pos.getY(); }
+    public int getZ() { return pos.getZ(); }
+
+    public int getx() { return pos.getX(); }
+    public int gety() { return pos.getY(); }
+    public int getz() { return pos.getZ(); }
+
+    public Vec3d toVec3d() {
+        return new Vec3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+    }
+
+    public Vec3d toVec3() {
+        return toVec3d();
+    }
+
     public Coordinate() {
     }
 

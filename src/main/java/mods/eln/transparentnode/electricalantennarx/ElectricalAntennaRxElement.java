@@ -34,7 +34,7 @@ public class ElectricalAntennaRxElement extends TransparentNodeElement {
     PowerSource powerSrc = new PowerSource("powerSrc", powerOut);
 
     LRDU rot = LRDU.Up;
-    Coordinate rxCoord = null;
+    Coordinate rpos.getX() = null;
     ElectricalAntennaRxDescriptor descriptor;
 
     public double getSignal() {

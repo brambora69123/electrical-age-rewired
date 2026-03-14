@@ -29,7 +29,7 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
 
     @Override
     public void process(double time) {
-        //if(element.rxCoord == null)
+        //if(element.rpos.getX() == null)
         World world = element.node.coordinate.world();
 
         if (timeCounter <= 0.0) {
@@ -66,7 +66,7 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
                 coordCpy.move(element.front.getInverse());
                 if (element.powerResistor.getPower() > 50) {
                     if (coordCpy.world().blockExists(coordCpy.x, coordCpy.y, coordCpy.z)) {
-                        if (coordCpy.getBlock() == Blocks.air) {
+                        if (coordCpy.getBlock() == Blocks.AIR) {
                             coordCpy.world().setBlock(coordCpy.x, coordCpy.y, coordCpy.z, Blocks.fire);
                         }
                     }
@@ -77,7 +77,7 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
                 if (world.getWorldInfo().isRaining()) element.powerEfficency *= 0.707;
                 if (world.getWorldInfo().isThundering()) element.powerEfficency *= 0.707;
 
-                element.rxCoord = node.coordinate;
+                element.rpos.getX() = node.coordinate;
                 element.rxElement = (ElectricalAntennaRxElement) node.element;
             }
             List list = world.getEntitiesWithinAABBExcludingEntity((Entity) null, Coordinate.getAxisAlignedBB(element.node.coordinate, coord));

@@ -117,7 +117,7 @@ public class ThermalLoad {
         PspTemp += power;
     }
 
-    public double getTemperature() {
+    public double T {
         if (Double.isNaN(temperatureCelsius)) {
             temperatureCelsius = 0.0;
         }

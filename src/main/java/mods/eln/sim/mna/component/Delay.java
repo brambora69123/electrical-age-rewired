@@ -44,7 +44,7 @@ public class Delay extends Bipole implements ISubSystemProcessI {
     }
 
     @Override
-    public double getCurrent() {
+    public double I {
         return oldIa - oldIb;
     }
 }
