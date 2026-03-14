@@ -20,6 +20,8 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,44 +41,47 @@ public class ThermalDissipatorPassiveElement extends TransparentNodeElement {
         slowProcessList.add(thermalWatchdog);
 
         thermalWatchdog
-            .set(thermalLoad)
-            .setTMax(this.descriptor.warmLimit)
-            .set(new WorldExplosion(this).machineExplosion());
+            .setMaximumTemperature(this.descriptor.warmLimit)
+            .setDestroys(new WorldExplosion(this).machineExplosion());
     }
 
 
-    ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
+    ThermalLoadWatchDog thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(thermalLoad));
 
+    @Nullable
     @Override
-    public ElectricalLoad getElectricalLoad(Direction side, LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         if (side == Direction.YN || side == Direction.YP || lrdu != lrdu.Down) return null;
         return thermalLoad;
     }
 
     @Override
-    public int getConnectionMask(Direction side, LRDU lrdu) {
+    public int getConnectionMask(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         if (side == Direction.YN || side == Direction.YP || lrdu != lrdu.Down) return 0;
         return node.maskThermal;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
 
         return "";
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
 
-        return Utils.plotCelsius("T : ", thermalLoad.Tc) + Utils.plotPower("P : ", thermalLoad.getPower());
+        return plotAmbientCelsius("T : ", thermalLoad.temperatureCelsius) + Utils.plotPower("P : ", thermalLoad.getPower());
     }
 
     @Override
@@ -86,27 +91,33 @@ public class ThermalDissipatorPassiveElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side,
+    public boolean onBlockActivated(EntityPlayer player, Direction side,
                                     float vx, float vy, float vz) {
-        ItemStack stack = entityPlayer.getHeldItemMainhand();
-        if (stack.getItem() == Items.WATER_BUCKET) {
-            thermalLoad.Tc *= 0.5;
-            entityPlayer.inventory.setInventorySlotContents(entityPlayer.inventory.currentItem, new ItemStack(Items.BUCKET));
+        ItemStack stack = player.getCurrentEquippedItem();
+        if (stack == null) return false;
+        if (stack.getItem() == Items.water_bucket) {
+            thermalLoad.temperatureCelsius *= 0.5;
+
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, new ItemStack(Items.bucket));
             return true;
         }
-        if (stack.getItem() == Item.getItemFromBlock(Blocks.ICE)) {
-            thermalLoad.Tc *= 0.2;
-            stack.splitStack(1);
+        if (stack.getItem() == Item.getItemFromBlock(Blocks.ice)) {
+            thermalLoad.temperatureCelsius *= 0.2;
+            if (stack.stackSize != 0)
+                stack.stackSize--;
+            else
+                player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             return true;
         }
         return false;
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.Tc));
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        info.put(I18N.tr("Temperature"), plotAmbientCelsius("", thermalLoad.temperatureCelsius));
+        if (Eln.wailaEasyMode) {
             info.put(I18N.tr("Thermal power"), Utils.plotPower("", thermalLoad.getPower()));
         }
         return info;

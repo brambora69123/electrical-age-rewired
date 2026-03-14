@@ -15,9 +15,9 @@ import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateInput;
 import mods.eln.sim.nbt.NbtElectricalGateOutput;
 import mods.eln.sim.nbt.NbtElectricalGateOutputProcess;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -56,7 +56,7 @@ public class ElectricalTimeoutElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -73,20 +73,22 @@ public class ElectricalTimeoutElement extends SixNodeElement {
         return nbt;
     }
 
+    @Nullable
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(@NotNull LRDU lrdu, int mask) {
         if (front == lrdu) return inputGate;
         if (front.inverse() == lrdu) return outputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
     @Override
-    public int getConnectionMask(LRDU lrdu) {
+    public int getConnectionMask(@NotNull LRDU lrdu) {
         if (front == lrdu) return NodeBase.maskElectricalInputGate;
         if (front.inverse() == lrdu) return NodeBase.maskElectricalOutputGate;
         return 0;
@@ -97,6 +99,7 @@ public class ElectricalTimeoutElement extends SixNodeElement {
         return inputGate.plot("Input:") + outputGate.plot("Output:");
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
@@ -108,6 +111,7 @@ public class ElectricalTimeoutElement extends SixNodeElement {
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";

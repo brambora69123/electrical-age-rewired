@@ -14,8 +14,8 @@ public class ElectricalSensorProcess implements IProcess {
 
     @Override
     public void process(double time) {
-        if (sensor.typeOfSensor == sensor.voltageType) {
-            setOutput(sensor.aLoad.getU());
+        if (sensor.typeOfSensor == sensor.voltageType || sensor.resistor == null) {
+            setOutput(sensor.aLoad.getVoltage());
         } else if (sensor.typeOfSensor == sensor.currantType) {
             double output = 0;
             switch (sensor.dirType) {
@@ -35,13 +35,13 @@ public class ElectricalSensorProcess implements IProcess {
             double output = 0;
             switch (sensor.dirType) {
                 case ElectricalSensorElement.dirNone:
-                    output = Math.abs(sensor.resistor.getCurrent() * sensor.aLoad.getU());
+                    output = Math.abs(sensor.resistor.getCurrent() * sensor.aLoad.getVoltage());
                     break;
                 case ElectricalSensorElement.dirAB:
-                    output = (sensor.resistor.getCurrent() * sensor.aLoad.getU());
+                    output = (sensor.resistor.getCurrent() * sensor.aLoad.getVoltage());
                     break;
                 case ElectricalSensorElement.dirBA:
-                    output = (-sensor.resistor.getCurrent() * sensor.aLoad.getU());
+                    output = (-sensor.resistor.getCurrent() * sensor.aLoad.getVoltage());
                     break;
             }
 
@@ -53,6 +53,6 @@ public class ElectricalSensorProcess implements IProcess {
         double U = (physical - sensor.lowValue) / (sensor.highValue - sensor.lowValue) * Cable.SVU;
         if (U > Cable.SVU) U = Cable.SVU;
         if (U < 0) U = 0;
-        sensor.outputGateProcess.setU(U);
+        sensor.outputGateProcess.setVoltage(U);
     }
 }

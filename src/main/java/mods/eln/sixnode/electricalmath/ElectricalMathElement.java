@@ -1,6 +1,8 @@
 package mods.eln.sixnode.electricalmath;
 
 import mods.eln.i18n.I18N;
+import mods.eln.item.ConfigCopyToolDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
@@ -23,6 +25,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -31,7 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ElectricalMathElement extends SixNodeElement {
+public class ElectricalMathElement extends SixNodeElement implements IConfigurable {
 
     NbtElectricalGateOutput gateOutput = new NbtElectricalGateOutput("gateOutput");
     NbtElectricalGateOutputProcess gateOutputProcess = new NbtElectricalGateOutputProcess("gateOutputProcess", gateOutput);
@@ -51,6 +55,9 @@ public class ElectricalMathElement extends SixNodeElement {
 
     int redstoneRequired;
     boolean redstoneReady = false;
+    boolean beepActive = false;
+    float beepPitch = 1f;
+    float beepVolume = 0.5f;
 
     SixNodeElementInventory inventory = new SixNodeElementInventory(1, 64, this);
 
@@ -102,10 +109,14 @@ public class ElectricalMathElement extends SixNodeElement {
 
         @Override
         public void process(double time) {
-            if (e.redstoneReady)
-                e.gateOutputProcess.setOutputNormalizedSafe(e.equation.getValue(time));
-            else
+            if (e.redstoneReady) {
+                double value = e.equation.getValue(time);
+                e.gateOutputProcess.setOutputNormalizedSafe(value);
+                e.updateBeepState();
+            } else {
                 e.gateOutputProcess.setOutputNormalized(0.0);
+                e.updateBeepInactive();
+            }
         }
     }
 
@@ -124,7 +135,7 @@ public class ElectricalMathElement extends SixNodeElement {
 
         redstoneRequired = 0;
         if (equationIsValid = equation.isValid()) {
-            redstoneRequired = equation.getOperatorCount();
+            redstoneRequired = equation.operatorCount;
         }
         checkRedstone();
     }
@@ -143,7 +154,7 @@ public class ElectricalMathElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (lrdu == front) return gateOutput;
         if (lrdu == front.left() && sideConnectionEnable[2]) return gateInput[2];
         if (lrdu == front.inverse() && sideConnectionEnable[1]) return gateInput[1];
@@ -151,8 +162,9 @@ public class ElectricalMathElement extends SixNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -167,21 +179,23 @@ public class ElectricalMathElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("Uout:", gateOutput.getU()) + Utils.plotAmpere("Iout:", gateOutput.getCurrent());
+        return Utils.plotVolt("Uout:", gateOutput.getVoltage()) + Utils.plotAmpere("Iout:", gateOutput.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Equation"), expression);
         info.put(I18N.tr("Input voltages"),
-            Utils.plotVolt("\u00A7c", gateInput[0].getU()) +
-                Utils.plotVolt("\u00A7a", gateInput[1].getU()) +
-                Utils.plotVolt("\u00A79", gateInput[2].getU()));
-        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", gateOutput.getU()));
+            Utils.plotVolt("\u00A7c", gateInput[0].getVoltage()) +
+                Utils.plotVolt("\u00A7a", gateInput[1].getVoltage()) +
+                Utils.plotVolt("\u00A79", gateInput[2].getVoltage()));
+        info.put(I18N.tr("Output voltage"), Utils.plotVolt("", gateOutput.getVoltage()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
@@ -193,7 +207,7 @@ public class ElectricalMathElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         super.inventoryChanged();
         checkRedstone();
     }
@@ -206,6 +220,36 @@ public class ElectricalMathElement extends SixNodeElement {
         needPublish();
     }
 
+    void updateBeepState() {
+        boolean nextActive = false;
+        float nextPitch = 1f;
+        float nextVolume = 0.5f;
+
+        for (Equation.Beep beep : equation.beepList) {
+            if (beep.getActive()) {
+                nextActive = true;
+                nextPitch = Math.max(nextPitch, (float) beep.getPitch());
+                nextVolume = Math.max(nextVolume, (float) beep.getVolume());
+            }
+        }
+
+        if (nextActive != beepActive || Math.abs(nextPitch - beepPitch) > 0.01f || Math.abs(nextVolume - beepVolume) > 0.01f) {
+            beepActive = nextActive;
+            beepPitch = nextPitch;
+            beepVolume = nextVolume;
+            needPublish();
+        }
+    }
+
+    void updateBeepInactive() {
+        if (beepActive) {
+            beepActive = false;
+            beepPitch = 1f;
+            beepVolume = 0.5f;
+            needPublish();
+        }
+    }
+
     @Override
     public IInventory getInventory() {
         return inventory;
@@ -216,8 +260,9 @@ public class ElectricalMathElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalMathContainer(sixNode, player, inventory);
     }
 
@@ -229,7 +274,7 @@ public class ElectricalMathElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         expression = nbt.getString("expression");
         preProcessEquation(expression);
@@ -245,6 +290,9 @@ public class ElectricalMathElement extends SixNodeElement {
             stream.writeUTF(expression);
             stream.writeInt(redstoneRequired);
             stream.writeBoolean(equationIsValid);
+            stream.writeBoolean(beepActive);
+            stream.writeFloat(beepPitch);
+            stream.writeFloat(beepVolume);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -263,5 +311,22 @@ public class ElectricalMathElement extends SixNodeElement {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("expression")) {
+            preProcessEquation(compound.getString("expression"));
+            reconnect();
+        }
+        if(ConfigCopyToolDescriptor.readVanillaStack(compound, "redstone", inventory, 0, invoker)) {
+            checkRedstone();
+        }
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        compound.setString("expression", expression);
+        ConfigCopyToolDescriptor.writeVanillaStack(compound, "redstone", inventory.getStackInSlot(0));
     }
 }

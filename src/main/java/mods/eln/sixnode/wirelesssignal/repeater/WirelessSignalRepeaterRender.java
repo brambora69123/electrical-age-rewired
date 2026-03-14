@@ -20,7 +20,7 @@ public class WirelessSignalRepeaterRender extends SixNodeElementRender {
 
     @Override
     public CableRenderDescriptor getCableRender(LRDU lrdu) {
-        return Cable.Companion.getSignal().descriptor.render;
+        return null; //Eln.instance.signalCableDescriptor.render;
     }
 
     @Override

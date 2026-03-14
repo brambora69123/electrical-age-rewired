@@ -1,6 +1,5 @@
 package mods.eln.sixnode.TreeResinCollector;
 
-import mods.eln.Eln;
 import mods.eln.init.Items;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
@@ -19,6 +18,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -39,28 +40,19 @@ public class TreeResinCollectorElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
     @Override
     public int getConnectionMask(LRDU lrdu) {
         return 0;
-    }
-
-    @Override
-    public String multiMeterString() {
-        return null;
-    }
-
-    @Override
-    public String thermoMeterString() {
-        return null;
     }
 
     @Override
@@ -150,7 +142,7 @@ public class TreeResinCollectorElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         timeFromLastActivated = nbt.getDouble("timeFromLastActivated");
     }

@@ -9,6 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
@@ -28,6 +30,7 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
     float cr, cg, cb;
 
     float reflc;
+    private final String modelTextureName;
 
     public boolean onFloor;
     public String textColor;
@@ -39,6 +42,15 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
         this.cg = cg;
         this.onFloor = onFloor;
         this.textColor = textColor;
+        if ("DataloggerCRTFloor".equals(objName)) {
+            modelTextureName = "CRTDisplay.png";
+        } else if ("FlatScreenMonitor".equals(objName)) {
+            modelTextureName = "FlatScreenMonitor.png";
+        } else if ("IndustrialPanel".equals(objName)) {
+            modelTextureName = "IndustrialPanel.png";
+        } else {
+            modelTextureName = null;
+        }
         obj = Eln.obj.getObj(objName);
         if (obj != null) {
             main = obj.getPart("main");
@@ -68,11 +80,20 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
         voltageLevelColor = VoltageLevelColor.SignalVoltage;
     }
 
-    void draw(DataLogs log, Direction side, LRDU front, int objPosMX, int objPosMZ) {
+    void draw(DataLogs log, Direction side, LRDU front, int objPosMX, int objPosMZ, byte color) {
         if (onFloor || side.isY()) front.glRotateOnX();
         if (!onFloor && side.isNotY()) GL11.glRotatef(90, 1, 0, 0);
         //GL11.glDisable(GL11.GL_TEXTURE_2D);
-        if (main != null) main.draw();
+        if (main != null) {
+            Utils.setGlColorFromDye(color);
+            if (modelTextureName != null) {
+                obj.bindTexture(modelTextureName);
+                main.drawNoBind();
+            } else {
+                main.draw();
+            }
+            GL11.glColor3f(1f, 1f, 1f);
+        }
         //GL11.glEnable(GL11.GL_TEXTURE_2D);
 
         //Glass (reflections)
@@ -92,7 +113,14 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
             UtilsClient.disableLight();
             // GL11.glPushMatrix();
             UtilsClient.ledOnOffColor(true);
-            if (led != null) led.draw();
+            if (led != null) {
+                if (modelTextureName != null) {
+                    obj.bindTexture(modelTextureName);
+                    led.drawNoBind();
+                } else {
+                    led.draw();
+                }
+            }
 
             UtilsClient.glDefaultColor();
 
@@ -151,8 +179,9 @@ public class ElectricalDataLoggerDescriptor extends SixNodeDescriptor {
         list.add(tr("It can store up to 256 points."));
     }
 
+    @Nullable
     @Override
-    public LRDU getFrontFromPlace(Direction side, EntityPlayer player) {
+    public LRDU getFrontFromPlace(@NotNull Direction side, @NotNull EntityPlayer player) {
         LRDU front = super.getFrontFromPlace(side, player);
         if (onFloor) {
             return front.inverse();

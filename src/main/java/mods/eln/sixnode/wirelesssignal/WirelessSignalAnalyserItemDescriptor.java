@@ -1,6 +1,7 @@
 package mods.eln.sixnode.wirelesssignal;
 
 import mods.eln.generic.GenericItemUsingDamageDescriptor;
+import mods.eln.i18n.I18N;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.Utils;
@@ -25,11 +26,11 @@ public class WirelessSignalAnalyserItemDescriptor extends GenericItemUsingDamage
     }
 
     @Override
-    public EnumActionResult onItemUse(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumHand hand, EnumFacing side, float vx, float vy, float vz) {
-        if (world.isRemote) return EnumActionResult.PASS;
-        Utils.sendMessage(player, "-------------------");
-        Direction dir = Direction.fromFacing(side);
-        Coordinate c = new Coordinate(pos, world);
+    public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side, float vx, float vy, float vz) {
+        if (world.isRemote) return true;
+        Utils.addChatMessage(player, "-------------------");
+        Direction dir = Direction.fromIntMinecraftSide(side);
+        Coordinate c = new Coordinate(x, y, z, world);
         c.move(dir);
 
         WirelessSignalSpot spot = WirelessUtils.buildSpot(c, null, 0);
@@ -46,11 +47,11 @@ public class WirelessSignalAnalyserItemDescriptor extends GenericItemUsingDamage
                 double temp = txStrength.get(oneTx);
                 if (temp < strength) strength = temp;
             }
-            Utils.sendMessage(player, entrySet.getKey() + " Strength=" + String.format("%2.1f", strength) + " Value=" + String.format("%3.0f", aggregator.aggregate(set) * 100) + "%");
+            Utils.addChatMessage(player, entrySet.getKey() + I18N.tr(" Strength")+"=" + String.format("%2.1f", strength) + I18N.tr(" Value")+"=" + String.format("%3.0f", aggregator.aggregate(set) * 100) + "%");
         }
 
         if (txSet.isEmpty()) {
-            Utils.sendMessage(player, "No wireless signal in area!");
+            Utils.addChatMessage(player, I18N.tr("No wireless signal in area!"));
         }
         /*ArrayList<WirelessSignalInfo> list = WirelessSignalRxProcess.getTxList(c);
 		int idx = 0;

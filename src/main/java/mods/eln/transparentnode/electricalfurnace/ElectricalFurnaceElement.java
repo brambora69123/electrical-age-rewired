@@ -1,7 +1,7 @@
 package mods.eln.transparentnode.electricalfurnace;
 
 import mods.eln.Eln;
-import mods.eln.generic.GenericItemUsingDamage;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.i18n.I18N;
 import mods.eln.init.Cable;
 import mods.eln.item.HeatingCorpElement;
@@ -27,6 +27,8 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -58,7 +60,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
     boolean autoShutDown = true;
     ElectricalFurnaceDescriptor descriptor;
 
-    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(electricalLoad);
 
     public static final byte unserializePowerOnId = 1;
     public static final byte unserializeTemperatureTarget = 2;
@@ -84,7 +86,7 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         slowProcessList.add(slowRefreshProcess);
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(electricalLoad).set(exp));
+        slowProcessList.add(voltageWatchdog.setDestroys(exp));
     }
 
     @Override
@@ -97,8 +99,9 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalFurnaceContainer(this.node, player, inventory);
     }
 
@@ -107,8 +110,9 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         return electricalLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -119,14 +123,16 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(electricalLoad.getU(), electricalLoad.getI());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(electricalLoad.getVoltage(), electricalLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
-        return Utils.plotCelsius("T:", thermalLoad.Tc);
+    public String thermoMeterString(@NotNull Direction side) {
+        return plotAmbientCelsius("T:", thermalLoad.temperatureCelsius);
     }
 
     @Override
@@ -164,17 +170,18 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         ItemStack itemStack;
         heatingCorpResistor.setState(powerOn);
         itemStack = inventory.getStackInSlot(heatingCorpSlotId);
-        if (itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
-            thermalRegulator.setRmin(MnaConst.highImpedance);
-            voltageWatchdog.setUNominal(100000);
+        if (itemStack == null) {
+            thermalRegulator.setMinimumResistance(MnaConst.highImpedance);
+            voltageWatchdog.setNominalVoltage(100000);
         } else {
-            HeatingCorpElement element = ((GenericItemUsingDamage<HeatingCorpElement>) itemStack.getItem()).getDescriptor(itemStack);
-            if (element != null) {
-                element.applyTo(thermalRegulator);
-                voltageWatchdog.setUNominal(element.electricalNominalU);
+            HeatingCorpElement element = (HeatingCorpElement) GenericItemUsingDamageDescriptor.getDescriptor(
+                itemStack, HeatingCorpElement.class);
+            if (element == null) {
+                thermalRegulator.setMinimumResistance(MnaConst.highImpedance);
+                voltageWatchdog.setNominalVoltage(100000);
             } else {
-                thermalRegulator.setRmin(MnaConst.highImpedance);
-                voltageWatchdog.setUNominal(100000);
+                element.applyTo(thermalRegulator);
+                voltageWatchdog.setNominalVoltage(element.electricalNominalU);
             }
         }
 
@@ -182,27 +189,28 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         if (itemStack.isEmpty() || !(itemStack.getItem() instanceof GenericItemUsingDamage)) {
             thermalRegulator.setNone();
         } else {
-            IRegulatorDescriptor element = ((GenericItemUsingDamage<IRegulatorDescriptor>) itemStack.getItem()).getDescriptor(itemStack);
-            if (element != null) {
-                element.applyTo(thermalRegulator, 500.0, 10.0, 0.1, 0.1);
-            } else {
+            IRegulatorDescriptor element = (IRegulatorDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+                itemStack, IRegulatorDescriptor.class);
+            if (element == null) {
                 thermalRegulator.setNone();
+            } else {
+                element.applyTo(thermalRegulator, 500.0, 10.0, 0.1, 0.1);
             }
         }
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
         return false;
     }
 
     public void networkSerialize(java.io.DataOutputStream stream) {
         super.networkSerialize(stream);
         try {
-            stream.writeByte((powerOn ? 1 : 0) + (heatingCorpResistor.getP() > 5 ? 2 : 0));
+            stream.writeByte((powerOn ? 1 : 0) + (heatingCorpResistor.getPower() > 5 ? 2 : 0));
 
             stream.writeShort((int) thermalRegulator.getTarget());
-            stream.writeShort((int) thermalLoad.Tc);
+            stream.writeShort((int) thermalLoad.temperatureCelsius);
 
             ItemStack stack;
             if ((stack = inventory.getStackInSlot(inSlotId)).isEmpty()) {
@@ -213,8 +221,8 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
                 stream.writeShort(stack.getItemDamage());
             }
 
-            stream.writeShort((int) heatingCorpResistor.getP());
-            stream.writeFloat((float) electricalLoad.getU());
+            stream.writeShort((int) heatingCorpResistor.getPower());
+            stream.writeFloat((float) electricalLoad.getVoltage());
             stream.writeFloat((float) slowRefreshProcess.processState());
             stream.writeFloat((float) slowRefreshProcess.processStatePerSecond());
 
@@ -272,13 +280,13 @@ public class ElectricalFurnaceElement extends TransparentNodeElement {
         return unserializeNulldId;
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.Tc));
-        ItemStack stack = inventory.getStackInSlot(heatingCorpSlotId);
-        if (!stack.isEmpty()) {
-            info.put(I18N.tr("Heating element"), stack.getDisplayName());
+        info.put(I18N.tr("Temperature"), plotAmbientCelsius("", thermalLoad.temperatureCelsius));
+        if (inventory.getStackInSlot(heatingCorpSlotId) != null) {
+            info.put(I18N.tr("Heating element"), inventory.getStackInSlot(heatingCorpSlotId).getDisplayName());
         } else {
             info.put(I18N.tr("Heating element"), I18N.tr("None"));
         }

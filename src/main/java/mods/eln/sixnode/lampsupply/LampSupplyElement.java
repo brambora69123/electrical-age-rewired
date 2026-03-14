@@ -2,12 +2,14 @@ package mods.eln.sixnode.lampsupply;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
+import mods.eln.item.ConfigCopyToolDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
 import mods.eln.node.AutoAcceptInventoryProxy;
 import mods.eln.node.NodeBase;
+import mods.eln.generic.GenericItemBlockUsingDamageDescriptor;
 import mods.eln.node.six.SixNode;
 import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElement;
@@ -16,6 +18,7 @@ import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.IProcess;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
+import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
@@ -32,14 +35,16 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
 
-public class LampSupplyElement extends SixNodeElement {
+public class LampSupplyElement extends SixNodeElement implements IConfigurable {
 
     public static class PowerSupplyChannelHandle {
         PowerSupplyChannelHandle(LampSupplyElement element, int id) {
@@ -77,7 +82,7 @@ public class LampSupplyElement extends SixNodeElement {
 
     public ArrayList<Entry> entries = new ArrayList<Entry>();
 
-    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(powerLoad);
 
     public static final byte setPowerName = 1;
     public static final byte setWirelessName = 2;
@@ -95,8 +100,9 @@ public class LampSupplyElement extends SixNodeElement {
             return null;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new LampSupplyContainer(player, inventory.getInventory());
     }
 
@@ -113,9 +119,7 @@ public class LampSupplyElement extends SixNodeElement {
 
 
         slowProcessList.add(voltageWatchdog);
-        voltageWatchdog
-            .set(powerLoad)
-            .set(new WorldExplosion(this).cableExplosion());
+        voltageWatchdog.setDestroys(new WorldExplosion(this).cableExplosion());
         channelStates = new boolean[this.descriptor.channelCount];
         aggregators = new IWirelessSignalAggregator[this.descriptor.channelCount][3];
         for (int idx = 0; idx < this.descriptor.channelCount; idx++) {
@@ -136,7 +140,11 @@ public class LampSupplyElement extends SixNodeElement {
 
         @Override
         public void process(double time) {
-            loadResistor.setR(1 / RpStack);
+            if (RpStack != 0) {
+                loadResistor.setResistance(1 / RpStack);
+            } else {
+                loadResistor.setResistance(MnaConst.highImpedance);
+            }
             RpStack = 0;
 
 
@@ -194,14 +202,15 @@ public class LampSupplyElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
-        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId).isEmpty()) return null;
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
+        if (getInventory().getStackInSlot(LampSupplyContainer.cableSlotId) == null) return null;
         if (front == lrdu) return powerLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -214,26 +223,28 @@ public class LampSupplyElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotUIP(powerLoad.getU(), powerLoad.getCurrent());
+        return Utils.plotUIP(powerLoad.getVoltage(), powerLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
-        Map<String, String> info = new HashMap<String, String>();
-        for (int i = 0; i < descriptor.channelCount; ++i) {
+        Map<String, String> info = new LinkedHashMap<String, String>();
+        for (int i = 0; i < 3; ++i) {
             Entry e = entries.get(i);
             if (!e.powerChannel.isEmpty()) {
                 info.put(I18N.tr("Channel") + " " + (i + 1), e.powerChannel + " = " +
                     (channelStates[i] ? "\u00A7aON" : "\u00A7cOFF"));
             }
         }
-        info.put(I18N.tr("Total power"), Utils.plotPower("", powerLoad.getU() * powerLoad.getI()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Voltage"), Utils.plotVolt("", powerLoad.getU()));
+        info.put(I18N.tr("Total power"), Utils.plotPower("", powerLoad.getVoltage() * powerLoad.getCurrent()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Voltage"), Utils.plotVolt("", powerLoad.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
@@ -245,7 +256,7 @@ public class LampSupplyElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         super.inventoryChanged();
         sixNode.disconnect();
         setupFromInventory();
@@ -296,7 +307,7 @@ public class LampSupplyElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         int idx = 0;
         for (Entry e : entries) {
             channelRemove(this, idx++, e.powerChannel);
@@ -327,17 +338,18 @@ public class LampSupplyElement extends SixNodeElement {
 
     void setupFromInventory() {
         ItemStack cableStack = getInventory().getStackInSlot(LampSupplyContainer.cableSlotId);
-        if (!cableStack.isEmpty()) {
-            ElectricalCableDescriptor desc = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack);
+        if (cableStack != null) {
+            ElectricalCableDescriptor desc = (ElectricalCableDescriptor) GenericItemBlockUsingDamageDescriptor.getDescriptor(
+                cableStack, ElectricalCableDescriptor.class);
             if (desc != null) {
                 desc.applyTo(powerLoad);
-                voltageWatchdog.setUNominal(desc.electricalNominalVoltage);
+                voltageWatchdog.setNominalVoltage(desc.electricalNominalVoltage);
             } else {
-                voltageWatchdog.setUNominal(10000);
+                voltageWatchdog.setNominalVoltage(10000);
                 powerLoad.highImpedance();
             }
         } else {
-            voltageWatchdog.setUNominal(10000);
+            voltageWatchdog.setNominalVoltage(10000);
             powerLoad.highImpedance();
         }
     }
@@ -410,5 +422,53 @@ public class LampSupplyElement extends SixNodeElement {
     private int getRange(LampSupplyDescriptor desc, IInventory inventory2) {
         ItemStack stack = inventory2.getStackInSlot(LampSupplyContainer.cableSlotId);
         return desc.range + (stack.isEmpty() ? 0 : stack.getCount());
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("powerChannels")) {
+            NBTTagList list = compound.getTagList("powerChannels", 8);
+            for(int idx = 0; idx < descriptor.channelCount && idx < list.tagCount(); idx++) {
+                channelRemove(this, idx, entries.get(idx).powerChannel);
+                entries.get(idx).powerChannel = list.getStringTagAt(idx);
+                channelRegister(this, idx, entries.get(idx).powerChannel);
+            }
+            needPublish();
+        }
+        if(compound.hasKey("wirelessChannels")) {
+            NBTTagList list = compound.getTagList("wirelessChannels", 8);
+            for(int idx = 0; idx < descriptor.channelCount && idx < list.tagCount(); idx++) {
+                channelRemove(this, idx, entries.get(idx).wirelessChannel);
+                entries.get(idx).wirelessChannel = list.getStringTagAt(idx);
+                channelRegister(this, idx, entries.get(idx).wirelessChannel);
+            }
+            needPublish();
+        }
+        if(compound.hasKey("aggregators")) {
+            int[] aggregators = compound.getIntArray("aggregators");
+            for(int idx = 0; idx < descriptor.channelCount && idx < aggregators.length; idx++) {
+                entries.get(idx).aggregator = aggregators[idx];
+            }
+            needPublish();
+        }
+        if(ConfigCopyToolDescriptor.readCableType(compound, getInventory(), 0, invoker))
+            needPublish();
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        NBTTagList powerList = new NBTTagList();
+        NBTTagList wirelessList = new NBTTagList();
+        int[] aggregators = new int[descriptor.channelCount];
+        for(int idx = 0; idx < descriptor.channelCount; idx++) {
+            powerList.appendTag(new NBTTagString(entries.get(idx).powerChannel));
+            wirelessList.appendTag(new NBTTagString(entries.get(idx).wirelessChannel));
+            aggregators[idx] = entries.get(idx).aggregator;
+        }
+        compound.setTag("powerChannels", powerList);
+        compound.setTag("wirelessChannels", wirelessList);
+        compound.setIntArray("aggregators", aggregators);
+        ItemStack cables = getInventory().getStackInSlot(0);
+        ConfigCopyToolDescriptor.writeCableType(compound, cables);
     }
 }

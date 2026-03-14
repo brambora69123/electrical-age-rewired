@@ -10,8 +10,7 @@ import net.minecraft.world.World;
 
 public class ComputerProbeBlock extends SimpleNodeBlock {
 
-    // TODO(1.10): Fix item rendering.
-//    private IIcon[] icon = new IIcon[6];
+    private final IIcon[] icon = new IIcon[6];
 
     public ComputerProbeBlock() {
         super(Material.PACKED_ICE);
@@ -23,7 +22,7 @@ public class ComputerProbeBlock extends SimpleNodeBlock {
     }
 
     @Override
-    protected SimpleNode newNode() {
+    public SimpleNode newNode() {
         return new ComputerProbeNode();
     }
 

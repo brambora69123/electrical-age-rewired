@@ -13,8 +13,9 @@ import mods.eln.node.six.SixNodeElement;
 import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.nbt.NbtElectricalGateInput;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -40,7 +41,7 @@ public class ElectricalRedstoneOutputElement extends SixNodeElement {
     }
 
     public boolean refreshRedstone() {
-        int newValue = (int) (inputGate.getU() * 15.0 / Cable.SVU + 0.5);
+        int newValue = (int) (inputGate.getVoltage() * 15.0 / Eln.SVU + 0.5);
         if (newValue != redstoneValue) {
             redstoneValue = newValue;
             notifyNeighbor();
@@ -60,7 +61,7 @@ public class ElectricalRedstoneOutputElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -76,13 +77,14 @@ public class ElectricalRedstoneOutputElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu.left()) return inputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -94,17 +96,19 @@ public class ElectricalRedstoneOutputElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", inputGate.getU()) + Utils.plotAmpere("I:", inputGate.getCurrent());
+        return Utils.plotVolt("U:", inputGate.getVoltage()) + Utils.plotAmpere("I:", inputGate.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Redstone value"), Utils.plotValue(redstoneValue));
-        info.put(I18N.tr("Input voltage"), Utils.plotVolt("", inputGate.getU()));
+        info.put(I18N.tr("Input voltage"), Utils.plotVolt("", inputGate.getVoltage()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";

@@ -5,13 +5,18 @@ public class ThermalLoad {
     /**
      * Current temperature, in celsius.
      */
-    public double Tc;
+    public double temperatureCelsius;
     public double Rp;
     /**
      * Thermal resistance, analogous to ohms.
      */
     public double Rs;
-    public double C;
+
+    /**
+     * heatCapacity: <a href="https://en.wikipedia.org/wiki/Heat_capacity">Heat Capacity</a>
+     * Joules/Kelvin
+     */
+    public double heatCapacity;
     /**
      * Current thermal power, in watts, of this load.
      * This will be negative if it's cooling down.
@@ -37,31 +42,36 @@ public class ThermalLoad {
     public double PcTemp;
 
     boolean isSlow;
+    private boolean hasSimCoordinate = false;
+    private int simDimension;
+    private int simX;
+    private int simY;
+    private int simZ;
 
     public ThermalLoad() {
         setHighImpedance();
-        Tc = 0;
+        temperatureCelsius = 0;
         PcTemp = 0;
         Pc = 0;
         Prs = 0;
         Psp = 0;
     }
 
-    public ThermalLoad(double Tc, double Rp, double Rs, double C) {
-        this.Tc = Tc;
+    public ThermalLoad(double Tc, double Rp, double Rs, double heatCapacity) {
+        this.temperatureCelsius = Tc;
         this.Rp = Rp;
         this.Rs = Rs;
-        this.C = C;
+        this.heatCapacity = heatCapacity;
         PcTemp = 0;
     }
 
     public void setRsByTao(double tao) {
-        Rs = tao / C;
+        Rs = tao / heatCapacity;
     }
 
     public void setHighImpedance() {
         Rs = 1000000000.0;
-        C = 1;
+        heatCapacity = 1;
         Rp = 1000000000.0;
     }
 
@@ -72,16 +82,18 @@ public class ThermalLoad {
     }
 
     public double getPower() {
-        return (Prs + Math.abs(Pc) + Tc / Rp + Psp) / 2;
+        if (Double.isNaN(Prs) || Double.isNaN(Pc) || Double.isNaN(temperatureCelsius) || Double.isNaN(Rp) || Double.isNaN(Psp)) return 0.0;
+        return (Prs + Math.abs(Pc) + temperatureCelsius / Rp + Psp) / 2;
     }
 
     public void set(double Rs, double Rp, double C) {
         this.Rp = Rp;
         this.Rs = Rs;
-        this.C = C;
+        this.heatCapacity = C;
     }
 
     public static void moveEnergy(double energy, double time, ThermalLoad from, ThermalLoad to) {
+        if(Double.isNaN(energy) || Double.isNaN(time)|| time == 0.0 || time == -0.0 ||Double.isNaN(from.PcTemp) || Double.isNaN(from.PspTemp)) return;
         double I = energy / time;
         double absI = Math.abs(I);
         from.PcTemp -= I;
@@ -91,6 +103,7 @@ public class ThermalLoad {
     }
 
     public static void movePower(double power, ThermalLoad from, ThermalLoad to) {
+        if(Double.isNaN(power) || Double.isNaN(from.PcTemp) || Double.isNaN(from.PspTemp)) return;
         double absI = Math.abs(power);
         from.PcTemp -= power;
         to.PcTemp += power;
@@ -99,13 +112,16 @@ public class ThermalLoad {
     }
 
     public void movePowerTo(double power) {
-        double absI = Math.abs(power);
+        if(Double.isNaN(power)) return;
         PcTemp += power;
-        PspTemp += absI;
+        PspTemp += power;
     }
 
-    public double getT() {
-        return Tc;
+    public double getTemperature() {
+        if (Double.isNaN(temperatureCelsius)) {
+            temperatureCelsius = 0.0;
+        }
+        return temperatureCelsius;
     }
 
     public boolean isSlow() {
@@ -118,5 +134,38 @@ public class ThermalLoad {
 
     public void setAsFast() {
         isSlow = false;
+    }
+
+    public ThermalLoad setSimCoordinate(int dimension, int x, int y, int z) {
+        this.hasSimCoordinate = true;
+        this.simDimension = dimension;
+        this.simX = x;
+        this.simY = y;
+        this.simZ = z;
+        return this;
+    }
+
+    public void clearSimCoordinate() {
+        this.hasSimCoordinate = false;
+    }
+
+    public boolean hasSimCoordinate() {
+        return hasSimCoordinate;
+    }
+
+    public int getSimDimension() {
+        return simDimension;
+    }
+
+    public int getSimX() {
+        return simX;
+    }
+
+    public int getSimY() {
+        return simY;
+    }
+
+    public int getSimZ() {
+        return simZ;
     }
 }

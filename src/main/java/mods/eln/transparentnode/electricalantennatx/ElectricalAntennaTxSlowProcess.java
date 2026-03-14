@@ -1,7 +1,8 @@
 package mods.eln.transparentnode.electricalantennatx;
 
-import mods.eln.init.ModBlock;
+import mods.eln.Eln;
 import mods.eln.misc.Coordinate;
+import mods.eln.node.NodeBase;
 import mods.eln.node.NodeManager;
 import mods.eln.node.transparent.TransparentNode;
 import mods.eln.sim.IProcess;
@@ -28,6 +29,7 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
 
     @Override
     public void process(double time) {
+        //if(element.rxCoord == null)
         World world = element.node.coordinate.world();
 
         if (timeCounter <= 0.0) {
@@ -62,9 +64,12 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
                 element.txDisconnect();
                 Coordinate coordCpy = new Coordinate(coord);
                 coordCpy.move(element.front.getInverse());
-                BlockPos pos = coordCpy.pos;
-                if (element.powerResistor.getP() > 50 && coordCpy.world().isAirBlock(pos)) {
-                    coordCpy.world().setBlockState(pos, Blocks.FIRE.getDefaultState());
+                if (element.powerResistor.getPower() > 50) {
+                    if (coordCpy.world().blockExists(coordCpy.x, coordCpy.y, coordCpy.z)) {
+                        if (coordCpy.getBlock() == Blocks.air) {
+                            coordCpy.world().setBlock(coordCpy.x, coordCpy.y, coordCpy.z, Blocks.fire);
+                        }
+                    }
                 }
             } else {
                 element.powerEfficency = 1 - (element.descriptor.electricalPowerRatioLostOffset + element.descriptor.electricalPowerRatioLostPerBlock * distance);
@@ -79,14 +84,14 @@ public class ElectricalAntennaTxSlowProcess implements IProcess {
 
             for (Object o : list) {
                 Entity e = (Entity) o;
-                e.setFire((int) (Math.pow(element.powerResistor.getP() / 100.0, 2) + 0.5));
+                e.setFire((int) (Math.pow(element.powerResistor.getPower() / 100.0, 2) + 0.5));
             }
         }
 
-        if (element.powerResistor.getP() > element.descriptor.electricalMaximalPower) {
+        if (element.powerResistor.getPower() > element.descriptor.electricalMaximalPower) {
             element.node.physicalSelfDestruction(2.0f);
         }
-        if (element.powerIn.getU() > element.descriptor.electricalMaximalVoltage) {
+        if (element.powerIn.getVoltage() > element.descriptor.electricalMaximalVoltage) {
             element.node.physicalSelfDestruction(2.0f);
         }
 

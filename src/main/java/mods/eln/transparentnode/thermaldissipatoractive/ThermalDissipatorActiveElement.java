@@ -19,6 +19,8 @@ import mods.eln.sim.process.destruct.ThermalLoadWatchDog;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -48,17 +50,16 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
         slowProcessList.add(thermalWatchdog);
 
         thermalWatchdog
-            .set(thermalLoad)
-            .setTMax(this.descriptor.warmLimit)
-            .set(new WorldExplosion(this).machineExplosion());
+            .setMaximumTemperature(this.descriptor.warmLimit)
+            .setDestroys(new WorldExplosion(this).machineExplosion());
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(positiveLoad).setUNominal(this.descriptor.nominalElectricalU).set(exp));
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.nominalElectricalU).setDestroys(exp));
 
     }
 
-    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
-    ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(positiveLoad);
+    ThermalLoadWatchDog thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(thermalLoad));
 
     @Override
     public ElectricalLoad getElectricalLoad(Direction side, LRDU lrdu) {
@@ -66,8 +67,9 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         if (side == Direction.YN || side == Direction.YP || lrdu != lrdu.Down) return null;
         if (side == front || side == front.getInverse()) return null;
@@ -82,16 +84,18 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
         return node.maskThermal;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
 
-        return Utils.plotVolt("U : ", positiveLoad.getU()) + Utils.plotAmpere("I : ", positiveLoad.getCurrent());
+        return Utils.plotVolt("U : ", positiveLoad.getVoltage()) + Utils.plotAmpere("I : ", positiveLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
 
-        return Utils.plotCelsius("T : ", thermalLoad.Tc) + Utils.plotPower("P : ", thermalLoad.getPower());
+        return plotAmbientCelsius("T : ", thermalLoad.temperatureCelsius) + Utils.plotPower("P : ", thermalLoad.getPower());
     }
 
     @Override
@@ -102,7 +106,7 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side,
+    public boolean onBlockActivated(EntityPlayer player, Direction side,
                                     float vx, float vy, float vz) {
 
         return false;
@@ -114,7 +118,7 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
 
         super.networkSerialize(stream);
         try {
-            stream.writeFloat(lastPowerFactor = (float) (powerResistor.getP() / descriptor.electricalNominalP));
+            stream.writeFloat(lastPowerFactor = (float) (powerResistor.getPower() / descriptor.electricalNominalP));
         } catch (IOException e) {
 
             e.printStackTrace();
@@ -124,11 +128,12 @@ public class ThermalDissipatorActiveElement extends TransparentNodeElement {
 
     public float lastPowerFactor;
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.Tc));
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        info.put(I18N.tr("Temperature"), plotAmbientCelsius("", thermalLoad.temperatureCelsius));
+        if (Eln.wailaEasyMode) {
             info.put(I18N.tr("Thermal power"), Utils.plotPower("", thermalLoad.getPower()));
         }
         return info;

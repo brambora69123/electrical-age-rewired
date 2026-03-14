@@ -19,12 +19,12 @@ public class TestNode extends SimpleNode {
     }
 
     @Override
-    public ThermalLoad getThermalLoad(Direction directionA, LRDU lrduA) {
+    public ThermalLoad getThermalLoad(Direction directionA, LRDU lrduA, int mask) {
         return null;
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(Direction directionB, LRDU lrduB) {
+    public ElectricalLoad getElectricalLoad(Direction directionB, LRDU lrduB, int mask) {
         return load;
     }
 
@@ -42,8 +42,8 @@ public class TestNode extends SimpleNode {
         electricalLoadList.add(load);
         electricalComponentList.add(resistor);
 
-        load.setRs(10);
-        resistor.setR(90);
+        load.setSerialResistance(10);
+        resistor.setResistance(90);
 
         connect();
     }

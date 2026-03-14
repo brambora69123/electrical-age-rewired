@@ -1,10 +1,10 @@
 package mods.eln.transparentnode.powercapacitor;
 
 import mods.eln.Eln;
-import mods.eln.init.Cable;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.DielectricItem;
+import mods.eln.misc.IFunction;
 import mods.eln.misc.Obj3D;
-import mods.eln.misc.series.ISerie;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
 import mods.eln.wiki.Data;
 import net.minecraft.inventory.IInventory;
@@ -17,7 +17,7 @@ public class PowerCapacitorDescriptor extends TransparentNodeDescriptor {
     public PowerCapacitorDescriptor(
         String name,
         Obj3D obj,
-        ISerie serie,
+        IFunction serie,
         double dischargeTao
 
     ) {
@@ -31,7 +31,7 @@ public class PowerCapacitorDescriptor extends TransparentNodeDescriptor {
 
     }
 
-    ISerie serie;
+    IFunction serie;
     public double dischargeTao;
 
     public double getCValue(int cableCount, double nominalDielVoltage) {
@@ -55,8 +55,8 @@ public class PowerCapacitorDescriptor extends TransparentNodeDescriptor {
         if (diel.isEmpty())
             return 10000;
         else {
-            DielectricItem desc = (DielectricItem) DielectricItem.getDescriptor(diel);
-            return desc.uNominal * diel.getCount();
+            DielectricItem desc = (DielectricItem) GenericItemUsingDamageDescriptor.getDescriptor(diel, DielectricItem.class);
+            return desc == null ? 10000 : desc.uNominal * diel.stackSize;
         }
     }
 

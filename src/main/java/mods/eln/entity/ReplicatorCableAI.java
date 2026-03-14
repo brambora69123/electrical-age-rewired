@@ -1,7 +1,6 @@
 package mods.eln.entity;
 
 import mods.eln.Eln;
-import mods.eln.init.Cable;
 import mods.eln.misc.Coordinate;
 import mods.eln.node.NodeBase;
 import mods.eln.node.NodeManager;
@@ -21,9 +20,9 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
 
     ReplicatorEntity entity;
 
-    private Coordinate cableCoordinate = null;
-    private Random rand = new Random();
-    private int lookingPerUpdate = 20;
+    public Coordinate cableCoordinate = null;
+    Random rand = new Random();
+    int lookingPerUpdate = 20;
 
     private ElectricalLoad load = new ElectricalLoad(), cableLoad;
     private Resistor resistorLoad = new Resistor(load, null);
@@ -37,17 +36,17 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
 
     PreSimCheck preSimCheck;
 
-    ReplicatorCableAI(ReplicatorEntity entity) {
+    public ReplicatorCableAI(ReplicatorEntity entity) {
         load.setAsPrivate();
         this.entity = entity;
-        Cable.Companion.getHighVoltage().descriptor.applyTo(load);
-        load.setRs(load.getRs() * 10);
+        Eln.instance.highVoltageCableDescriptor.applyTo(load);
+        load.setSerialResistance(load.getSerialResistance() * 10);
         this.setMutexBits(1);
     }
 
     @Override
     public boolean shouldExecute() {
-        //Utils.println("LookingForCableAi");
+        assert NodeManager.instance != null;
         List<NodeBase> nodes = NodeManager.instance.getNodes();
         if (nodes.isEmpty()) return false;
         for (int idx = 0; idx < lookingPerUpdate; idx++) {
@@ -67,34 +66,30 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
 
                 ElectricalCableElement cable = (ElectricalCableElement) e;
 
-                if (!isElectricalCableInterresting(cable)) continue;
+                if (!isElectricalCableInteresting(cable)) continue;
 
+                PathEntity path = entity.getNavigator().getPathToXYZ(node.coordinate.x, node.coordinate.y, node.coordinate.z);
 
-                Path path = entity.getNavigator().getPathToXYZ(node.coordinate.pos.getX(), node.coordinate.pos.getY(), node.coordinate.pos.getZ());
-
-                if (path == null/* || path.isFinished() == false*/) continue;
+                if (path == null) continue;
 
                 entity.getNavigator().setPath(path, 1);
                 cableCoordinate = node.coordinate;
-                //Utils.println("LookingForCableAi done");
                 moveTimeOut = moveTimeOutReset;
                 resistorLoad.highImpedance();
                 resetTimeout = resetTimeoutReset * (0.8 + Math.random() * 0.4);
                 return true;
             }
         }
-        //ADD isElectricalCableInterresting !
         return false;
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
+    public boolean continueExecuting() {
         return cableCoordinate != null;
     }
 
     @Override
     public void updateTask() {
-        //Utils.println("update");
         moveTimeOut -= 0.05;
         resetTimeout -= 0.05;
         ElectricalCableElement cable;
@@ -108,19 +103,18 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
         double distance = cableCoordinate.distanceTo(entity);
 
         if (distance > 2 && (entity.getNavigator().getPath() == null || entity.getNavigator().getPath().isFinished())) {
-            this.entity.getNavigator().tryMoveToXYZ(cableCoordinate.pos.getX(), cableCoordinate.pos.getY(), cableCoordinate.pos.getZ(), 1);
+            this.entity.getNavigator().tryMoveToXYZ(cableCoordinate.x, cableCoordinate.y, cableCoordinate.z, 1);
         }
         if (distance < 2) {
-            //Utils.println("replicator on cable !");
-            double u = cable.electricalLoad.getU();
-            double nextRp = Math.pow(u / Cable.LVU, -0.3) * u * u / (50);
-            if (resistorLoad.getR() < 0.8 * nextRp) {
-                entity.attackEntityFrom(DamageSource.LIGHTNING_BOLT, 5);
+            double u = cable.electricalLoad.getVoltage();
+            double nextRp = Math.pow(u / Eln.LVU, -0.3) * u * u / (50);
+            if (resistorLoad.getResistance() < 0.8 * nextRp) {
+                entity.attackEntityFrom(DamageSource.magic, 5);
             } else {
-                entity.eatElectricity(resistorLoad.getP() * 0.05);
+                entity.eatElectricity(resistorLoad.getPower() * 0.05);
             }
 
-            resistorLoad.setR(nextRp);
+            resistorLoad.setResistance(nextRp);
 
             timeRemover.setTimeout(0.16);
             moveTimeOut = moveTimeOutReset;
@@ -133,17 +127,15 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
         }
     }
 
-    boolean isElectricalCableInterresting(ElectricalCableElement c) {
-        if (c.descriptor.signalWire || c.electricalLoad.getU() < 30) {
-            return false;
-        }
-        return true;
+    boolean isElectricalCableInteresting(ElectricalCableElement c) {
+        return !c.descriptor.signalWire && !(c.electricalLoad.getVoltage() < 30);
     }
 
     ElectricalCableElement getCable() {
         if (cableCoordinate == null) return null;
 
-        NodeBase node = NodeManager.instance.getNodeFromCoordinate(cableCoordinate);
+        assert NodeManager.instance != null;
+        NodeBase node = NodeManager.instance.getNodeFromCoordonate(cableCoordinate);
 
         if (node == null) return null;
 
@@ -154,18 +146,11 @@ public class ReplicatorCableAI extends EntityAIBase implements ITimeRemoverObser
 
                 if (e instanceof ElectricalCableElement) {
                     ElectricalCableElement cable = (ElectricalCableElement) e;
-                    if (isElectricalCableInterresting(cable)) return cable;
+                    if (isElectricalCableInteresting(cable)) return cable;
                 }
             }
         }
         return null;
-    }
-
-    @Override
-    public void startExecuting() {
-        //Utils.println("START REPLICATOOOOOR");
-
-        //Utils.println(this.entity.getNavigator().tryMoveToXYZ(-2470, 56, -50, 1));
     }
 
     @Override

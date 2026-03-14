@@ -12,7 +12,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.ISound;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -112,7 +113,7 @@ public class AutoMinerRender extends TransparentNodeElementRender {
 
         front.glRotateXnRef();
 
-        boolean drawScreen = UtilsClient.clientDistanceTo(tileEntity) < 20 && powerOk;
+        boolean drawScreen = UtilsClient.clientDistanceTo(getTileEntity()) < 20 && powerOk;
         boolean drawRay = drawScreen && job != null;
 
         UtilsClient.disableCulling();
@@ -128,8 +129,8 @@ public class AutoMinerRender extends TransparentNodeElementRender {
             GL11.glScalef(1 / 128f, -1 / 128f, 1);
             int idx = 0;
             for (String log : logs) {
-                Minecraft.getMinecraft().fontRenderer.drawString(idx == 0 ? Color.COLOR_BRIGHT_GREEN + "> " +
-                    log.substring(2) : Color.COLOR_DARK_GREEN + log, 80, 1 + idx, 0xFFD0D0D0 /*No effect...*/);
+                Minecraft.getMinecraft().fontRenderer.drawString(idx == 0 ? FC.BRIGHT_GREEN + "> " +
+                    log.substring(2) : FC.DARK_GREEN + log, 80, 1 + idx, 0xFFD0D0D0 /*No effect...*/);
                 idx += 8;
             }
             GL11.glPopMatrix();
@@ -193,11 +194,9 @@ public class AutoMinerRender extends TransparentNodeElementRender {
                         camAlpha = (float) (Math.PI / 2);
                         break;
                 }
-                BlockPos pos = tileEntity.getPos();
-                float offset = Math.max(0, pipeLength - 3);
-                render.generate(this.tileEntity.getWorld(), pos.getX() + 0.5,
-                    pos.getY() + 0.5 - offset,
-                    pos.getZ() + 0.5, -(float) (Math.PI * 1 / 2) + camAlpha, -(float) (Math.PI / 2));
+                render.generate(this.getTileEntity().getWorldObj(), getTileEntity().xCoord + 0.5,
+                    getTileEntity().yCoord + 0.5 - (Math.max(0, pipeLength - 5)),
+                    getTileEntity().zCoord + 0.5, -(float) (Math.PI * 1 / 2) + camAlpha, -(float) (Math.PI / 2));
             }
         }
 
@@ -206,8 +205,9 @@ public class AutoMinerRender extends TransparentNodeElementRender {
         rotSpeed.step(deltaT);
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new AutoMinerGuiDraw(player, inventory, this);
     }
 

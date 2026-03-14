@@ -2,7 +2,6 @@ package mods.eln.transparentnode.waterturbine;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -20,6 +19,8 @@ import mods.eln.sim.nbt.NbtElectricalLoad;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -58,8 +59,9 @@ public class WaterTurbineElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
 
         return null;
     }
@@ -72,14 +74,16 @@ public class WaterTurbineElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
 
         return null;
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
 
         return null;
     }
@@ -90,10 +94,10 @@ public class WaterTurbineElement extends TransparentNodeElement {
     public void initialize() {
 
         setPhysicalValue();
-        waterCoord = descriptor.getWaterCoordinate(node.coordinate.world());
+        waterCoord = descriptor.getWaterCoordonate(node.coordinate.world());
         waterCoord.applyTransformation(front, node.coordinate);
-        powerSource.setUmax(descriptor.maxVoltage);
-        powerSource.setImax(descriptor.nominalPower * 5 / descriptor.maxVoltage);
+        powerSource.setMaximumVoltage(descriptor.maxVoltage);
+        powerSource.setMaximumCurrent(descriptor.nominalPower * 5 / descriptor.maxVoltage);
         connect();
     }
 
@@ -117,8 +121,9 @@ public class WaterTurbineElement extends TransparentNodeElement {
         return false;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
 
         return new WaterTurbineContainer(this.node, player, inventory);
     }
@@ -129,7 +134,7 @@ public class WaterTurbineElement extends TransparentNodeElement {
 
         super.networkSerialize(stream);
         try {
-            stream.writeFloat((float) (powerSource.getP() / descriptor.nominalPower));
+            stream.writeFloat((float) (powerSource.getPower() / descriptor.nominalPower));
         } catch (IOException e) {
 
             e.printStackTrace();
@@ -138,19 +143,20 @@ public class WaterTurbineElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
 
         return false;
     }
 
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> wailaList = new HashMap<String, String>();
         wailaList.put(I18N.tr("Generating"), slowProcess.getWaterFactor() > 0 ? I18N.tr("Yes") : I18N.tr("No"));
-        wailaList.put(I18N.tr("Produced power"), Utils.plotPower("", powerSource.getEffectiveP()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            wailaList.put("Voltage", Utils.plotVolt("", powerSource.getU()));
+        wailaList.put(I18N.tr("Produced power"), Utils.plotPower("", powerSource.getEffectivePower()));
+        if (Eln.wailaEasyMode) {
+            wailaList.put(I18N.tr("Voltage"), Utils.plotVolt("", powerSource.getVoltage()));
         }
         return wailaList;
     }

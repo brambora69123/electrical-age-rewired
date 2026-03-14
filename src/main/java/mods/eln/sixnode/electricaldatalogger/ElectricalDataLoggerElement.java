@@ -1,6 +1,10 @@
 package mods.eln.sixnode.electricaldatalogger;
 
+import mods.eln.Eln;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.i18n.I18N;
+import mods.eln.item.BrushDescriptor;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
@@ -17,6 +21,8 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -25,7 +31,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ElectricalDataLoggerElement extends SixNodeElement {
+public class ElectricalDataLoggerElement extends SixNodeElement implements IConfigurable {
 
     public static final int logsSizeMax = 256;
 
@@ -39,6 +45,8 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
 
     public double timeToNextSample = 0;
 
+    public byte color = 15;
+
     public DataLogs logs = new DataLogs(logsSizeMax);
 
     static final byte publishId = 1, dataId = 2;
@@ -50,6 +58,7 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     public static final byte printId = 6;
     public static final byte tooglePauseId = 7;
     public static final byte setMinValue = 8;
+    public static final byte setShowZeroLineId = 9;
 
     public static final byte toClientLogsClear = 1;
     public static final byte toClientLogsAdd = 2;
@@ -83,7 +92,7 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
 
         logs.readFromNBT(nbt, "logs");
@@ -91,6 +100,7 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
         timeToNextSample = nbt.getDouble("timeToNextSample");
         sampleStack = nbt.getInteger("sampleStack");
         sampleStackNbr = nbt.getInteger("sampleStackNbr");
+        color = nbt.getByte("color");
     }
 
     @Override
@@ -98,6 +108,7 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
         super.writeToNBT(nbt);
         nbt.setDouble("timeToNextSample", timeToNextSample);
         nbt.setBoolean("pause", pause);
+        nbt.setByte("color", color);
 
         logs.writeToNBT(nbt, "logs");
         nbt.setInteger("sampleStack", sampleStack);
@@ -106,13 +117,14 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front.inverse() == lrdu) return inputGate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -127,13 +139,23 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
         return inputGate.plot("In: ");
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Input"), Utils.plotVolt("", inputGate.getU()));
+        info.put(I18N.tr("Input"), Utils.plotVolt("", inputGate.getVoltage()));
+        if (Eln.wailaEasyMode && logs.size() > 0) {
+            info.put(I18N.tr("Current value"), DataLogs.getValueString(
+                logs.read(0),
+                logs.maxValue,
+                logs.minValue,
+                logs.unitType
+            ));
+        }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -148,6 +170,8 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
             stream.writeFloat((float) logs.samplingPeriod);
             stream.writeFloat((float) logs.maxValue);
             stream.writeFloat((float) logs.minValue);
+            stream.writeBoolean(logs.showZeroLine);
+            stream.writeByte(color);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -159,7 +183,7 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
     }
 
@@ -185,6 +209,10 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
                     break;
                 case setMinValue:
                     logs.minValue = stream.readFloat();
+                    needPublish();
+                    break;
+                case setShowZeroLineId:
+                    logs.showZeroLine = stream.readByte() != 0;
                     needPublish();
                     break;
                 case setUnitId:
@@ -234,13 +262,71 @@ public class ElectricalDataLoggerElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalDataLoggerContainer(player, inventory);
     }
 
     public void sampleStackReset() {
         sampleStack = 0;
         sampleStackNbr = 0;
+    }
+
+    @Override
+    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+        ItemStack cur = entityPlayer.getCurrentEquippedItem();
+        if (cur != null) {
+            GenericItemUsingDamageDescriptor desc = BrushDescriptor.getDescriptor(cur);
+            if (desc != null && desc instanceof BrushDescriptor) {
+                BrushDescriptor brush = (BrushDescriptor) desc;
+                int brushColor = brush.getColor(cur);
+                if (brushColor != color && brush.use(cur, entityPlayer)) {
+                    color = (byte) brushColor;
+                    needPublish();
+                }
+                return true;
+            }
+        }
+
+        return onBlockActivatedRotate(entityPlayer);
+    }
+
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("min"))
+            logs.minValue = compound.getFloat("min");
+        if(compound.hasKey("max"))
+            logs.maxValue = compound.getFloat("max");
+        if(compound.hasKey("unit"))
+            logs.unitType = compound.getByte("unit");
+        if(compound.hasKey("period"))
+            logs.samplingPeriod = compound.getFloat("period");
+
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(64);
+            DataOutputStream packet = new DataOutputStream(bos);
+
+            preparePacketForClient(packet);
+            packet.writeByte(toClientLogsClear);
+
+            int size = logs.size();
+            for(int i = size - 1; i >= 0; i--) {
+                packet.writeByte(logs.read(i));
+            }
+
+            sendPacketToAllClient(bos);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        needPublish();
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        compound.setFloat("min", logs.minValue);
+        compound.setFloat("max", logs.maxValue);
+        compound.setByte("unit", logs.unitType);
+        compound.setFloat("period", logs.samplingPeriod);
     }
 }

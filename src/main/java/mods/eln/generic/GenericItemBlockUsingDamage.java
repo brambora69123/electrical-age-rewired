@@ -1,5 +1,10 @@
 package mods.eln.generic;
 
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import mods.eln.Eln;
+import mods.eln.misc.RealisticEnum;
 import mods.eln.misc.Utils;
 import mods.eln.misc.UtilsClient;
 import net.minecraft.block.Block;
@@ -21,19 +26,23 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsingDamageDescriptor> extends ItemBlock {
 
     public Hashtable<Integer, Descriptor> subItemList = new Hashtable<Integer, Descriptor>();
     public ArrayList<Integer> orderList = new ArrayList<Integer>();
     public ArrayList<Descriptor> descriptors = new ArrayList<Descriptor>();
+    private final Map<Integer, CreativeTabs> creativeTabByGroup = new HashMap<Integer, CreativeTabs>();
 
     public Descriptor defaultElement = null;
 
     public GenericItemBlockUsingDamage(Block b) {
         super(b);
         setHasSubtypes(true);
+        CreativeTabPopulator.register(this);
     }
 
     public void setDefaultElement(Descriptor descriptor) {
@@ -52,8 +61,8 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         orderList.add(damage);
         descriptors.add(descriptor);
         descriptor.setParent(this, damage);
-        // In 1.12.2, items are registered via RegistryEvent.Register, not here
-        // The parent ItemBlock is already registered, descriptors are just metadata
+        applyDefaultTab(damage, descriptor);
+        GameRegistry.registerCustomItemStack(descriptor.name, descriptor.newItemStack(1));
     }
 
     public void addWithoutRegistry(int damage, Descriptor descriptor) {
@@ -61,6 +70,7 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         ItemStack stack = new ItemStack(this, 1, damage);
         stack.setTagCompound(descriptor.getDefaultNBT());
         descriptor.setParent(this, damage);
+        applyDefaultTab(damage, descriptor);
     }
 
     public Descriptor getDescriptor(int damage) {
@@ -110,16 +120,18 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
 
     @SideOnly(Side.CLIENT)
     @Override
-    public void getSubItems(CreativeTabs tabs, NonNullList<ItemStack> items) {
-        if (this.isInCreativeTab(tabs)) {
-            // Add all sub-items to the creative tab
-            for (int id : orderList) {
-                Descriptor descriptor = subItemList.get(id);
-                if (descriptor != null) {
-                    ItemStack stack = new ItemStack(this, 1, id);
-                    stack.setTagCompound(descriptor.getDefaultNBT());
-                    items.add(stack);
-                }
+    public void getSubItems(Item itemID, CreativeTabs tabs, List list) {
+        // You can also take a more direct approach and do each one individual but I prefer the lazy / right way
+        //for(Entry<Integer, Descriptor> entry : subItemList.entrySet())
+        for (int id : orderList) {
+            Descriptor descriptor = subItemList.get(id);
+            if (descriptor == null || descriptor.isHidden()) continue;
+            CreativeTabs descriptorTab = descriptor.getCreativeTab();
+            if (descriptorTab == null) descriptorTab = Eln.creativeTabOther;
+            if (tabs == null || tabs == descriptorTab || tabs == CreativeTabs.tabAllSearch) {
+                ItemStack stack = Utils.newItemStack(itemID, 1, id);
+                stack.setTagCompound(descriptor.getDefaultNBT());
+                list.add(stack);
             }
         }
     }
@@ -128,7 +140,34 @@ public class GenericItemBlockUsingDamage<Descriptor extends GenericItemBlockUsin
         Descriptor desc = getDescriptor(itemStack);
         if (desc == null) return;
         List listFromDescriptor = new ArrayList();
+        List realismData = new ArrayList();
         desc.addInformation(itemStack, entityPlayer, listFromDescriptor, par4);
-        UtilsClient.showItemTooltip(listFromDescriptor, list);
+        RealisticEnum realism = desc.addRealismContext(realismData);
+        UtilsClient.showItemTooltip(listFromDescriptor, realismData, realism, list);
+    }
+
+    public boolean onEntityItemUpdate(EntityItem entityItem) {
+        Descriptor desc = getDescriptor(entityItem.getEntityItem());
+        if (desc != null) return desc.onEntityItemUpdate(entityItem);
+        return false;
+    }
+
+    @Override
+    public boolean onItemUseFirst(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side, float hitX, float hitY, float hitZ) {
+        Descriptor desc = getDescriptor(stack);
+        if (desc != null) return desc.onItemUseFirst(stack, player);
+        return false;
+    }
+
+    private void applyDefaultTab(int damage, Descriptor descriptor) {
+        if (descriptor.getCreativeTab() != null) return;
+        CreativeTabs tab = creativeTabByGroup.get(damage >> 6);
+        if (tab != null) {
+            descriptor.setCreativeTab(tab);
+        }
+    }
+
+    public void setCreativeTabForGroup(int group, CreativeTabs tab) {
+        creativeTabByGroup.put(group, tab);
     }
 }

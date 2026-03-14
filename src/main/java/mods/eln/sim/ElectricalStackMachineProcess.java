@@ -64,7 +64,7 @@ public class ElectricalStackMachineProcess implements IProcess {
         ItemStack itemStackIn = inventory.getStackInSlot(inputSlotId);
         if (itemStackIn == null) itemStackIn = ItemStack.EMPTY;
 
-        boolean itemTypeChanged = !Utils.areSame(itemStackIn, itemStackInOld);
+        boolean itemTypeChanged = itemStackIn == null && itemStackInOld != null || itemStackIn != null && itemStackInOld == null || itemStackIn != null && !itemStackIn.getUnlocalizedName().equals(itemStackInOld.getUnlocalizedName());
 
         if (itemTypeChanged || (!smeltCan()) || !smeltInProcess) {
             smeltInit();
@@ -82,31 +82,25 @@ public class ElectricalStackMachineProcess implements IProcess {
     }
 
     public double getPower() {
-        if (electricalResistor == null) return 0.0;
-        return electricalResistor.getP() * efficiency;
+        return electricalResistor.getPower() * efficiency;
     }
 
     public void smeltInit() {
         smeltInProcess = smeltCan();
         if (!smeltInProcess) {
-            smeltInProcess = false;
             energyNeeded = 1.0;
             energyCounter = 0.0;
             if (electricalResistor != null) electricalResistor.highImpedance();
         } else {
-            smeltInProcess = true;
-            ItemStack stack = inventory.getStackInSlot(inputSlotId);
-            if (stack == null) stack = ItemStack.EMPTY;
-            Recipe r = recipesList.getRecipe(stack);
-            energyNeeded = r != null ? r.energy : 1.0;
+            energyNeeded = recipesList.getRecipe(inventory.getStackInSlot(inputSlotId)).energy;
             energyCounter = 0.0;
-            if (electricalResistor != null) electricalResistor.setR(resistorValue / speedUp);
+            electricalResistor.setResistance(resistorValue / speedUp);
         }
     }
 
     public void setResistorValue(double value) {
         resistorValue = value;
-        if (smeltInProcess && electricalResistor != null) electricalResistor.setR(resistorValue / speedUp);
+        if (smeltInProcess) electricalResistor.setResistance(resistorValue / speedUp);
     }
 
     /**
@@ -156,7 +150,6 @@ public class ElectricalStackMachineProcess implements IProcess {
     public double processStatePerSecond() {
         if (!smeltInProcess) return 0;
         double power = getPower() + 0.1;
-        double ret = power / (energyNeeded);
-        return ret;
+        return power / (energyNeeded);
     }
 }

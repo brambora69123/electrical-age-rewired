@@ -11,7 +11,8 @@ import mods.eln.node.transparent.TransparentNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -68,8 +69,9 @@ public class ElectricalFurnaceRender extends TransparentNodeElementRender {
         time = System.currentTimeMillis();
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalFurnaceGuiDraw(player, inventory, this);
     }
 
@@ -100,8 +102,7 @@ public class ElectricalFurnaceRender extends TransparentNodeElementRender {
                 entityItemIn = null;
                 stream.readShort();
             } else {
-                BlockPos pos = tileEntity.getPos();
-                entityItemIn = new EntityItem(tileEntity.getWorld(), pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 1.2, Utils.newItemStack(read, 1, stream.readShort()));
+                entityItemIn = new EntityItem(getTileEntity().getWorldObj(), getTileEntity().xCoord + 0.5, getTileEntity().yCoord + 0.5, getTileEntity().zCoord + 1.2, Utils.newItemStack(read, 1, stream.readShort()));
             }
 
             heatingCorpResistorP = stream.readShort();

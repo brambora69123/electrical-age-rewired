@@ -55,10 +55,7 @@ public class FrameTime {
             deltaT = (nanoTime - oldNanoTime) * 0.000000001f;
             //	Utils.println(deltaT);
         }
-
         oldNanoTime = nanoTime;
-
-        //Utils.println(NodeBlockEntity.clientList.size());
         Iterator<NodeBlockEntity> i = NodeBlockEntity.clientList.iterator();
         World w = Minecraft.getMinecraft().world;
 
@@ -73,7 +70,5 @@ public class FrameTime {
                 e.clientRefresh(deltaTcaped);
             }
         }
-        //Minecraft.getMinecraft().world.getChunkFromChunkCoords(1, 1).
-        //	Utils.println("delta T : " + deltaT + "   " + event);
     }
 }

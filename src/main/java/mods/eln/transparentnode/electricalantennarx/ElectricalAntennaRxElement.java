@@ -2,7 +2,6 @@ package mods.eln.transparentnode.electricalantennarx;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
 import mods.eln.misc.Coordinate;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
@@ -18,6 +17,8 @@ import mods.eln.sim.nbt.NbtElectricalGateInput;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.util.HashMap;
@@ -37,15 +38,15 @@ public class ElectricalAntennaRxElement extends TransparentNodeElement {
     ElectricalAntennaRxDescriptor descriptor;
 
     public double getSignal() {
-        return signalIn.getBornedU();
+        return signalIn.getSignalVoltage();
     }
 
     public void setPowerOut(double power) {
-        powerSrc.setP(power);
+        powerSrc.setPower(power);
     }
 
     public void rxDisconnect() {
-        powerSrc.setP(0.0);
+        powerSrc.setPower(0.0);
     }
 
     public ElectricalAntennaRxElement(TransparentNode transparentNode, TransparentNodeDescriptor descriptor) {
@@ -68,8 +69,9 @@ public class ElectricalAntennaRxElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -83,27 +85,29 @@ public class ElectricalAntennaRxElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
         return "";
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return "";
     }
 
     @Override
     public void initialize() {
         descriptor.cable.applyTo(powerOut);
-        powerSrc.setUmax(descriptor.electricalMaximalVoltage * 2);
-        powerSrc.setImax(descriptor.electricalMaximalVoltage * descriptor.electricalMaximalPower * 2);
+        powerSrc.setMaximumVoltage(descriptor.electricalMaximalVoltage * 2);
+        powerSrc.setMaximumCurrent(descriptor.electricalMaximalVoltage * descriptor.electricalMaximalPower * 2);
         connect();
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
-        if (Utils.isPlayerUsingWrench(entityPlayer)) {
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
+        if (Utils.isPlayerUsingWrench(player)) {
             rot = rot.getNextClockwise();
             node.reconnect();
             return true;
@@ -148,12 +152,13 @@ public class ElectricalAntennaRxElement extends TransparentNodeElement {
         node.lrduCubeMask.getTranslate(front.getInverse()).serialize(stream);
     }
 
+    @NotNull
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Receiving"), powerSrc.getP() != 0 ? "Yes" : "No");
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Power received"), Utils.plotPower("", powerSrc.getP()));
-            info.put(I18N.tr("Effective power"), Utils.plotPower("", powerSrc.getEffectiveP()));
+        info.put(I18N.tr("Receiving"), powerSrc.getPower() != 0 ? "Yes" : "No");
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Power received"), Utils.plotPower("", powerSrc.getPower()));
+            info.put(I18N.tr("Effective power"), Utils.plotPower("", powerSrc.getEffectivePower()));
         }
         return info;
     }

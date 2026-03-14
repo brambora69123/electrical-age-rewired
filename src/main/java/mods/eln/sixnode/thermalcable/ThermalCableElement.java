@@ -19,8 +19,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ public class ThermalCableElement extends SixNodeElement {
 
     NbtThermalLoad thermalLoad = new NbtThermalLoad("thermalLoad");
 
-    ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
+    ThermalLoadWatchDog thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(thermalLoad));
 
     int color = 0;
     int colorCare = 1;
@@ -46,9 +46,8 @@ public class ThermalCableElement extends SixNodeElement {
         slowProcessList.add(thermalWatchdog);
 
         thermalWatchdog
-            .set(thermalLoad)
-            .setLimit(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
-            .set(new WorldExplosion(this).cableExplosion());
+            .setTemperatureLimits(this.descriptor.thermalWarmLimit, this.descriptor.thermalCoolLimit)
+            .setDestroys(new WorldExplosion(this).cableExplosion());
     }
 
     public static boolean canBePlacedOnSide(Direction side, int type) {
@@ -56,7 +55,7 @@ public class ThermalCableElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte b = nbt.getByte("color");
         color = b & 0xF;
@@ -71,12 +70,13 @@ public class ThermalCableElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         return null;
     }
 
+    @org.jetbrains.annotations.Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return thermalLoad;
     }
 
@@ -90,19 +90,20 @@ public class ThermalCableElement extends SixNodeElement {
         return "";
     }
 
-    @Nullable
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
 
         info.put(I18N.tr("Thermic power"), Utils.plotPower("", thermalLoad.getPower()));
-        info.put(I18N.tr("Temperature"), Utils.plotCelsius("", thermalLoad.getT()));
+        info.put(I18N.tr("Temperature"), plotAmbientCelsius("", thermalLoad.getTemperature()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
-        return Utils.plotCelsius("T", thermalLoad.Tc) + Utils.plotPower("P", thermalLoad.getPower());
+        return plotAmbientCelsius("T", thermalLoad.temperatureCelsius) + Utils.plotPower("P", thermalLoad.getPower());
     }
 
     @Override
@@ -110,7 +111,7 @@ public class ThermalCableElement extends SixNodeElement {
         super.networkSerialize(stream);
         try {
             stream.writeByte((color << 4));
-            stream.writeShort((short) (thermalLoad.Tc * NodeBase.networkSerializeTFactor));
+            stream.writeShort((short) (thermalLoad.temperatureCelsius * NodeBase.networkSerializeTFactor));
         } catch (IOException e) {
             e.printStackTrace();
         }

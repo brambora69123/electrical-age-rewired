@@ -2,7 +2,7 @@ package mods.eln.sixnode.electricalrelay;
 
 import mods.eln.Eln;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
+import mods.eln.item.IConfigurable;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
@@ -13,6 +13,8 @@ import mods.eln.node.six.SixNodeElement;
 import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
+import mods.eln.sim.mna.component.ResistorSwitch;
+import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.nbt.NbtElectricalGateInput;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
@@ -20,8 +22,9 @@ import mods.eln.sim.process.destruct.WorldExplosion;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import mods.eln.sound.SoundCommand;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -29,17 +32,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ElectricalRelayElement extends SixNodeElement {
+public class ElectricalRelayElement extends SixNodeElement implements IConfigurable {
 
     public ElectricalRelayDescriptor descriptor;
     public NbtElectricalLoad aLoad = new NbtElectricalLoad("aLoad");
     public NbtElectricalLoad bLoad = new NbtElectricalLoad("bLoad");
-    public Resistor switchResistor = new Resistor(aLoad, bLoad);
+    public ResistorSwitch switchResistor = new ResistorSwitch("switchRes", aLoad, bLoad);
     public NbtElectricalGateInput gate = new NbtElectricalGateInput("gate");
     public ElectricalRelayGateProcess gateProcess = new ElectricalRelayGateProcess(this, "GP", gate);
 
-    VoltageStateWatchDog voltageWatchDogA = new VoltageStateWatchDog();
-    VoltageStateWatchDog voltageWatchDogB = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchDogA = new VoltageStateWatchDog(aLoad);
+    VoltageStateWatchDog voltageWatchDogB = new VoltageStateWatchDog(bLoad);
     //ResistorCurrentWatchdog currentWatchDog = new ResistorCurrentWatchdog();
 
     boolean switchState = false, defaultOutput = false;
@@ -52,6 +55,9 @@ public class ElectricalRelayElement extends SixNodeElement {
         super(sixNode, side, descriptor);
 
         this.descriptor = (ElectricalRelayDescriptor) descriptor;
+        if (this.descriptor.cable.signalWire) {
+            switchResistor.setOffResistance(MnaConst.ultraImpedance);
+        }
 
         electricalLoadList.add(aLoad);
         electricalLoadList.add(bLoad);
@@ -69,8 +75,8 @@ public class ElectricalRelayElement extends SixNodeElement {
         WorldExplosion exp = new WorldExplosion(this).cableExplosion();
 
         //currentWatchDog.set(switchResistor).setIAbsMax(this.descriptor.cable.electricalMaximalCurrent).set(exp);
-        voltageWatchDogA.set(aLoad).setUNominal(this.descriptor.cable.electricalNominalVoltage).set(exp);
-        voltageWatchDogB.set(bLoad).setUNominal(this.descriptor.cable.electricalNominalVoltage).set(exp);
+        voltageWatchDogA.setNominalVoltage(this.descriptor.cable.electricalNominalVoltage).setDestroys(exp);
+        voltageWatchDogB.setNominalVoltage(this.descriptor.cable.electricalNominalVoltage).setDestroys(exp);
     }
 
     public static boolean canBePlacedOnSide(Direction side, int type) {
@@ -78,7 +84,7 @@ public class ElectricalRelayElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -96,15 +102,16 @@ public class ElectricalRelayElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front.left() == lrdu) return aLoad;
         if (front.right() == lrdu) return bLoad;
         if (front == lrdu) return gate;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -118,21 +125,24 @@ public class ElectricalRelayElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("Ua:", aLoad.getU()) + Utils.plotVolt("Ub:", bLoad.getU()) + Utils.plotAmpere("I:", aLoad.getCurrent());
+        return Utils.plotVolt("Ua:", aLoad.getVoltage()) + Utils.plotVolt("Ub:", bLoad.getVoltage()) + Utils.plotAmpere("I:", aLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Position"), switchState ? I18N.tr("Closed") : I18N.tr("Open"));
         info.put(I18N.tr("Current"), Utils.plotAmpere("", aLoad.getCurrent()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        if (Eln.wailaEasyMode) {
             info.put(I18N.tr("Default position"), defaultOutput ? I18N.tr("Closed") : I18N.tr("Open"));
-            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getU()) + Utils.plotVolt(" ", bLoad.getU()));
+            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getVoltage()) + Utils.plotVolt(" ", bLoad.getVoltage()));
         }
+        info.put(I18N.tr("Subsystem Matrix Size"), Utils.renderSubSystemWaila(switchResistor.getSubSystem()));
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -158,11 +168,7 @@ public class ElectricalRelayElement extends SixNodeElement {
     }
 
     public void refreshSwitchResistor() {
-        if (!switchState) {
-            switchResistor.ultraImpedance();
-        } else {
-            descriptor.applyTo(switchResistor);
-        }
+        switchResistor.setState(switchState);
     }
 
     public boolean getSwitchState() {
@@ -178,13 +184,14 @@ public class ElectricalRelayElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
     }
 
     public void computeElectricalLoad() {
         descriptor.applyTo(aLoad);
         descriptor.applyTo(bLoad);
+        descriptor.applyTo(switchResistor);
         refreshSwitchResistor();
     }
 
@@ -206,5 +213,18 @@ public class ElectricalRelayElement extends SixNodeElement {
     @Override
     public boolean hasGui() {
         return true;
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("nc")) {
+            defaultOutput = compound.getBoolean("nc");
+            needPublish();
+        }
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        compound.setBoolean("nc", defaultOutput);
     }
 }

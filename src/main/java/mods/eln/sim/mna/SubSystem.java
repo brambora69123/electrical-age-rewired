@@ -2,17 +2,18 @@ package mods.eln.sim.mna;
 
 import mods.eln.misc.Profiler;
 import mods.eln.misc.Utils;
-import mods.eln.sim.mna.component.Component;
-import mods.eln.sim.mna.component.Delay;
-import mods.eln.sim.mna.component.Resistor;
-import mods.eln.sim.mna.component.VoltageSource;
+import mods.eln.sim.mna.component.*;
 import mods.eln.sim.mna.misc.IDestructor;
 import mods.eln.sim.mna.misc.ISubSystemProcessFlush;
 import mods.eln.sim.mna.misc.ISubSystemProcessI;
-import mods.eln.sim.mna.misc.Matrix;
+import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.mna.state.State;
 import mods.eln.sim.mna.state.VoltageState;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.QRDecomposition;
+import org.apache.commons.math3.linear.RealMatrix;
 
+import mods.eln.Eln;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,8 +32,7 @@ public class SubSystem {
     boolean matrixValid = false;
 
     int stateCount;
-    Matrix A;
-    //Matrix I;
+    RealMatrix A;
     boolean singularMatrix;
 
     double[][] AInvdata;
@@ -59,13 +59,13 @@ public class SubSystem {
 
     public void addComponent(Component c) {
         component.add(c);
-        c.addedTo(this);
+        c.addToSubsystem(this);
         invalidate();
     }
 
     public void addState(State s) {
         states.add(s);
-        s.addedTo(this);
+        s.setSubsystem(this);
         invalidate();
     }
 
@@ -80,16 +80,6 @@ public class SubSystem {
         s.quitSubSystem();
         invalidate();
     }
-
-	/*public void removeAll() {
-		for (Component c : component) {
-			c.disconnectFromSubSystem();
-		}
-		for (State s : states) {
-			s.disconnectFromSubSystem();
-		}	
-		invalidate();
-	}*/
 
     public void removeProcess(ISubSystemProcessI p) {
         processI.remove(p);
@@ -112,20 +102,13 @@ public class SubSystem {
         processI.add(p);
     }
 
-    //double[][] getDataRef()
-
     public void generateMatrix() {
         stateCount = states.size();
 
-        // Profiler p = new Profiler();
-        // p.add("Inversse with " + stateCount + " state : ");
+        Profiler p = new Profiler();
+        p.add("Inversse with " + stateCount + " state : ");
 
-        A = new Matrix(stateCount, stateCount);
-        //Adata = ((Array2DRowRealMatrix) A).getDataRef();
-        // X = MatrixUtils.createRealMatrix(stateCount, 1); Xdata =
-        // ((Array2DRowRealMatrix)X).getDataRef();
-        //I = MatrixUtils.createRealMatrix(stateCount, 1);
-        //Idata = ((Array2DRowRealMatrix) I).getDataRef();
+        A = MatrixUtils.createRealMatrix(stateCount, stateCount);
         Idata = new double[stateCount];
         XtempData = new double[stateCount];
         {
@@ -136,14 +119,11 @@ public class SubSystem {
         }
 
         for (Component c : component) {
-            c.applyTo(this);
+            c.applyToSubsystem(this);
         }
 
-        //	org.apache.commons.math3.linear.
-
         try {
-            //FieldLUDecomposition QRDecomposition  LUDecomposition RRQRDecomposition
-            Matrix Ainv = A.getInverse();
+            RealMatrix Ainv = new QRDecomposition(A).getSolver().getInverse();
             AInvdata = Ainv.getData();
             singularMatrix = false;
         } catch (Exception e) {
@@ -160,33 +140,96 @@ public class SubSystem {
 
         matrixValid = true;
 
-        // p.stop();
-        // Utils.println(p);
+        p.stop();
+        Utils.println(p);
+    }
+
+    public synchronized SubSystemDebugSnapshot captureDebugSnapshot() {
+        if (!matrixValid || A == null) {
+            generateMatrix();
+        }
+
+        double[][] matrixCopy = A != null ? A.getData() : new double[0][0];
+        double[] rhsCopy = Idata != null ? Idata.clone() : new double[0];
+
+        String[] stateDescriptions = new String[stateCount];
+        String[] stateOwners = new String[stateCount];
+        for (int idx = 0; idx < stateCount; idx++) {
+            State state = states.get(idx);
+            stateDescriptions[idx] = describeState(state);
+            stateOwners[idx] = state != null ? state.getOwner() : null;
+        }
+
+        String[] componentDescriptions = new String[component.size()];
+        String[] componentOwners = new String[component.size()];
+        int[][] componentConnections = new int[component.size()][];
+        for (int idx = 0; idx < component.size(); idx++) {
+            Component c = component.get(idx);
+            componentDescriptions[idx] = describeComponent(c);
+            componentOwners[idx] = c != null ? c.getOwner() : null;
+            State[] connected = c.getConnectedStates();
+            if (connected == null) {
+                componentConnections[idx] = new int[0];
+            } else {
+                int[] connectionIds = new int[connected.length];
+                for (int sIdx = 0; sIdx < connected.length; sIdx++) {
+                    State state = connected[sIdx];
+                    connectionIds[sIdx] = state != null ? state.getId() : -1;
+                }
+                componentConnections[idx] = connectionIds;
+            }
+        }
+
+        return new SubSystemDebugSnapshot(
+                matrixCopy,
+                rhsCopy,
+                stateDescriptions,
+                stateOwners,
+                componentDescriptions,
+                componentOwners,
+                componentConnections,
+                singularMatrix
+        );
+    }
+
+    private String describeState(State state) {
+        if (state == null) {
+            return "null";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append('#').append(state.getId()).append(' ').append(state.getClass().getSimpleName());
+        String owner = state.getOwner();
+        if (owner != null && !owner.isEmpty()) {
+            builder.append(" [").append(owner).append(']');
+        }
+        if (state instanceof VoltageState) {
+            builder.append(String.format(" %.4fV", ((VoltageState) state).getVoltage()));
+        }
+        return builder.toString();
+    }
+
+    private String describeComponent(Component component) {
+        if (component == null) {
+            return "null";
+        }
+        StringBuilder builder = new StringBuilder(component.getClass().getSimpleName());
+        String owner = component.getOwner();
+        if (owner != null && !owner.isEmpty()) {
+            builder.append(" [").append(owner).append(']');
+        }
+        return builder.toString();
     }
 
     public void addToA(State a, State b, double v) {
         if (a == null || b == null)
             return;
         A.addToEntry(a.getId(), b.getId(), v);
-        //Adata[a.getId()][b.getId()] += v;
     }
 
     public void addToI(State s, double v) {
         if (s == null) return;
         Idata[s.getId()] = v;
-        //Idata[s.getId()][0] += v;
     }
-
-	/*
-	 * public void pushX(){
-	 * 
-	 * }
-	 */
-	/*
-	 * public void popX(){
-	 * 
-	 * }
-	 */
 
     public void step() {
         stepCalc();
@@ -194,22 +237,17 @@ public class SubSystem {
     }
 
     public void stepCalc() {
-        Profiler profiler = new Profiler();
-        //	profiler.add("generateMatrix");
         if (!matrixValid) {
             generateMatrix();
         }
 
         if (!singularMatrix) {
-            //profiler.add("generateMatrix");
             for (int y = 0; y < stateCount; y++) {
                 Idata[y] = 0;
             }
-            //profiler.add("generateMatrix");
             for (ISubSystemProcessI p : processI) {
                 p.simProcessI(this);
             }
-            //	profiler.add("generateMatrix");
 
             for (int idx2 = 0; idx2 < stateCount; idx2++) {
                 double stack = 0;
@@ -218,14 +256,10 @@ public class SubSystem {
                 }
                 XtempData[idx2] = stack;
             }
-            //Xtemp = Ainv.multiply(I);
         }
-        profiler.stop();
-        //Utils.println(profiler);
     }
 
     public double solve(State pin) {
-        //Profiler profiler = new Profiler();
         if (!matrixValid) {
             generateMatrix();
         }
@@ -248,11 +282,9 @@ public class SubSystem {
         return 0;
     }
 
-    //Matrix Xtemp;
     public void stepFlush() {
         if (!singularMatrix) {
             for (int idx = 0; idx < stateCount; idx++) {
-                //statesTab[idx].state = Xtemp.getEntry(idx, 0);
                 statesTab[idx].state = XtempData[idx];
 
             }
@@ -268,51 +300,20 @@ public class SubSystem {
     }
 
     public static void main(String[] args) {
-//		SubSystem s = new SubSystem(null, 0.1);
-//		VoltageState n1, n2;
-//		VoltageSource u1;
-//		Resistor r1, r2;
-//
-//		s.addState(n1 = new VoltageState());
-//		s.addState(n2 = new VoltageState());
-//
-//		//s.addComponent((u1 = new VoltageSource()).setU(1).connectTo(n1, null));
-//
-//		s.addComponent((r1 = new Resistor()).setR(10).connectTo(n1, n2));
-//		s.addComponent((r2 = new Resistor()).setR(20).connectTo(n2, null));
-//
-//		s.step();
-//		s.step();
-
         SubSystem s = new SubSystem(null, 0.1);
-        VoltageState n1, n2, n3, n4, n5;
-        VoltageSource u1;
-        Resistor r1, r2, r3;
-        Delay d1, d2;
+        VoltageState n1, n2;
+        CurrentSource cs1;
+        Resistor r1;
 
         s.addState(n1 = new VoltageState());
-        s.addState(n2 = new VoltageState());
-        s.addState(n3 = new VoltageState());
-        //	s.addState(n4 = new VoltageState());
-        //	s.addState(n5 = new VoltageState());
 
-        s.addComponent((u1 = new VoltageSource("")).setU(1).connectTo(n1, null));
-
-        s.addComponent((r1 = new Resistor()).setR(10).connectTo(n1, n2));
-        s.addComponent((d1 = new Delay()).set(1).connectTo(n2, n3));
-        s.addComponent((r2 = new Resistor()).setR(10).connectTo(n3, null));
-        //s.addComponent((d2 = new Delay()).set(10).connectTo(n4, n5));
-        //s.addComponent((r2 = new Resistor()).setR(10).connectTo(n5, null));
-
-        for (int idx = 0; idx < 100; idx++) {
-            s.step();
-        }
-
-        System.out.println("END");
+        s.addComponent((cs1 = new CurrentSource("cs1")).setCurrent(0.01).connectTo(n1, null));
+        s.addComponent((r1 = new Resistor()).setResistance(10).connectTo(n1, null));
 
         s.step();
-        s.step();
-        s.step();
+
+        Eln.logger.info("R: U = " + r1.getVoltage() + ", I = " + r1.getCurrent());
+        Eln.logger.info("CS: U = " + cs1.getVoltage());
     }
 
     public boolean containe(State state) {
@@ -372,39 +373,60 @@ public class SubSystem {
         return dt;
     }
 
-    static public class Th {
-        public double R, U;
+    static public class Thevenin {
+        public double resistance, voltage;
 
         public boolean isHighImpedance() {
-            return R > 1e8;
+            return resistance > 1e8;
         }
     }
 
-    public Th getTh(State d, VoltageSource voltageSource) {
-        Th th = new Th();
-        double originalU = d.state;
+    public Thevenin getTh(State d, VoltageSource voltageSource) {
+        Thevenin thevenin = new Thevenin();
+        double originalVoltage = d.state;
 
-        double aU = 10;
-        voltageSource.setU(aU);
-        double aI = solve(voltageSource.getCurrentState());
+        double testVoltage = originalVoltage + 5;
+        voltageSource.setVoltage(testVoltage);
+        double testCurrent = solve(voltageSource.getCurrentState());
 
-        double bU = 5;
-        voltageSource.setU(bU);
-        double bI = solve(voltageSource.getCurrentState());
+        voltageSource.setVoltage(originalVoltage);
+        double originalCurrent = solve(voltageSource.getCurrentState());
 
-        double Rth = (aU - bU) / (bI - aI);
-        double Uth;
-        //if(Double.isInfinite(d.Rth)) d.Rth = Double.MAX_VALUE;
-        if (Rth > 10000000000000000000.0 || Rth < 0) {
-            Uth = 0;
-            Rth = 10000000000000000000.0;
+        double theveninResistance = (testVoltage - originalVoltage) / (originalCurrent - testCurrent);
+        double theveninVoltage;
+        if (theveninResistance > 10000000000000000000.0 || theveninResistance < 0) {
+            theveninVoltage = 0;
+            theveninResistance = 10000000000000000000.0;
         } else {
-            Uth = aU + Rth * aI;
+            theveninVoltage = testVoltage + theveninResistance * testCurrent;
         }
-        voltageSource.setU(originalU);
+        voltageSource.setVoltage(originalVoltage);
 
-        th.R = Rth;
-        th.U = Uth;
-        return th;
+        thevenin.resistance = theveninResistance;
+        thevenin.voltage = theveninVoltage;
+
+        if(Double.isNaN(thevenin.voltage)) {
+            thevenin.voltage = originalVoltage;
+            thevenin.resistance = MnaConst.highImpedance;
+        }
+        if (Double.isNaN(thevenin.resistance)) {
+            thevenin.voltage = originalVoltage;
+            thevenin.resistance = MnaConst.highImpedance;
+        }
+
+        return thevenin;
+    }
+
+    public String toString() {
+        String str = "";
+        for (Component c: component) {
+            if (c != null)
+                str += c.toString();
+        }
+        return str;
+    }
+
+    public int componentSize() {
+        return component.size();
     }
 }

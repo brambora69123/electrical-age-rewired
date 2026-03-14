@@ -1,17 +1,16 @@
 package mods.eln.sim;
 
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ServerTickEvent;
+import mods.eln.environment.RoomThermalManager;
 import mods.eln.misc.Utils;
 import mods.eln.sim.mna.RootSystem;
 import mods.eln.sim.mna.component.Component;
 import mods.eln.sim.mna.state.State;
-import mods.eln.sim.process.destruct.IDestructable;
+import mods.eln.sim.process.destruct.IDestructible;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,13 +22,14 @@ public class Simulator /* ,IPacketHandler */ {
 
     private ArrayList<IProcess> slowProcessList;
     private List<IProcess> slowPreProcessList;
+    private List<IProcess> slowPostProcessList;
 
     private ArrayList<IProcess> electricalProcessList;
 
     private ArrayList<IProcess> thermalFastProcessList, thermalSlowProcessList;
     private ArrayList<ThermalConnection> thermalFastConnectionList, thermalSlowConnectionList;
     private ArrayList<ThermalLoad> thermalFastLoadList, thermalSlowLoadList;
-    private Set<IDestructable> destructableSet;
+    private Set<IDestructible> destructableSet;
 
     boolean run;
 
@@ -59,7 +59,6 @@ public class Simulator /* ,IPacketHandler */ {
 
     public boolean checkThermalLoad(double thermalRs, double thermalRp, double thermalC) {
         if (thermalC < getMinimalThermalC(thermalRs, thermalRp)) {
-            Utils.println("checkThermalLoad ERROR");
             throw new IllegalStateException("Thermal load outside safe limits.");
         }
         return true;
@@ -77,18 +76,15 @@ public class Simulator /* ,IPacketHandler */ {
 
         slowProcessList = new ArrayList<IProcess>();
         slowPreProcessList = new ArrayList<IProcess>();
-
+        slowPostProcessList = new ArrayList<IProcess>();
         electricalProcessList = new ArrayList<IProcess>();
-        // electricalConnectionList = new ArrayList<ElectricalConnection>();
-        // electricalLoadList = new ArrayList<ElectricalLoad>();
-
         thermalFastProcessList = new ArrayList<IProcess>();
         thermalSlowProcessList = new ArrayList<IProcess>();
         thermalFastConnectionList = new ArrayList<ThermalConnection>();
         thermalFastLoadList = new ArrayList<ThermalLoad>();
         thermalSlowConnectionList = new ArrayList<ThermalConnection>();
         thermalSlowLoadList = new ArrayList<ThermalLoad>();
-        destructableSet = new HashSet<IDestructable>();
+        destructableSet = new HashSet<IDestructible>();
 
         run = false;
     }
@@ -104,9 +100,8 @@ public class Simulator /* ,IPacketHandler */ {
 
         slowProcessList.clear();
         slowPreProcessList.clear();
-
+        slowPostProcessList.clear();
         electricalProcessList.clear();
-
         thermalFastProcessList.clear();
         thermalSlowProcessList.clear();
         thermalFastConnectionList.clear();
@@ -125,11 +120,8 @@ public class Simulator /* ,IPacketHandler */ {
 
         slowProcessList.clear();
         slowPreProcessList.clear();
-
+        slowPostProcessList.clear();
         electricalProcessList.clear();
-        // electricalConnectionList.clear();
-        // electricalLoadList.clear();
-
         thermalFastProcessList.clear();
         thermalSlowProcessList.clear();
         thermalFastConnectionList.clear();
@@ -144,19 +136,12 @@ public class Simulator /* ,IPacketHandler */ {
     public void addElectricalComponent(Component c) {
         if (c != null) {
             mna.addComponent(c);
-            // electricalConnectionList.add(connection);
-            // connection.L1.electricalConnections.add(connection);
-            // connection.L2.electricalConnections.add(connection);
         }
     }
 
     public void removeElectricalComponent(Component c) {
         if (c != null) {
             mna.removeComponent(c);
-
-            // electricalConnectionList.remove(connection);
-            // connection.L1.electricalConnections.remove(connection);
-            // connection.L2.electricalConnections.remove(connection);
         }
     }
 
@@ -224,6 +209,10 @@ public class Simulator /* ,IPacketHandler */ {
     public void removeSlowPreProcess(IProcess process) {
         if (process != null) slowPreProcessList.remove(process);
     }
+
+    public void addSlowPostProcess(IProcess process) { if(process != null) slowPostProcessList.add(process); }
+
+    public void removeSlowPostProcess(IProcess process) { if(process != null) slowPostProcessList.remove(process); }
 
     public void addElectricalProcess(IProcess process) {
         if (process != null) electricalProcessList.add(process);
@@ -361,8 +350,6 @@ public class Simulator /* ,IPacketHandler */ {
         if (process != null) thermalSlowProcessList.removeAll(process);
     }
 
-    // private ArrayList<Double> conectionSerialConductance = new ArrayList<Double>();
-
     public boolean pleaseCrash = false;
 
     @SubscribeEvent
@@ -407,7 +394,6 @@ public class Simulator /* ,IPacketHandler */ {
                 thermalTimeout += thermalPeriod;
 
                 stackStart = System.nanoTime();
-                // / Utils.print("*");
 
                 thermalStep(thermalPeriod, thermalFastConnectionList, thermalFastProcessList, thermalFastLoadList);
 
@@ -431,38 +417,13 @@ public class Simulator /* ,IPacketHandler */ {
             process.process(0.05);
         }
 
-        for (IDestructable d : destructableSet) {
+        for (IDestructible d : destructableSet) {
             d.destructImpl();
         }
         destructableSet.clear();
 
         slowNsStack += System.nanoTime() - stackStart;
         avgTickTime += 1.0 / 20 * ((int) (System.nanoTime() - startTime) / 1000);
-
-		/*stackStart = System.nanoTime();
-		for (int idx = 0; idx < 100; idx++) {
-			ByteArrayOutputStream bos = new ByteArrayOutputStream(8);
-			DataOutputStream stream = new DataOutputStream(bos);
-
-			try {
-				for (int idx2 = 0; idx2 < 10; idx2++)
-					stream.writeInt(idx2+0xAAAAAAAA);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
-
-			for (Object obj : server.getConfigurationManager().playerEntityList) {
-				EntityPlayerMP player = (EntityPlayerMP) obj;
-				WorldServer worldServer = (WorldServer) MinecraftServer.getServer().getWorld(player.dimension);
-				PlayerManager playerManager = worldServer.getPlayerManager();
-				Utils.sendPacketToClient(bos, player);
-			}
-			//S3FPacketCustomPayload packet = new S3FPacketCustomPayload(Eln.channelName, bos.toByteArray());
-			//Eln.eventChannel.sendToAll(new FMLProxyPacket(packet));
-		}
-		
-		Utils.println((System.nanoTime() - stackStart) / 1000);*/
 
         if (++printTimeCounter == 20) {
             printTimeCounter = 0;
@@ -471,25 +432,16 @@ public class Simulator /* ,IPacketHandler */ {
             thermalSlowNsStack /= 20;
             slowNsStack /= 20;
 
-            /*Utils.println("ticks " + new DecimalFormat("#").format((int) avgTickTime) + " us" + "  E " + electricalNsStack / 1000 + "  TF " + thermalFastNsStack / 1000 + "  TS " + thermalSlowNsStack / 1000 + "  S " + slowNsStack / 1000
-
-                + "    " + mna.getSubSystemCount() + " SS"
-                + "    " + electricalProcessList.size() + " EP"
-                + "    " + thermalFastLoadList.size() + " TFL"
-                + "    " + thermalFastConnectionList.size() + " TFC"
-                + "    " + thermalFastProcessList.size() + " TFP"
-                + "    " + thermalSlowLoadList.size() + " TSL"
-                + "    " + thermalSlowConnectionList.size() + " TSC"
-                + "    " + thermalSlowProcessList.size() + " TSP"
-                + "    " + slowProcessList.size() + " SP"
-            );*/
-
             avgTickTime = 0;
 
             electricalNsStack = 0;
             thermalFastNsStack = 0;
             slowNsStack = 0;
             thermalSlowNsStack = 0;
+        }
+
+        for(IProcess o : slowPostProcessList) {
+            o.process(1 / 20.0);
         }
     }
 
@@ -501,7 +453,7 @@ public class Simulator /* ,IPacketHandler */ {
         // Compute heat transferred over each thermal connection:
         for (ThermalConnection c : connectionList) {
             double i;
-            i = (c.L2.Tc - c.L1.Tc) / ((c.L2.Rs + c.L1.Rs));
+            i = (c.L2.temperatureCelsius - c.L1.temperatureCelsius) / ((c.L2.Rs + c.L1.Rs));
             c.L1.PcTemp += i;
             c.L2.PcTemp -= i;
 
@@ -513,10 +465,30 @@ public class Simulator /* ,IPacketHandler */ {
                 process.process(dt);
             }
         }
-        for (ThermalLoad load : loadList) {
-            load.PcTemp -= load.Tc / load.Rp;
 
-            load.Tc += load.PcTemp * dt / load.C;
+        RoomThermalManager.INSTANCE.advanceRoomAmbientExchange(dt);
+
+        for (ThermalLoad load : loadList) {
+            Double roomPower = null;
+            if (load.hasSimCoordinate()) {
+                roomPower = RoomThermalManager.INSTANCE.exchangeLoadWithRoom(
+                    load.getSimDimension(),
+                    load.getSimX(),
+                    load.getSimY(),
+                    load.getSimZ(),
+                    load.temperatureCelsius,
+                    load.Rp,
+                    dt
+                );
+            }
+
+            if (roomPower != null) {
+                load.PcTemp -= roomPower;
+            } else {
+                load.PcTemp -= load.temperatureCelsius / load.Rp;
+            }
+
+            load.temperatureCelsius += load.PcTemp * dt / load.heatCapacity;
 
             load.Pc = load.PcTemp;
             load.Prs = load.PrsTemp;

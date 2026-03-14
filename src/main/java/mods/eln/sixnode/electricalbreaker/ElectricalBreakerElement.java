@@ -10,6 +10,7 @@ import mods.eln.misc.Utils;
 import mods.eln.node.NodeBase;
 import mods.eln.node.six.SixNode;
 import mods.eln.node.six.SixNodeDescriptor;
+import mods.eln.node.six.SixNodeDescriptor;
 import mods.eln.node.six.SixNodeElement;
 import mods.eln.node.six.SixNodeElementInventory;
 import mods.eln.sim.ElectricalLoad;
@@ -22,6 +23,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -74,7 +77,7 @@ public class ElectricalBreakerElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -95,14 +98,15 @@ public class ElectricalBreakerElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
         if (front == lrdu) return aLoad;
         if (front.inverse() == lrdu) return bLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -117,20 +121,22 @@ public class ElectricalBreakerElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("Ua:", aLoad.getU()) + Utils.plotVolt("Ub:", bLoad.getU()) + Utils.plotAmpere("I:", aLoad.getCurrent());
+        return Utils.plotVolt("Ua:", aLoad.getVoltage()) + Utils.plotVolt("Ub:", bLoad.getVoltage()) + Utils.plotAmpere("I:", aLoad.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Contact"), switchState ? I18N.tr("Closed") : I18N.tr("Open"));
         info.put(I18N.tr("Current"), Utils.plotAmpere("", aLoad.getCurrent()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getU()) + Utils.plotVolt(" ", bLoad.getU()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Voltages"), Utils.plotVolt("", aLoad.getVoltage()) + Utils.plotVolt(" ", bLoad.getVoltage()));
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return "";
@@ -160,9 +166,11 @@ public class ElectricalBreakerElement extends SixNodeElement {
 
     public void refreshSwitchResistor() {
         ItemStack cable = inventory.getStackInSlot(ElectricalBreakerContainer.cableSlotId);
-        ElectricalCableDescriptor cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(cable);
+        ElectricalCableDescriptor cableDescriptor = descriptor instanceof ElectricalCableDescriptor ?
+            (ElectricalCableDescriptor) descriptor : null;
         if (cableDescriptor == null || !switchState) {
-            switchResistor.ultraImpedance();
+            switchResistor.highImpedance();
         } else {
             cableDescriptor.applyTo(switchResistor);
         }
@@ -179,7 +187,7 @@ public class ElectricalBreakerElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
         reconnect();
     }
@@ -190,7 +198,8 @@ public class ElectricalBreakerElement extends SixNodeElement {
         if (!nbtBoot) setSwitchState(false);
         nbtBoot = false;
 
-        cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        SixNodeDescriptor descriptor = Eln.sixNodeItem.getDescriptor(cable);
+        cableDescriptor = descriptor instanceof ElectricalCableDescriptor ? (ElectricalCableDescriptor) descriptor : null;
         if (cableDescriptor == null) {
             aLoad.highImpedance();
             bLoad.highImpedance();
@@ -230,8 +239,9 @@ public class ElectricalBreakerElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalBreakerContainer(player, inventory);
     }
 }

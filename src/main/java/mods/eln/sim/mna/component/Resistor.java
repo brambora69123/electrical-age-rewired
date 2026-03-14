@@ -1,5 +1,7 @@
 package mods.eln.sim.mna.component;
 
+import mods.eln.Eln;
+import mods.eln.misc.Utils;
 import mods.eln.sim.mna.SubSystem;
 import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.mna.state.State;
@@ -13,96 +15,58 @@ public class Resistor extends Bipole {
         super(aPin, bPin);
     }
 
-    //public SubSystem interSystemA, interSystemB;
+    private double resistance = MnaConst.highImpedance;
+    private double resistanceInverse = 1 / MnaConst.highImpedance;
 
-/*	public Line line = null;
-    public boolean lineReversDir;
-	public boolean isInLine() {
-		
-		return line != null;
-	}*/
 
-    private double r = MnaConst.highImpedance, rInv = 1 / MnaConst.highImpedance;
-
-    //public boolean usedAsInterSystem = false;
-
-    public double getRInv() {
-        return rInv;
+    public double getResistanceInverse() {
+        return resistanceInverse;
     }
 
-    public double getR() {
-        return r;
+    public double getResistance() {
+        return resistance;
     }
 
-    public double getI() {
-        return getCurrent();
+    public double getPower() {
+        return getVoltage() * getCurrent();
     }
 
-    public double getP() {
-        return getU() * getCurrent();
-    }
-
-    public double getU() {
-        return (aPin == null ? 0 : aPin.state) - (bPin == null ? 0 : bPin.state);
-    }
-
-    public Resistor setR(double r) {
-        if (this.r != r) {
-            this.r = r;
-            this.rInv = 1 / r;
+    public Resistor setResistance(double resistance) {
+        if (!Double.isFinite(resistance)) {
+            Utils.println("Error! Resistor cannot be set to " + resistance);
+            // Call stack for debugging which node type it comes from;
+            // this typically results in a cable going boom! somewhere
+            if (Eln.debugEnabled)
+                Eln.LOGGER.error("Error! Resistor cannot be set to {}", resistance, new Throwable());
+            return this;
+        }
+        if (this.resistance != resistance) {
+            this.resistance = resistance;
+            this.resistanceInverse = 1 / resistance;
             dirty();
         }
         return this;
     }
 
     public void highImpedance() {
-        setR(MnaConst.highImpedance);
-    }
-
-    public void ultraImpedance() {
-        setR(MnaConst.ultraImpedance);
+        setResistance(MnaConst.highImpedance);
     }
 
     public Resistor pullDown() {
-        setR(MnaConst.pullDown);
+        setResistance(MnaConst.pullDown);
         return this;
-    }
-	
-	/*@Override
-	public void dirty() {
-		if (line != null) {
-			line.recalculateR();
-		}
-		if (usedAsInterSystem) {
-			aPin.getSubSystem().breakSystem();
-			if (aPin.getSubSystem() != bPin.getSubSystem()) {
-				bPin.getSubSystem().breakSystem();
-			}
-		}
-		
-		super.dirty();
-	}*/
-
-    boolean canBridge() {
-        return false;
     }
 
     @Override
-    public void applyTo(SubSystem s) {
-        s.addToA(aPin, aPin, rInv);
-        s.addToA(aPin, bPin, -rInv);
-        s.addToA(bPin, bPin, rInv);
-        s.addToA(bPin, aPin, -rInv);
+    public void applyToSubsystem(SubSystem s) {
+        s.addToA(aPin, aPin, resistanceInverse);
+        s.addToA(aPin, bPin, -resistanceInverse);
+        s.addToA(bPin, bPin, resistanceInverse);
+        s.addToA(bPin, aPin, -resistanceInverse);
     }
 
     @Override
     public double getCurrent() {
-        return getU() * rInv;
-		/*if(line == null)
-			return getU() * rInv;
-		else if (lineReversDir)
-			return -line.getCurrent();
-		else
-			return line.getCurrent();*/
+        return getVoltage() * resistanceInverse;
     }
 }

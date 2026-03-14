@@ -9,6 +9,8 @@ import mods.eln.node.transparent.TransparentNodeElementRender;
 import mods.eln.node.transparent.TransparentNodeEntity;
 import mods.eln.sound.LoopedSound;
 import net.minecraft.client.audio.ISound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.DataInputStream;
@@ -51,10 +53,10 @@ public class TurbineRender extends TransparentNodeElementRender {
 
         if (cableRefresh) {
             cableRefresh = false;
-            connectionType = CableRender.connectionType(tileEntity, eConn, front.down());
+            connectionType = CableRender.connectionType(getTileEntity(), eConn, front.down());
         }
 
-        glCableTransforme(front.down());
+        glCableTransform(front.down());
         descriptor.eRender.bindCableTexture();
 
         for (LRDU lrdu : LRDU.values()) {
@@ -63,13 +65,14 @@ public class TurbineRender extends TransparentNodeElementRender {
             if (lrdu != front.down().getLRDUGoingTo(front) && lrdu.inverse() != front.down().getLRDUGoingTo(front))
                 continue;
             maskTemp.set(1 << lrdu.toInt());
-            CableRender.drawCable(descriptor.eRender, maskTemp, connectionType);
+            CableRender.drawCable(descriptor.eRender, maskTemp, connectionType, descriptor.eRender.getWidthDiv2() / 2f, false);
         }
         UtilsClient.glDefaultColor();
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(Direction side, LRDU lrdu) {
+    public CableRenderDescriptor getCableRenderSide(@NotNull Direction side, @NotNull LRDU lrdu) {
         if (lrdu == LRDU.Down) {
             if (side == front) return descriptor.eRender;
             if (side == front.back()) return descriptor.eRender;

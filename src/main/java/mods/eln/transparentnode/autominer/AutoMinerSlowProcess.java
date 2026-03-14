@@ -1,8 +1,7 @@
 package mods.eln.transparentnode.autominer;
 
 import mods.eln.Eln;
-import mods.eln.init.Config;
-import mods.eln.init.ModBlock;
+import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.item.ElectricalDrillDescriptor;
 import mods.eln.item.MiningPipeDescriptor;
 import mods.eln.item.electricalitem.OreColorMapping;
@@ -11,6 +10,7 @@ import mods.eln.misc.INBTTReady;
 import mods.eln.misc.Utils;
 import mods.eln.sim.IProcess;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockChest;
 import net.minecraft.block.BlockOre;
 import net.minecraft.block.BlockRedstoneOre;
 import net.minecraft.block.state.IBlockState;
@@ -58,7 +58,8 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
     }
 
     private boolean isReadyToDrill() {
-        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) ElectricalDrillDescriptor.getDescriptor(miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId));
+        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+            miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId), ElectricalDrillDescriptor.class);
         if (drill == null) return false;
         return isStorageReady();
     }
@@ -77,18 +78,20 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
 
     @Override
     public void process(double time) {
-        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) ElectricalDrillDescriptor.getDescriptor(miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId));
+        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+            miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId), ElectricalDrillDescriptor.class);
 
         if (++blinkCounter >= 9) {
             blinkCounter = 0;
-            if ((miner.inPowerLoad.getU() / miner.descriptor.nominalVoltage - 0.5) * 3 > Math.random()) {
+            if ((miner.inPowerLoad.getVoltage() / miner.descriptor.nominalVoltage - 0.5) * 3 > Math.random()) {
                 miner.setPowerOk(true);
+                LightBlockEntity.addLight(miner.lightCoordinate, 12, 11);
             } else {
                 miner.setPowerOk(false);
             }
         }
 
-        energyCounter += miner.powerResistor.getP() * time;
+        energyCounter += miner.powerResistor.getPower() * time;
 
         if (job != jobType.none && job != jobType.full && job != jobType.chestFull && job != jobType.done) {
             if (energyCounter >= energyTarget || (job == jobType.ore && !isReadyToDrill()) || !miner.powerOk) {
@@ -111,7 +114,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
 
                         // Use cobblestone instead of air, everywhere except the mining shaft.
                         // This is so mobs won't spawn excessively.
-                        int xDist = jobCoord.pos.getX() - miner.node.coordinate.pos.getX(), zDist = jobCoord.pos.getZ() - miner.node.coordinate.pos.getZ();
+                        int xDist = jobCoord.x - miner.node.coordinate.x, zDist = jobCoord.z - miner.node.coordinate.z;
                         if (xDist * xDist + zDist * zDist > 25) {
                             jobCoord.world().setBlockState(jobCoord.pos, Blocks.COBBLESTONE.getDefaultState());
                         } else {
@@ -123,7 +126,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                         break;
                     case pipeAdd:
                         // miner.pushLog("Pipe " + (pipeLength + 1) + " added");
-                        Eln.ghostManager.createGhost(jobCoord, miner.node.coordinate, jobCoord.pos.getY());
+                        Eln.ghostManager.createGhost(jobCoord, miner.node.coordinate, jobCoord.y);
                         miner.getInventory().decrStackSize(AutoMinerContainer.MiningPipeSlotId, 1);
 
                         pipeLength++;
@@ -138,6 +141,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                         ItemStack pipeStackInSlot = miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId);
                         if (pipeStackInSlot.isEmpty()) {
                             miner.getInventory().setInventorySlotContents(AutoMinerContainer.MiningPipeSlotId, Eln.miningPipeDescriptor.newItemStack(1));
+                            miner.getInventory().markDirty();
                         } else {
                             pipeStackInSlot.grow(1);
                         }
@@ -166,14 +170,14 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                 } else {
                     double p = drill.nominalPower;
                     if (silkTouch) p *= 3;
-                    miner.powerResistor.setR(Math.pow(miner.descriptor.nominalVoltage, 2.0) / p);
+                    miner.powerResistor.setResistance(Math.pow(miner.descriptor.nominalVoltage, 2.0) / p);
                 }
                 break;
             case pipeAdd:
-                miner.powerResistor.setR(miner.descriptor.pipeOperationRp);
+                miner.powerResistor.setResistance(miner.descriptor.pipeOperationRp);
                 break;
             case pipeRemove:
-                miner.powerResistor.setR(miner.descriptor.pipeOperationRp);
+                miner.powerResistor.setResistance(miner.descriptor.pipeOperationRp);
                 break;
         }
 
@@ -211,52 +215,21 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         oneJobDone = false;
         oldJob = job;
     }
-
-    private IItemHandler getDropItemHandler() {
-        // In local coords, x=1 and x=2 are behind the machine.
-        for (int x = 1; x <= 2; x++) {
-            Coordinate c = new Coordinate(x, -1, 0, miner.world());
-            c.applyTransformation(miner.front, miner.coordinate());
-            IItemHandler handler = getHandlerAt(c);
-            if (handler != null) return handler;
-        }
-
-        // Second priority: directly behind at machine level (y=0)
-        for (int x = 1; x <= 2; x++) {
-            Coordinate c = new Coordinate(x, 0, 0, miner.world());
-            c.applyTransformation(miner.front, miner.coordinate());
-            IItemHandler handler = getHandlerAt(c);
-            if (handler != null) return handler;
-        }
-
-        // Search around the miner for any inventory (checking ground level y=-1 to top level y=1)
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -3; x <= 3; x++) {
-                for (int z = -3; z <= 3; z++) {
-                    if (y == 0 && x == 0 && z == 0) continue; // Skip miner main block
-                    // Already checked these specific spots
-                    if ((y == -1 || y == 0) && (x == 1 || x == 2) && z == 0) continue;
-
-                    Coordinate c = new Coordinate(x, y, z, miner.world());
-                    c.applyTransformation(miner.front, miner.coordinate());
-                    IItemHandler handler = getHandlerAt(c);
-                    if (handler != null) return handler;
+    private IInventory getDropInventory() {
+        IInventory inventoryEntity = null;
+        Coordinate outputLocation = new Coordinate(1, -1, 0, miner.world());
+        outputLocation.applyTransformation(miner.front, miner.coordinate());
+        if (outputLocation.getTileEntity() instanceof IInventory) {
+            inventoryEntity = (IInventory) outputLocation.getTileEntity();
+            Block inventoryBlock = miner.world().getBlock(outputLocation.x, outputLocation.y, outputLocation.z);
+            if(inventoryBlock instanceof BlockChest) {
+                IInventory possibleDoubleInventoryEntity = ((BlockChest)inventoryBlock).func_149951_m(miner.world(),outputLocation.x, outputLocation.y, outputLocation.z);
+                if (possibleDoubleInventoryEntity != null) {
+                    inventoryEntity = possibleDoubleInventoryEntity;
                 }
             }
         }
-        return null;
-    }
-
-    private IItemHandler getHandlerAt(Coordinate c) {
-        TileEntity te = c.getTileEntity();
-        if (te == null) return null;
-        if (te.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
-            return te.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
-        }
-        if (te instanceof IInventory) {
-            return new InvWrapper((IInventory) te);
-        }
-        return null;
+        return inventoryEntity;
     }
 
     private boolean drop(ItemStack stack) {
@@ -271,15 +244,19 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
     }
 
     private void setupJob() {
-        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) ElectricalDrillDescriptor.getDescriptor(miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId));
+        ElectricalDrillDescriptor drill = (ElectricalDrillDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+            miner.getInventory().getStackInSlot(AutoMinerContainer.electricalDrillSlotId), ElectricalDrillDescriptor.class);
         // OreScanner scanner = (OreScanner) ElectricalDrillDescriptor.getDescriptor(miner.inventory.getStackInSlot(AutoMinerContainer.OreScannerSlotId));
-        MiningPipeDescriptor pipe = (MiningPipeDescriptor) ElectricalDrillDescriptor.getDescriptor(miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId));
+        MiningPipeDescriptor pipe = (MiningPipeDescriptor) GenericItemUsingDamageDescriptor.getDescriptor(
+            miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId), MiningPipeDescriptor.class);
 
         int scannerRadius = Config.INSTANCE.getAutominerRange();
         double scannerEnergy = 0;
 
-        jobCoord.setDimension(miner.node.coordinate.getDimension());
-        jobCoord.setPosition(new Vec3d(miner.node.coordinate.pos.getX(), miner.node.coordinate.pos.getY() - pipeLength, miner.node.coordinate.pos.getZ()));
+        jobCoord.dimension = miner.node.coordinate.dimension;
+        jobCoord.x = miner.node.coordinate.x;
+        jobCoord.y = miner.node.coordinate.y - pipeLength;
+        jobCoord.z = miner.node.coordinate.z;
 
         // Attempt to drop items. This might not be successful.
         while (itemsToDrop.size() > 0) {
@@ -292,12 +269,12 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         }
 
         boolean jobFind = false;
-        if (!miner.node.coordinate.doesBlockExist()) {
+        if (!miner.node.coordinate.getBlockExist()) {
             setJob(jobType.none);
         } else if (!miner.powerOk) {
             setJob(jobType.none);
         } else if (drill == null) {
-            if (jobCoord.pos.getY() != miner.node.coordinate.pos.getY()) {
+            if (jobCoord.y != miner.node.coordinate.y) {
                 ItemStack pipeStack = miner.getInventory().getStackInSlot(AutoMinerContainer.MiningPipeSlotId);
                 if (pipeStack.getCount() != pipeStack.getMaxStackSize() && pipeStack.getCount() != miner.getInventory().getInventoryStackLimit()) {
                     jobFind = true;
@@ -311,19 +288,17 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
             setJob(jobType.chestFull);
             jobFind = true;
         } else if (pipe != null) {
-            if (jobCoord.pos.getY() < miner.node.coordinate.pos.getY() - 2) {
-                int depth = (miner.node.coordinate.pos.getY() - jobCoord.pos.getY());
+            if (jobCoord.y < miner.node.coordinate.y - 2) {
+                int depth = (miner.node.coordinate.y - jobCoord.y);
                 double miningRay = depth / 10.0 + 0.1;
                 miningRay = Math.min(miningRay, 2);
                 if (depth < scannerRadius) scannerRadius = depth + 1;
                 miningRay = Math.min(miningRay, scannerRadius - 2);
-                for (jobCoord.pos.setPos(jobCoord.pos.getX(), jobCoord.pos.getY(), miner.node.coordinate.pos.getZ() - scannerRadius); jobCoord.pos.getZ() <= miner.node.coordinate.pos.getZ() + scannerRadius; jobCoord.pos.setPos(jobCoord.pos.getX(), jobCoord.pos.getY(), jobCoord.pos.getZ() + 1)) {
-                    for (jobCoord.pos.setPos(miner.node.coordinate.pos.getX() - scannerRadius, jobCoord.pos.getY(), jobCoord.pos.getZ()) ; jobCoord.pos.getX() <= miner.node.coordinate.pos.getX() + scannerRadius; jobCoord.pos.setPos(jobCoord.pos.getX() + 1, jobCoord.pos.getY(), jobCoord.pos.getZ())) {
-                        net.minecraft.world.chunk.Chunk chunk = jobCoord.world().getChunkProvider().getLoadedChunk(jobCoord.pos.getX() >> 4, jobCoord.pos.getZ() >> 4);
-                        if (chunk == null || chunk.isEmpty()) continue;
-                        double dx = jobCoord.pos.getX() - miner.node.coordinate.pos.getX();
+                for (jobCoord.z = miner.node.coordinate.z - scannerRadius; jobCoord.z <= miner.node.coordinate.z + scannerRadius; jobCoord.z++) {
+                    for (jobCoord.x = miner.node.coordinate.x - scannerRadius; jobCoord.x <= miner.node.coordinate.x + scannerRadius; jobCoord.x++) {
+                        double dx = jobCoord.x - miner.node.coordinate.x;
                         double dy = 0;
-                        double dz = jobCoord.pos.getZ() - miner.node.coordinate.pos.getZ();
+                        double dz = jobCoord.z - miner.node.coordinate.z;
                         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
                         Block block = chunk.getBlockState(jobCoord.pos).getBlock();
                         if (checkIsOre(jobCoord, chunk) || (distance > 0.1 && distance < miningRay && isMinable(block))) {
@@ -341,7 +316,9 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
                     jobFind = true;
                     setJob(jobType.done);
                 } else {
-                    jobCoord.pos.setPos(miner.node.coordinate.pos.getX(), jobCoord.pos.getY() - 1, miner.node.coordinate.pos.getZ());
+                    jobCoord.x = miner.node.coordinate.x;
+                    jobCoord.y--;
+                    jobCoord.z = miner.node.coordinate.z;
 
                     net.minecraft.world.chunk.Chunk chunk = jobCoord.world().getChunkProvider().getLoadedChunk(jobCoord.pos.getX() >> 4, jobCoord.pos.getZ() >> 4);
                     if (chunk == null || chunk.isEmpty()) {
@@ -396,19 +373,15 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
         this.job = job;
     }
 
-    private boolean checkIsOre(Coordinate coordinate, net.minecraft.world.chunk.Chunk chunk) {
-        IBlockState state = chunk.getBlockState(coordinate.pos);
-        Block block = state.getBlock();
+    private boolean checkIsOre(Coordinate coordinate) {
+        Block block = coordinate.world().getBlock(coordinate.x, coordinate.y, coordinate.z);
         if (block instanceof BlockOre) return true;
         if (block == ModBlock.copperOreBlock) return true;
         if (block == ModBlock.leadOreBlock) return true;
         if (block == ModBlock.tungstenOreBlock) return true;
         if (block == ModBlock.cinnabarOreBlock) return true;
         if (block instanceof BlockRedstoneOre) return true;
-
-
-        return OreColorMapping.INSTANCE.getMap()[Block.getIdFromBlock(block) +
-            (block.getMetaFromState(state) << 12)] != 0;
+        return OreColorMapping.INSTANCE.getMap()[Block.getIdFromBlock(block) + (coordinate.world().getBlockMetadata(coordinate.x, coordinate.y, coordinate.z) << 12)] != 0;
     }
 
     public void onBreakElement() {
@@ -424,7 +397,7 @@ public class AutoMinerSlowProcess implements IProcess, INBTTReady {
 
     private void dropPipe() {
         Coordinate coord = new Coordinate(miner.node.coordinate);
-        for (coord.pos.setY(miner.node.coordinate.pos.getY() - 1); coord.pos.getY() >= miner.node.coordinate.pos.getY() - pipeLength; coord.pos.setY(coord.pos.getY() - 1)) {
+        for (coord.y = miner.node.coordinate.y - 1; coord.y >= miner.node.coordinate.y - pipeLength; coord.y--) {
             Utils.dropItem(Eln.miningPipeDescriptor.newItemStack(1), coord);
         }
     }

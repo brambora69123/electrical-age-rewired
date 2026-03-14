@@ -7,6 +7,8 @@ import mods.eln.node.six.SixNodeElementRender;
 import mods.eln.node.six.SixNodeEntity;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -30,7 +32,7 @@ public class ElectricalWatchRender extends SixNodeElementRender {
         super.draw();
         long time;
         if (upToDate)
-            time = tileEntity.getWorld().getWorldTime();
+            time = getTileEntity().getWorldObj().getWorldTime();
         else
             time = oldDate;
         time += 6000;
@@ -52,8 +54,9 @@ public class ElectricalWatchRender extends SixNodeElementRender {
         }
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new ElectricalWatchGui(player, inventory, this);
     }
 }

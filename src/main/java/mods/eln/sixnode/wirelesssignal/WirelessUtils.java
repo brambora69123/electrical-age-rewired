@@ -3,8 +3,6 @@ package mods.eln.sixnode.wirelesssignal;
 import mods.eln.misc.Coordinate;
 import mods.eln.sixnode.wirelesssignal.tx.WirelessSignalTxElement;
 import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.*;
@@ -31,7 +29,7 @@ public class WirelessUtils {
             for (List<IWirelessSignalTx> txs : from.getTx().values()) {
                 for (IWirelessSignalTx tx : txs) {
                     if (isRoot)
-                        strength = tx.getRange() - getVirtualDistance(tx.getCoordinate(), from.getCoordinate(), tx.getCoordinate().trueDistanceTo(from.getCoordinate()));
+                        strength = tx.getRange() - getVirtualDistance(tx.getCoordinate(), from.getCoordonate(), tx.getCoordinate().trueDistanceTo(from.getCoordonate()));
                     addTo(tx, strength, txSet, txStrength);
                 }
             }
@@ -62,7 +60,7 @@ public class WirelessUtils {
                 }
 
                 for (IWirelessSignalTx tx : txs) {
-                    double temp = tx.getCoordinate().trueDistanceTo(from.getCoordinate());
+                    double temp = tx.getCoordinate().trueDistanceTo(from.getCoordonate());
                     if (temp < bestScore) {
                         bestScore = temp;
                         best = tx;
@@ -81,7 +79,7 @@ public class WirelessUtils {
                     IWirelessSignalTx tx = (IWirelessSignalTx) best;
 
                     if (isRoot)
-                        strength = tx.getRange() - getVirtualDistance(tx.getCoordinate(), from.getCoordinate(), tx.getCoordinate().trueDistanceTo(from.getCoordinate()));
+                        strength = tx.getRange() - getVirtualDistance(tx.getCoordinate(), from.getCoordonate(), tx.getCoordinate().trueDistanceTo(from.getCoordonate()));
                     addTo(tx, strength, txSet, txStrength);
                     txs.remove(best);
                 }
@@ -156,7 +154,6 @@ public class WirelessUtils {
         return true;
     }
 
-    //TODO: Needs performance improvement
     static private double getVirtualDistance(Coordinate txC, Coordinate rxC, double distance) {
         double virtualDistance = distance;
         if (distance > 2) {
@@ -166,11 +163,11 @@ public class WirelessUtils {
             vy = rxC.pos.getY() + 0.5;
             vz = rxC.pos.getZ() + 0.5;
 
-            dx = (txC.pos.getX() - rxC.pos.getX()) / distance;
-            dy = (txC.pos.getY() - rxC.pos.getY()) / distance;
-            dz = (txC.pos.getZ() - rxC.pos.getZ()) / distance;
+            dx = (txC.x - rxC.x) / distance;
+            dy = (txC.y - rxC.y) / distance;
+            dz = (txC.z - rxC.z) / distance;
             Coordinate c = new Coordinate();
-            c.setDimension(rxC.getDimension());
+            c.setDimension(rxC.dimension);
 
             for (int idx = 0; idx < distance - 1; idx++) {
                 vx += dx;
@@ -216,7 +213,7 @@ public class WirelessUtils {
         }
 
         @Override
-        public Coordinate getCoordinate() {
+        public Coordinate getCoordonate() {
             return coordinate;
         }
 

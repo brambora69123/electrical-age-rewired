@@ -17,8 +17,10 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.world.EnumSkyBlock;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import java.io.ByteArrayOutputStream;
@@ -60,8 +62,9 @@ public class LampSocketRender extends SixNodeElementRender {
         lampSocketDescriptor = (LampSocketDescriptor) descriptor;
     }
 
+    @Nullable
     @Override
-    public GuiScreen newGuiDraw(Direction side, EntityPlayer player) {
+    public GuiScreen newGuiDraw(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new LampSocketGuiDraw(player, inventory, this);
     }
 
@@ -76,24 +79,57 @@ public class LampSocketRender extends SixNodeElementRender {
         super.draw(); //Colored cable only
 
         GL11.glRotatef(descriptor.initialRotateDeg, 1.f, 0.f, 0.f);
-        if (descriptor.render != null) {
-            descriptor.render.draw(this, UtilsClient.distanceFromClientPlayer(this.tileEntity));
-        }
+        descriptor.render.draw(this, UtilsClient.distanceFromClientPlayer(this.getTileEntity()));
     }
 
     @Override
     public void refresh(float deltaT) {
         if (!(descriptor.render instanceof LampSocketSuspendedObjRender)) return;
 
-        float dt = deltaT;
-        BlockPos pos = tileEntity.getPos();
-        entityTimout -= dt;
-        if (entityTimout < 0) {
-            entityList = tileEntity.getWorld().getEntitiesWithinAABB(
-                Entity.class,
-                new Coordinate(pos.getX(), pos.getY() - 2, pos.getZ(), tileEntity.getWorld()).getAxisAlignedBB(2)
-            );
-            entityTimout = 0.1f;
+            entityTimout -= dt;
+            if (entityTimout < 0) {
+                entityList = getTileEntity().getWorldObj().getEntitiesWithinAABB(Entity.class, new Coordinate(getTileEntity().xCoord, getTileEntity().yCoord - 2, getTileEntity().zCoord, getTileEntity().getWorldObj()).getAxisAlignedBB(2));
+                entityTimout = 0.1f;
+            }
+
+            for (Object o : entityList) {
+                Entity e = (Entity) o;
+                float eFactor = 0;
+                if (e instanceof EntityArrow)
+                    eFactor = 1f;
+                if (e instanceof EntityLivingBase)
+                    eFactor = 4f;
+
+                if (eFactor == 0)
+                    continue;
+                pertuVz += e.motionX * eFactor * dt;
+                pertuVy += e.motionZ * eFactor * dt;
+            }
+
+            if (getTileEntity().getWorldObj().getSavedLightValue(EnumSkyBlock.Sky, getTileEntity().xCoord, getTileEntity().yCoord, getTileEntity().zCoord) > 3) {
+                float weather = (float) UtilsClient.getWeather(getTileEntity().getWorldObj()) * 0.9f + 0.1f;
+
+                // TODO: Reduce swinging of lamps to some degree?
+                weatherAlphaY += (0.4 - Math.random()) * dt * Math.PI / 0.2 * weather;
+                weatherAlphaZ += (0.4 - Math.random()) * dt * Math.PI / 0.2 * weather;
+                if (weatherAlphaY > 2 * Math.PI)
+                    weatherAlphaY -= 2 * Math.PI;
+                if (weatherAlphaZ > 2 * Math.PI)
+                    weatherAlphaZ -= 2 * Math.PI;
+                pertuVy += Math.random() * Math.sin(weatherAlphaY) * weather * weather * dt * 3;
+                pertuVz += Math.random() * Math.cos(weatherAlphaY) * weather * weather * dt * 3;
+
+                pertuVy += 0.4 * dt * weather * Math.signum(pertuVy) * Math.random();
+                pertuVz += 0.4 * dt * weather * Math.signum(pertuVz) * Math.random();
+            }
+
+            pertuVy -= pertuPy / 10 * dt;
+            pertuVy *= (1 - 0.2 * dt);
+            pertuPy += pertuVy;
+
+            pertuVz -= pertuPz / 10 * dt;
+            pertuVz *= (1 - 0.2 * dt);
+            pertuPz += pertuVz;
         }
 
         for (Entity e : entityList) {
@@ -132,7 +168,7 @@ public class LampSocketRender extends SixNodeElementRender {
 
     void setLight(byte newLight) {
         light = newLight;
-        if (lampDescriptor != null && lampDescriptor.type == Type.eco && oldLight != -1 && oldLight < 9 && light >= 9) {
+        if (lampDescriptor != null && lampDescriptor.type == Type.ECO && oldLight != -1 && oldLight < 9 && light >= 9) {
             float rand = (float) Math.random();
             if (rand > 0.1f)
                 play(new SoundCommand("eln:neon_lamp").mulVolume(0.7f, 1.0f + (rand / 6.0f)).smallRange());
@@ -155,9 +191,12 @@ public class LampSocketRender extends SixNodeElementRender {
             Object lampObject = Utils.getItemObject(lampStack);
             lampDescriptor = lampObject instanceof LampDescriptor ? (LampDescriptor) lampObject : null;
             alphaZ = stream.readFloat();
-            ItemStack cableStack = Utils.unserialiseItemStack(stream);
-            inventory.setInventorySlotContents(LampSocketContainer.cableSlotId, cableStack == null ? ItemStack.EMPTY : cableStack.copy());
-            cable = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(cableStack, ElectricalCableDescriptor.class);
+            ItemStack itemStack = Utils.unserialiseItemStack(stream);
+            if (itemStack != null ) {
+                cable = (ElectricalCableDescriptor) ElectricalCableDescriptor.getDescriptor(itemStack, ElectricalCableDescriptor.class);
+            } else {
+                cable = null;
+            }
 
             poweredByLampSupply = stream.readBoolean();
             channel = stream.readUTF();
@@ -187,8 +226,9 @@ public class LampSocketRender extends SixNodeElementRender {
         this.grounded = grounded;
     }
 
+    @Nullable
     @Override
-    public CableRenderDescriptor getCableRender(LRDU lrdu) {
+    public CableRenderDescriptor getCableRender(@NotNull LRDU lrdu) {
         if (cable == null
             || (lrdu == front && !descriptor.cableFront)
             || (lrdu == front.left() && !descriptor.cableLeft)
@@ -217,5 +257,18 @@ public class LampSocketRender extends SixNodeElementRender {
     @Override
     public boolean cameraDrawOptimisation() {
         return descriptor.cameraOpt;
+    }
+
+    @Override
+    public AxisAlignedBB getRenderBoundingBox(SixNodeEntity tileEntity) {
+        if (!descriptor.extendedRenderBounds) return null;
+        return AxisAlignedBB.getBoundingBox(
+            tileEntity.xCoord - 1.0,
+            tileEntity.yCoord,
+            tileEntity.zCoord - 1.0,
+            tileEntity.xCoord + 2.0,
+            tileEntity.yCoord + 4.0,
+            tileEntity.zCoord + 2.0
+        );
     }
 }

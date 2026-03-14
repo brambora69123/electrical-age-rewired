@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 public class ElementFluidHandler implements IFluidHandler, INBTTReady {
     private Fluid[] whitelist;
     private float fluid_heat_mb = 0;
-    FluidTank tank;
+    public FluidTank tank;
 
     /**
      * Stores fluids.

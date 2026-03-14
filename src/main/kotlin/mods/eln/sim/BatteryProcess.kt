@@ -1,0 +1,95 @@
+package mods.eln.sim
+
+import mods.eln.Eln
+import mods.eln.misc.FunctionTable
+import mods.eln.sim.mna.component.VoltageSource
+import mods.eln.sim.mna.state.VoltageState
+
+open class BatteryProcess(
+    var positiveLoad: VoltageState?,
+    var negativeLoad: VoltageState?,
+    var voltageFunction: FunctionTable,
+    @JvmField var IMax: Double,
+    var voltageSource: VoltageSource,
+    private var thermalLoad: ThermalLoad
+) : IProcess {
+
+    // TODO: Change these to charge, and change the charge getter/setter to reflect
+    @JvmField
+    var Q = 0.0
+    var QNominal = 0.0
+    var uNominal = 0.0
+    @JvmField
+    var life = 1.0
+    var isRechargeable = true
+
+    override fun process(time: Double) {
+        val lastQ = Q
+        var wasteQ = 0.0
+        val deltaQ = voltageSource.current * time / QNominal
+        if (!isRechargeable && deltaQ < 0.0) {
+            if (Eln.debugEnabled) {
+                Eln.logger.warn("Battery is recharging when it shouldn't! current=${voltageSource.current}")
+            }
+            wasteQ = -deltaQ
+            Q = lastQ
+        } else {
+            Q = Math.max(Q - deltaQ, 0.0)
+        }
+        val voltage = computeVoltage()
+        voltageSource.voltage = voltage
+        if (wasteQ > 0) {
+            thermalLoad.movePowerTo(Math.abs(voltageSource.current * voltage))
+        }
+    }
+
+    fun computeVoltage(): Double {
+        val voltage = voltageFunction.getValue(Q / life)
+        return Math.max(0.0, voltage * uNominal)
+    }
+
+    fun changeLife(newLife: Double) {
+        if (newLife < life) {
+            Q *= newLife / life
+        }
+        life = newLife
+    }
+
+    var charge: Double
+        get() = Q / life
+        set(charge) {
+            Q = life * charge
+        }
+    val energy: Double
+        get() {
+            val stepNbr = 50
+            val chargeStep = charge / stepNbr
+            var chargeIntegrator = 0.0
+            var energy = 0.0
+            val QperStep = QNominal * life * chargeStep
+            for (step in 0 until stepNbr) {
+                val voltage = voltageFunction.getValue(chargeIntegrator) * uNominal
+                energy += voltage * QperStep
+                chargeIntegrator += chargeStep
+            }
+            return energy
+        }
+    val energyMax: Double
+        get() {
+            val stepNbr = 50
+            val chargeStep = 1.0 / stepNbr
+            var chargeIntegrator = 0.0
+            var energy = 0.0
+            val QperStep = QNominal * life * 1.0 / stepNbr
+            for (step in 0 until stepNbr) {
+                val voltage = voltageFunction.getValue(chargeIntegrator) * uNominal
+                energy += voltage * QperStep
+                chargeIntegrator += chargeStep
+            }
+            return energy
+        }
+    val u: Double
+        get() = computeVoltage()
+    val dischargeCurrent: Double
+        get() = voltageSource.current
+}

@@ -23,6 +23,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -46,7 +48,7 @@ public class AutoMinerElement extends TransparentNodeElement {
 
     Coordinate lightCoordinate;
 
-    private final VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    private final VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(inPowerLoad);
 
     private final ArrayList<AutoMinerPowerNode> powerNodeList = new ArrayList<AutoMinerPowerNode>();
 
@@ -64,7 +66,7 @@ public class AutoMinerElement extends TransparentNodeElement {
         slowProcessList.add(slowProcess);
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(inPowerLoad).setUNominal(this.descriptor.nominalVoltage).set(exp));
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.nominalVoltage).setDestroys(exp));
     }
 
     @Override
@@ -72,8 +74,9 @@ public class AutoMinerElement extends TransparentNodeElement {
         return inPowerLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -82,13 +85,15 @@ public class AutoMinerElement extends TransparentNodeElement {
         return NodeBase.maskElectricalPower;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(inPowerLoad.getU(), inPowerLoad.getCurrent());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(inPowerLoad.getVoltage(), inPowerLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return "";
     }
 
@@ -98,7 +103,7 @@ public class AutoMinerElement extends TransparentNodeElement {
         lightCoordinate.applyTransformation(front, node.coordinate);
 
         int idx = 0;
-        for (Coordinate c : descriptor.getPowerCoordinate(node.coordinate.world())) {
+        for (Coordinate c : descriptor.getPowerCoordonate(node.coordinate.world())) {
             AutoMinerPowerNode n = new AutoMinerPowerNode();
             n.setElement(this);
             c.applyTransformation(front, node.coordinate);
@@ -132,8 +137,8 @@ public class AutoMinerElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
-        return inventory.take(entityPlayer.getHeldItemMainhand());
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
+        return inventory.take(player.getCurrentEquippedItem());
     }
 
     @Override
@@ -141,8 +146,9 @@ public class AutoMinerElement extends TransparentNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new AutoMinerContainer(player, inventory.getInventory());
     }
 
@@ -211,6 +217,7 @@ public class AutoMinerElement extends TransparentNodeElement {
         return unserializeNulldId;
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();

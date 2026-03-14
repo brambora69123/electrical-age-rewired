@@ -29,12 +29,12 @@ public class SolarPanelDescriptor extends TransparentNodeDescriptor {
     private Obj3DPart panel;
 
     public SolarPanelDescriptor(
-        String name,
-        Obj3D obj, CableRenderDescriptor cableRender,
-        GhostGroup ghostGroup, int solarOffsetX, int solarOffsetY, int solarOffsetZ,
-        Coordinate groundCoordinate, double electricalUmax, double electricalPmax,
-        double electricalDropFactor,
-        double alphaMin, double alphaMax
+            String name,
+            Obj3D obj, CableRenderDescriptor cableRender,
+            GhostGroup ghostGroup, int solarOffsetX, int solarOffsetY, int solarOffsetZ,
+            Coordinate groundCoordinate, double electricalUmax, double electricalPmax,
+            double electricalDropFactor,
+            double alphaMin, double alphaMax
 
     ) {
         super(name, SolarPanelElement.class, SolarPanelRender.class);
@@ -83,7 +83,7 @@ public class SolarPanelDescriptor extends TransparentNodeDescriptor {
     boolean canRotate;
 
     public void applyTo(ElectricalLoad load) {
-        load.setRs(electricalRs);
+        load.setSerialResistance(electricalRs);
     }
 
 

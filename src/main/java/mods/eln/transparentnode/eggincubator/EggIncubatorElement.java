@@ -26,7 +26,9 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.MathHelper;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -41,7 +43,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
     EggIncubatorProcess slowProcess = new EggIncubatorProcess();
     EggIncubatorDescriptor descriptor;
 
-    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
+    VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(powerLoad);
 
     double lastVoltagePublish;
 
@@ -54,7 +56,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
         this.descriptor = (EggIncubatorDescriptor) descriptor;
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
-        slowProcessList.add(voltageWatchdog.set(powerLoad).setUNominal(this.descriptor.nominalVoltage).set(exp));
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.nominalVoltage).setDestroys(exp));
     }
 
     class EggIncubatorProcess implements IProcess, INBTTReady {
@@ -71,19 +73,21 @@ public class EggIncubatorElement extends TransparentNodeElement {
 
         @Override
         public void process(double time) {
-            energy -= powerResistor.getP() * time;
-            if (!inventory.getStackInSlot(EggIncubatorContainer.EggSlotId).isEmpty()) {
+            energy -= powerResistor.getPower() * time;
+            if (inventory.getStackInSlot(EggIncubatorContainer.EggSlotId) != null) {
                 descriptor.setState(powerResistor, true);
                 if (energy <= 0) {
                     inventory.decrStackSize(EggIncubatorContainer.EggSlotId, 1);
                     EntityChicken chicken = new EntityChicken(node.coordinate.world());
                     chicken.setGrowingAge(-24000);
-                    chicken.setLocationAndAngles(node.coordinate.pos.getX() + 0.5, node.coordinate.pos.getY() + 0.5, node.coordinate.pos.getZ() + 0.5, MathHelper.wrapDegrees(node.coordinate.world().rand.nextFloat() * 360.0F), 0.0F);
-                    chicken.rotationYawHead = chicken.rotationYaw;
-                    chicken.renderYawOffset = chicken.rotationYaw;
-                    node.coordinate.world().spawnEntity(chicken);
-                    chicken.playLivingSound();
-                    //node.coordinate.world().spawnEntity());
+                    EntityLiving entityliving = (EntityLiving) chicken;
+                    entityliving.setLocationAndAngles(node.coordinate.x + 0.5, node.coordinate.y + 0.5, node.coordinate.z + 0.5, MathHelper.wrapAngleTo180_float(node.coordinate.world().rand.nextFloat() * 360.0F), 0.0F);
+                    entityliving.rotationYawHead = entityliving.rotationYaw;
+                    entityliving.renderYawOffset = entityliving.rotationYaw;
+                    //entityliving.func_110161_a((EntityLivingData)null); 1.6.4
+                    node.coordinate.world().spawnEntityInWorld(entityliving);
+                    entityliving.playLivingSound();
+                    //node.coordonate.world().spawnEntityInWorld());
                     resetEnergy();
 
                     needPublish();
@@ -92,7 +96,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
                 descriptor.setState(powerResistor, false);
                 resetEnergy();
             }
-            if (Math.abs(powerLoad.getU() - lastVoltagePublish) / descriptor.nominalVoltage > 0.1) needPublish();
+            if (Math.abs(powerLoad.getVoltage() - lastVoltagePublish) / descriptor.nominalVoltage > 0.1) needPublish();
         }
 
         @Override
@@ -113,8 +117,9 @@ public class EggIncubatorElement extends TransparentNodeElement {
         return powerLoad;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         return null;
     }
 
@@ -126,13 +131,15 @@ public class EggIncubatorElement extends TransparentNodeElement {
         return 0;
     }
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
-        return Utils.plotUIP(powerLoad.getU(), powerLoad.getCurrent());
+    public String multiMeterString(@NotNull Direction side) {
+        return Utils.plotUIP(powerLoad.getVoltage(), powerLoad.getCurrent());
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         return null;
     }
 
@@ -147,7 +154,7 @@ public class EggIncubatorElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
         return false;
     }
 
@@ -156,8 +163,9 @@ public class EggIncubatorElement extends TransparentNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new EggIncubatorContainer(player, inventory, node);
     }
 
@@ -179,21 +187,22 @@ public class EggIncubatorElement extends TransparentNodeElement {
 
             node.lrduCubeMask.getTranslate(front.down()).serialize(stream);
 
-            stream.writeFloat((float) powerLoad.getU());
+            stream.writeFloat((float) powerLoad.getVoltage());
         } catch (IOException e) {
             e.printStackTrace();
         }
-        lastVoltagePublish = powerLoad.getU();
+        lastVoltagePublish = powerLoad.getVoltage();
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         ItemStack eggStack = inventory.getStackInSlot(EggIncubatorContainer.EggSlotId);
         info.put(I18N.tr("Has egg"), !eggStack.isEmpty() ?
             I18N.tr("Yes") : I18N.tr("No"));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put(I18N.tr("Power consumption"), Utils.plotPower("", powerResistor.getP()));
+        if (Eln.wailaEasyMode) {
+            info.put(I18N.tr("Power consumption"), Utils.plotPower("", powerResistor.getPower()));
         }
         return info;
     }

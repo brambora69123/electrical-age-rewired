@@ -13,7 +13,7 @@ public interface IWirelessSignalSpot {
 
     ArrayList<IWirelessSignalSpot> getSpot();
 
-    Coordinate getCoordinate();
+    Coordinate getCoordonate();
 
     public int getRange();
 }

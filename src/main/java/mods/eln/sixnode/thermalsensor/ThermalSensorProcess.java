@@ -15,16 +15,20 @@ public class ThermalSensorProcess implements IProcess {
     @Override
     public void process(double time) {
         if (sensor.typeOfSensor == sensor.temperatureType) {
-            setOutput(sensor.thermalLoad.Tc);
+            setOutput(toMeasuredTemperature(sensor.thermalLoad.temperatureCelsius, sensor.getAmbientTemperatureCelsius()));
         } else if (sensor.typeOfSensor == sensor.powerType) {
             setOutput(sensor.thermalLoad.getPower());
         }
+    }
+
+    static double toMeasuredTemperature(double thermalDeltaCelsius, double ambientCelsius) {
+        return thermalDeltaCelsius + ambientCelsius;
     }
 
     void setOutput(double physical) {
         double U = (physical - sensor.lowValue) / (sensor.highValue - sensor.lowValue) * Cable.SVU;
         if (U > Cable.SVU) U = Cable.SVU;
         if (U < 0) U = 0;
-        sensor.outputGateProcess.setU(U);
+        sensor.outputGateProcess.setVoltage(U);
     }
 }

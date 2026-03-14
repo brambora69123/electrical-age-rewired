@@ -34,6 +34,7 @@ public class ElectricalDataLoggerProcess implements IProcess {
                 ItemStack print = Eln.dataLogsPrintDescriptor.newItemStack(1);
                 Eln.dataLogsPrintDescriptor.initializeStack(print, e.logs);
                 e.inventory.setInventorySlotContents(ElectricalDataLoggerContainer.printSlotId, print);
+                e.inventory.markDirty();
             }
             e.printToDo = false;
         }

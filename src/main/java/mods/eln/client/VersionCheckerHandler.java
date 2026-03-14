@@ -3,7 +3,7 @@ package mods.eln.client;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import mods.eln.Eln;
-import mods.eln.misc.Color;
+import mods.eln.misc.FC;
 import mods.eln.misc.Version;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
@@ -29,72 +29,18 @@ import java.net.URL;
  */
 public class VersionCheckerHandler {
 
-    // Current mod version file hosted on Github
-    private final static String URL = "http://electrical-age.net/modinfo/modinfo.json";
+    // Current mod version
+    private final static String URL = "http://eln.ja13.org/modinfo.json";
 
     private static VersionCheckerHandler instance;
 
     private boolean ready = false;
-    private String versionMsg = null;
+    private String versionMsg = "";
 
     public static VersionCheckerHandler getInstance() {
         if (instance == null)
             instance = new VersionCheckerHandler();
         return instance;
-    }
-
-    private VersionCheckerHandler() {
-        // Check online if a new mod version if available (asynchronous HTTP request).
-        Thread versionThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String msg;
-                try {
-                    // Get the mod info Json file
-                    final String urlSrc = IOUtils.toString(new URL(URL));
-                    JsonObject j = new JsonParser().parse(urlSrc).getAsJsonObject();
-                    int manifestVersion = j.get("manifest_version").getAsInt();
-                    if (manifestVersion != 1)
-                        throw new IOException();
-
-                    // Read the last stable version
-                    JsonObject stable = j.get("stable").getAsJsonObject();
-                    int uniqueVersion = 1000000 * stable.get("version_major").getAsInt() +
-                        1000 * stable.get("version_minor").getAsInt() + stable.get("version_revision").getAsInt();
-                    int currentUniqueVersion = Version.UNIQUE_VERSION;
-
-                    // New stable version
-                    if (uniqueVersion > currentUniqueVersion) {
-                        int major = stable.get("version_major").getAsInt();
-                        int minor = stable.get("version_minor").getAsInt();
-                        int revision = stable.get("version_revision").getAsInt();
-                        msg = String.format(Color.GREEN + "> New stable version available: %d.%d.%d" + " - please upgrade !",
-                            major, minor, revision);
-                    }
-                    // No update
-                    else if (uniqueVersion == currentUniqueVersion) {
-                        msg = "> No update available (last stable version)";
-                    }
-                    // DEV version (not stable)
-                    else {
-                        msg = Color.RED + "> Warning: this is a version under test !";
-                    }
-
-                } catch (Exception e) {
-                    final String error = "Unable to check the latest available version.";
-                    System.err.println(error);
-                    msg = Color.RED + "> " + error;
-
-                    e.printStackTrace();
-                }
-
-                // Ready. Display the message on the client chat.
-                VersionCheckerHandler.getInstance().versionMsg = msg;
-                VersionCheckerHandler.getInstance().ready = true;
-            }
-        });
-
-        versionThread.start();
     }
 
     @SubscribeEvent
@@ -111,7 +57,71 @@ public class VersionCheckerHandler {
         if (!ready)
             return;
 
-        MinecraftForge.EVENT_BUS.unregister(this);
+        // Print the current version when the client start a map
+        if (Eln.versionCheckEnabled) {
+            //m.thePlayer.addChatMessage(new ChatComponentText(Version.printColor()));
+            System.out.println(Version.printColor());
+            String elnVers = "Electrical Age";
+            m.thePlayer.addChatMessage(new ChatComponentText(elnVers));
+            m.thePlayer.addChatMessage(new ChatComponentText(versionMsg));
+        }
+
+        FMLCommonHandler.instance().bus().unregister(this);
         ready = false;
+    }
+
+    private VersionCheckerHandler() {
+        // Check online if a new mod version if available (asynchronous HTTP request).
+        Thread versionThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String msg = "";
+                try {
+                    // Get the mod info Json file
+                    final String urlSrc = IOUtils.toString(new URL(URL));
+                    JsonObject j = new JsonParser().parse(urlSrc).getAsJsonObject();
+                    int manifestVersion = j.get("manifest_version").getAsInt();
+                    if (manifestVersion != 1) {
+                        throw new IOException();
+                    }
+
+                    // Read the last stable version
+                    JsonObject stable = j.get("stable").getAsJsonObject();
+                    int uniqueVersion = 1000000 * stable.get("version_major").getAsInt() +
+                        1000 * stable.get("version_minor").getAsInt() + stable.get("version_revision").getAsInt();
+                    int currentUniqueVersion = Version.UNIQUE_VERSION;
+
+                    // New stable version
+                    if (uniqueVersion > currentUniqueVersion) {
+                        int major = stable.get("version_major").getAsInt();
+                        int minor = stable.get("version_minor").getAsInt();
+                        int revision = stable.get("version_revision").getAsInt();
+                        msg = String.format(FC.GREEN + "> New stable version available: %d.%d.%d" + " - please upgrade !",
+                            major, minor, revision);
+                    }
+                    // No update
+                    else if (uniqueVersion == currentUniqueVersion) {
+                        msg = "> No update available (last stable version)";
+                    }
+                    // DEV version (not stable)
+                    else {
+                        msg = FC.RED + "> Warning: this is a version under test !";
+                    }
+
+                } catch (Exception e) {
+                    final String error = "Unable to check the latest available version.";
+                    System.err.println(error);
+                    msg = FC.RED + "> " + error;
+
+                    e.printStackTrace();
+                }
+
+                // Ready. Display the message on the client chat.
+                VersionCheckerHandler.getInstance().versionMsg = msg;
+                VersionCheckerHandler.getInstance().ready = true;
+            }
+        });
+
+        versionThread.start();
     }
 }

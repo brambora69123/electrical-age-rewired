@@ -3,9 +3,7 @@ package mods.eln.sixnode.lampsocket;
 import mods.eln.Eln;
 import mods.eln.generic.GenericItemUsingDamageDescriptor;
 import mods.eln.i18n.I18N;
-import mods.eln.init.Config;
-import mods.eln.item.BrushDescriptor;
-import mods.eln.item.LampDescriptor;
+import mods.eln.item.*;
 import mods.eln.misc.Direction;
 import mods.eln.misc.LRDU;
 import mods.eln.misc.Utils;
@@ -18,6 +16,7 @@ import mods.eln.node.six.SixNodeElementInventory;
 import mods.eln.sim.ElectricalLoad;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
+import mods.eln.sim.mna.misc.MnaConst;
 import mods.eln.sim.nbt.NbtElectricalLoad;
 import mods.eln.sixnode.electricalcable.ElectricalCableDescriptor;
 import net.minecraft.entity.player.EntityPlayer;
@@ -26,6 +25,10 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -33,10 +36,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LampSocketElement extends SixNodeElement {
+public class LampSocketElement extends SixNodeElement implements IConfigurable {
 
     LampSocketDescriptor socketDescriptor = null;
 
+    public MonsterPopFreeProcess monsterPopFreeProcess = new MonsterPopFreeProcess(sixNode.coordinate, Eln.instance.killMonstersAroundLampsRange);
     public NbtElectricalLoad positiveLoad = new NbtElectricalLoad("positiveLoad");
 
     public LampSocketProcess lampProcess = new LampSocketProcess(this);
@@ -80,7 +84,7 @@ public class LampSocketElement extends SixNodeElement {
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public void readFromNBT(@NotNull NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         byte value = nbt.getByte("front");
         front = LRDU.fromInt((value >> 0) & 0x3);
@@ -159,7 +163,7 @@ public class LampSocketElement extends SixNodeElement {
     }
 
     @Override
-    protected void inventoryChanged() {
+    public void inventoryChanged() {
         computeElectricalLoad();
         needPublish();
         reconnect();
@@ -170,8 +174,9 @@ public class LampSocketElement extends SixNodeElement {
         return true;
     }
 
+    @Nullable
     @Override
-    public Container newContainer(Direction side, EntityPlayer player) {
+    public Container newContainer(@NotNull Direction side, @NotNull EntityPlayer player) {
         return new LampSocketContainer(player, acceptingInventory.getInventory(), socketDescriptor);
     }
 
@@ -180,16 +185,17 @@ public class LampSocketElement extends SixNodeElement {
     }
 
     @Override
-    public ElectricalLoad getElectricalLoad(LRDU lrdu) {
-        if (!hasCable()) return null;
+    public ElectricalLoad getElectricalLoad(LRDU lrdu, int mask) {
+        if (acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId) == null) return null;
         if (poweredByLampSupply) return null;
 
         if (grounded) return positiveLoad;
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull LRDU lrdu, int mask) {
         return null;
     }
 
@@ -207,32 +213,34 @@ public class LampSocketElement extends SixNodeElement {
 
     @Override
     public String multiMeterString() {
-        return Utils.plotVolt("U:", positiveLoad.getU()) + Utils.plotAmpere("I:", lampResistor.getCurrent());
+        return Utils.plotVolt("U:", positiveLoad.getVoltage()) + Utils.plotAmpere("I:", lampResistor.getCurrent());
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
-        info.put(I18N.tr("Power consumption"), Utils.plotPower("", lampResistor.getI() * lampResistor.getU()));
-        if (lampDescriptor != null) {
-            info.put(I18N.tr("Bulb"), lampDescriptor.name);
+        info.put(I18N.tr("Power consumption"), Utils.plotPower("", lampResistor.getCurrent() * lampResistor.getVoltage()));
+        ItemStack lampStack = acceptingInventory.getInventory().getStackInSlot(0);
+        if (lampDescriptor != null && lampStack != null) {
+            info.put(I18N.tr("Bulb"), lampStack.getDisplayName());
         } else {
             info.put(I18N.tr("Bulb"), I18N.tr("None"));
         }
-        if (Config.INSTANCE.getWailaEasyMode()) {
+        if (Eln.wailaEasyMode) {
             if (poweredByLampSupply) {
                 info.put(I18N.tr("Channel"), channel);
             }
-            info.put(I18N.tr("Voltage"), Utils.plotVolt("", positiveLoad.getU()));
-            ItemStack lampStack = acceptingInventory.getInventory().getStackInSlot(0);
-            if (lampStack != null && !lampStack.isEmpty() && lampDescriptor != null) {
-                info.put(I18N.tr("Life"), Utils.plotValue(lampDescriptor.getLifeInTag(lampStack)));
+            info.put(I18N.tr("Voltage"), Utils.plotVolt("", positiveLoad.getVoltage()));
+            if (lampStack != null && lampDescriptor != null) {
+                info.put(I18N.tr("Life Left"), Utils.plotValue(lampDescriptor.getLifeInTag(lampStack)) + " Hours");
             }
 
         }
         return info;
     }
 
+    @NotNull
     @Override
     public String thermoMeterString() {
         return null;
@@ -273,7 +281,9 @@ public class LampSocketElement extends SixNodeElement {
         ItemStack lamp = acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.lampSlotId);
         ItemStack cable = acceptingInventory.getInventory().getStackInSlot(LampSocketContainer.cableSlotId);
 
-        ElectricalCableDescriptor cableDescriptor = (ElectricalCableDescriptor) Eln.sixNodeItem.getDescriptor(cable);
+        SixNodeDescriptor cableItemDescriptor = Eln.sixNodeItem.getDescriptor(cable);
+        ElectricalCableDescriptor cableDescriptor = cableItemDescriptor instanceof ElectricalCableDescriptor ?
+            (ElectricalCableDescriptor) cableItemDescriptor : null;
 
         if (cableDescriptor == null) {
             positiveLoad.highImpedance();
@@ -287,7 +297,7 @@ public class LampSocketElement extends SixNodeElement {
         lampDescriptor = lampObject instanceof LampDescriptor ? (LampDescriptor) lampObject : null;
 
         if (lampDescriptor == null) {
-            lampResistor.setR(Double.POSITIVE_INFINITY);
+            lampResistor.setResistance(MnaConst.highImpedance);
         } else {
             lampDescriptor.applyTo(lampResistor);
         }
@@ -308,6 +318,10 @@ public class LampSocketElement extends SixNodeElement {
             GenericItemUsingDamageDescriptor itemDescriptor = GenericItemUsingDamageDescriptor.getDescriptor(currentItemStack);
             if (itemDescriptor != null) {
                 if (itemDescriptor instanceof BrushDescriptor) {
+                    if (!socketDescriptor.paintable) {
+                        // Ignore brush use on non-paintable sockets (e.g. Street Light).
+                        return true;
+                    }
                     BrushDescriptor brush = (BrushDescriptor) itemDescriptor;
                     int brushColor = brush.getColor(currentItemStack);
                     if (brushColor != paintColor && brush.use(currentItemStack, entityPlayer)) {
@@ -315,6 +329,12 @@ public class LampSocketElement extends SixNodeElement {
                         needPublish(); //Sync
                     }
                     return true;
+                }
+
+                if (itemDescriptor instanceof LampDescriptor) {
+                    if (((LampDescriptor) itemDescriptor).socket != socketDescriptor.socketType) {
+                        return false;
+                    }
                 }
             }
         }
@@ -334,7 +354,6 @@ public class LampSocketElement extends SixNodeElement {
     @Override
     public void destroy(EntityPlayerMP entityPlayer) {
         super.destroy(entityPlayer);
-        lampProcess.destructor();
     }
 
     void setIsConnectedToLampSupply(boolean value) {
@@ -342,5 +361,32 @@ public class LampSocketElement extends SixNodeElement {
             isConnectedToLampSupply = value;
             needPublish();
         }
+    }
+
+    @Override
+    public void readConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        if(compound.hasKey("powerChannels")) {
+            String newChannel = compound.getTagList("powerChannels", 8).getStringTagAt(0);
+            if(newChannel != null && newChannel != "") {
+                channel = newChannel;
+                needPublish();
+            }
+        }
+        if(ConfigCopyToolDescriptor.readGenDescriptor(compound, "lamp", getInventory(), 0, invoker))
+            needPublish();
+        if(ConfigCopyToolDescriptor.readCableType(compound, getInventory(), 1, invoker))
+            needPublish();
+    }
+
+    @Override
+    public void writeConfigTool(NBTTagCompound compound, EntityPlayer invoker) {
+        NBTTagList list = new NBTTagList();
+        list.appendTag(new NBTTagString(channel));
+        compound.setTag("powerChannels", list);
+        IInventory inv = getInventory();
+        ItemStack lampStack = inv.getStackInSlot(0);
+        ConfigCopyToolDescriptor.writeGenDescriptor(compound, "lamp", lampStack);
+        ItemStack cableStack = inv.getStackInSlot(1);
+        ConfigCopyToolDescriptor.writeCableType(compound, cableStack);
     }
 }

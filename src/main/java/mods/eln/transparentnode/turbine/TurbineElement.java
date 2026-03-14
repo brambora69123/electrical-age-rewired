@@ -12,6 +12,7 @@ import mods.eln.node.transparent.TransparentNode;
 import mods.eln.node.transparent.TransparentNodeDescriptor;
 import mods.eln.node.transparent.TransparentNodeElement;
 import mods.eln.sim.ElectricalLoad;
+import mods.eln.sim.PhysicalConstant;
 import mods.eln.sim.ThermalLoad;
 import mods.eln.sim.mna.component.Resistor;
 import mods.eln.sim.mna.component.VoltageSource;
@@ -21,6 +22,8 @@ import mods.eln.sim.process.destruct.ThermalLoadWatchDog;
 import mods.eln.sim.process.destruct.VoltageStateWatchDog;
 import mods.eln.sim.process.destruct.WorldExplosion;
 import net.minecraft.entity.player.EntityPlayer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -59,19 +62,17 @@ public class TurbineElement extends TransparentNodeElement {
 
         WorldExplosion exp = new WorldExplosion(this).machineExplosion();
 
+        ThermalLoadWatchDog thermalWatchdog = ambientAwareThermalWatchdog(new ThermalLoadWatchDog(warmLoad));
         slowProcessList.add(thermalWatchdog);
 
         thermalWatchdog
-            .set(warmLoad)
-            .setTMax(this.descriptor.nominalDeltaT * 2)
-            .set(exp);
+            .setMaximumTemperature(this.descriptor.nominalDeltaT * 2)
+            .setDestroys(exp);
 
-        slowProcessList.add(voltageWatchdog.set(positiveLoad).setUNominal(this.descriptor.nominalU).set(exp));
+        VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog(positiveLoad);
+        slowProcessList.add(voltageWatchdog.setNominalVoltage(this.descriptor.nominalU).setDestroys(exp));
         slowProcessList.add(new NodePeriodicPublishProcess(node, 1., .5));
     }
-
-    private final VoltageStateWatchDog voltageWatchdog = new VoltageStateWatchDog();
-    private final ThermalLoadWatchDog thermalWatchdog = new ThermalLoadWatchDog();
 
     @Override
     public void connectJob() {
@@ -95,8 +96,9 @@ public class TurbineElement extends TransparentNodeElement {
         return null;
     }
 
+    @Nullable
     @Override
-    public ThermalLoad getThermalLoad(Direction side, LRDU lrdu) {
+    public ThermalLoad getThermalLoad(@NotNull Direction side, @NotNull LRDU lrdu) {
         if (side == front.left()) return warmLoad;
         if (side == front.right()) return coolLoad;
         return null;
@@ -114,30 +116,32 @@ public class TurbineElement extends TransparentNodeElement {
     }
 
 
+    @NotNull
     @Override
-    public String multiMeterString(Direction side) {
+    public String multiMeterString(@NotNull Direction side) {
         if (side == front.left()) return "";
         if (side == front.right()) return "";
         if (side == front || side == front.back())
-            return Utils.plotVolt("U+:", positiveLoad.getU()) + Utils.plotAmpere("I+:", positiveLoad.getCurrent());
-        return Utils.plotVolt("U:", positiveLoad.getU()) + Utils.plotAmpere("I:", positiveLoad.getCurrent());
+            return Utils.plotVolt("U+:", positiveLoad.getVoltage()) + Utils.plotAmpere("I+:", positiveLoad.getCurrent());
+        return Utils.plotVolt("U:", positiveLoad.getVoltage()) + Utils.plotAmpere("I:", positiveLoad.getCurrent());
 
     }
 
+    @NotNull
     @Override
-    public String thermoMeterString(Direction side) {
+    public String thermoMeterString(@NotNull Direction side) {
         if (side == front.left())
-            return Utils.plotCelsius("T+:", warmLoad.Tc) + Utils.plotPower("P+:", warmLoad.getPower());
+            return plotAmbientCelsius("T+:", warmLoad.temperatureCelsius) + Utils.plotPower("P+:", warmLoad.getPower());
         if (side == front.right())
-            return Utils.plotCelsius("T-:", coolLoad.Tc) + Utils.plotPower("P-:", coolLoad.getPower());
-        return Utils.plotCelsius("dT:", warmLoad.Tc - coolLoad.Tc) + Utils.plotPercent("Eff:", turbineThermaltProcess.getEfficiency());
+            return plotAmbientCelsius("T-:", coolLoad.temperatureCelsius) + Utils.plotPower("P-:", coolLoad.getPower());
+        return Utils.plotCelsius("dT:", warmLoad.temperatureCelsius - coolLoad.temperatureCelsius) + Utils.plotPercent("Eff:", turbineThermaltProcess.getEfficiency());
 
     }
 
     @Override
     public void initialize() {
         descriptor.applyTo(inputLoad);
-        inputToTurbineResistor.setR(descriptor.electricalRs * 30);
+        inputToTurbineResistor.setResistance(descriptor.electricalRs * 30);
         descriptor.applyTo(warmLoad);
         descriptor.applyTo(coolLoad);
 
@@ -145,8 +149,13 @@ public class TurbineElement extends TransparentNodeElement {
     }
 
     @Override
-    public boolean onBlockActivated(EntityPlayer entityPlayer, Direction side, float vx, float vy, float vz) {
+    public boolean onBlockActivated(EntityPlayer player, Direction side, float vx, float vy, float vz) {
         return false;
+    }
+
+    public double getAmbientTemperatureKelvin() {
+        double ambientCelsius = getAmbientTemperatureCelsius();
+        return ambientCelsius + PhysicalConstant.zeroCelsiusInKelvin;
     }
 
     public float getLightOpacity() {
@@ -158,21 +167,22 @@ public class TurbineElement extends TransparentNodeElement {
         super.networkSerialize(stream);
         node.lrduCubeMask.getTranslate(front.down()).serialize(stream);
         try {
-            stream.writeFloat((float) (warmLoad.Tc - coolLoad.Tc));
+            stream.writeFloat((float) (warmLoad.temperatureCelsius - coolLoad.temperatureCelsius));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    @NotNull
     @Override
     public Map<String, String> getWaila() {
         Map<String, String> info = new HashMap<String, String>();
         info.put(I18N.tr("Nominal") + " \u0394T",
-            (warmLoad.Tc - coolLoad.Tc == descriptor.nominalDeltaT ? I18N.tr("Yes") : I18N.tr("No")));
-        info.put(I18N.tr("Generated power"), Utils.plotPower("", electricalPowerSourceProcess.getP()));
-        if (Config.INSTANCE.getWailaEasyMode()) {
-            info.put("\u0394T", Utils.plotCelsius("", warmLoad.Tc - coolLoad.Tc));
-            info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalPowerSourceProcess.getU()));
+            (warmLoad.temperatureCelsius - coolLoad.temperatureCelsius == descriptor.nominalDeltaT ? I18N.tr("Yes") : I18N.tr("No")));
+        info.put(I18N.tr("Generated power"), Utils.plotPower("", electricalPowerSourceProcess.getPower()));
+        if (Eln.wailaEasyMode) {
+            info.put("\u0394T", Utils.plotCelsius("", warmLoad.temperatureCelsius - coolLoad.temperatureCelsius));
+            info.put(I18N.tr("Voltage"), Utils.plotVolt("", electricalPowerSourceProcess.getVoltage()));
         }
         return info;
     }
